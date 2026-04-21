@@ -13,4 +13,8 @@
         </PackageReference>
         <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="8.0.0" />
     </ItemGroup>
+    <ItemGroup>
+      <Folder Include="Abtraction\" />
+      <Folder Include="Entity\" />
+    </ItemGroup>
 </Project>
