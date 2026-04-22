@@ -27,26 +27,29 @@ As a user, I want to complete an initial onboarding survey so that the system ca
 As a user, I want to view my profile and basic financial setup so that I can understand what information the system is using for budgeting. `(core)`  
 → `(API: Get/update user profile, onboarding summary, preferred budgeting settings)`
 
+As a user, I want to create and manage manual financial accounts such as cash so that I can use the app even if I do not link any bank account. `(core)`  
+→ `(API: Create/update/delete financial accounts, bootstrap default cash account, current balance update, source account summary)`
+
 As a user, I want to create, edit, delete, and view my spending jars so that I can allocate money to different spending purposes and goals. `(core)`  
 → `(API: CRUD jars, jar balance summary, jar status validation)`
 
-As a user, I want to allocate money into jars and transfer money between jars so that my budget is reflected correctly across spending purposes. `(core)`  
-→ `(API: Allocate funds to jar, transfer funds between jars, transaction-safe balance update, transfer history)`
+As a user, I want to allocate money from my total balance or a selected financial account into jars and transfer money between jars so that my budget is reflected correctly across spending purposes. `(core)`  
+→ `(API: Allocate funds to jar, optional source financial account selection, transfer funds between jars, transaction-safe balance update, transfer history)`
 
-As a user, I want to record income and expense transactions so that I can track every money movement accurately and quickly. `(core)`  
-→ `(API: CRUD transactions, income/expense type handling, ownership validation, transaction-to-jar/category mapping)`
+As a user, I want to record income and expense transactions from a selected financial account so that I can track every money movement accurately and quickly. `(core)`  
+→ `(API: CRUD transactions, income/expense type handling, financial-account ownership validation, transaction-to-jar/category mapping)`
 
 As a user, I want to view my transaction history with search and filters so that I can easily review past spending. `(core)`  
 → `(API: Get transaction list with filters by date, type, jar, category, keyword, pagination)`
 
-As a user, I want to import a bank statement file and review parsed transactions before saving so that I can add many transactions quickly without entering them one by one. `(core)`  
-→ `(API: Upload statement file, parse imported data, preview parsed transactions, confirm import, import job status)`
+As a user, I want to import a bank statement file into a selected financial account and review parsed transactions before saving so that I can add many transactions quickly without entering them one by one. `(core)`  
+→ `(API: Upload statement file, choose target financial account, parse imported data, preview parsed transactions, confirm import, import job status)`
 
 As a user, I want to use default categories provided by admin or create my own custom categories so that categorizing transactions is standardized and convenient. `(core)`  
 → `(API: Get default categories, CRUD custom categories, category ownership rules, category assignment to transactions)`
 
-As a user, I want to view my personal dashboard so that I can see total balance, spending charts, recent transactions, and jar status at a glance. `(core)`  
-→ `(API: Get user dashboard metrics, current balance summary, recent transactions, spending by category/jar, goal progress snapshot)`
+As a user, I want to view my personal dashboard so that I can see total balance, allocated balance, unallocated balance, spending charts, recent transactions, and jar status at a glance. `(core)`  
+→ `(API: Get user dashboard metrics, total/allocated/unallocated balance summary, recent transactions, spending by category/jar, goal progress snapshot)`
 
 As a user, I want to set spending limits for each jar or category so that I can control my budget by day or month. `(core)`  
 → `(API: CRUD spending limits, daily/monthly period configuration, limit-to-jar/category mapping)`
@@ -74,6 +77,9 @@ As a user, I want to set recurring payment reminders so that I do not miss bills
 
 ### 1.2. Scale User Stories
 
+As a user, I want to link my bank account so that I can sync balance and transactions automatically when external integration is available. `(scale)`  
+→ `(API: Create linked financial account, provider token management, sync balances/transactions, integration status tracking)`
+
 As a user, I want to upload a receipt photo so that the system can automatically extract amount, category, date, and description using OCR. `(scale)`  
 → `(API: Upload receipt image, OCR processing, extracted transaction draft, editable review before save)`
 
@@ -90,9 +96,6 @@ As a user, I want to export my transaction history so that I can store or review
 → `(API: Export transaction history to CSV/XLSX, filtered export, async export job if needed)`
 
 ### 1.3. Optional User Stories
-
-As a user, I want to link my bank account so that I can sync balance and transactions automatically if external integration is supported later. `(optional)`  
-→ `(API: Link bank account, bank token management, sync transactions, integration status tracking)`
 
 As a user, I want to invite friends or family to join a shared jar so that we can manage common expenses together. `(optional)`  
 → `(API: Create shared jar, invite members, member permissions, shared transaction visibility)`
@@ -192,7 +195,7 @@ Nếu ưu tiên triển khai trong vòng 1 tháng đầu, nhóm nên tập trung
 
 - xác thực người dùng và quản trị;
 - onboarding;
-- quản lý hũ, giao dịch, danh mục;
+- quản lý nguồn tiền, hũ, giao dịch, danh mục;
 - dashboard cá nhân;
 - hạn mức và cảnh báo;
 - mục tiêu tiết kiệm;
@@ -206,10 +209,10 @@ Nếu ưu tiên triển khai trong vòng 1 tháng đầu, nhóm nên tập trung
    Tập trung vào đăng ký/đăng nhập người dùng, đăng nhập admin, phân quyền, refresh token, bootstrap hồ sơ ban đầu và audit log cho các thao tác nhạy cảm. Đây là lớp nền bắt buộc để các luồng còn lại có thể chạy an toàn.
 
 2. `P1 - Onboarding + Financial Setup`
-   Hoàn thiện onboarding, hồ sơ người dùng, danh mục mặc định/tùy chỉnh, tạo hũ và các thiết lập ngân sách cơ bản. Sau bước này, user đã có thể vào hệ thống và chuẩn bị dữ liệu nền cho việc quản lý tài chính.
+   Hoàn thiện onboarding, hồ sơ người dùng, nguồn tiền mặc định như `Tiền mặt`, danh mục mặc định/tùy chỉnh, tạo hũ và các thiết lập ngân sách cơ bản. Sau bước này, user đã có thể vào hệ thống và chuẩn bị dữ liệu nền cho việc quản lý tài chính ngay cả khi chưa liên kết ngân hàng.
 
 3. `P2 - Transaction Management Core`
-   Ưu tiên CRUD giao dịch, lịch sử giao dịch, phân loại theo hũ/danh mục, phân bổ tiền vào hũ và chuyển tiền giữa các hũ. Đây là cụm chức năng tạo ra dữ liệu vận hành chính cho toàn bộ sản phẩm.
+   Ưu tiên CRUD giao dịch, lịch sử giao dịch, phân loại theo nguồn tiền/hũ/danh mục, phân bổ tiền vào hũ và chuyển tiền giữa các hũ. Đây là cụm chức năng tạo ra dữ liệu vận hành chính cho toàn bộ sản phẩm.
 
 4. `P3 - Personal Dashboard`
    Xây dựng dashboard cá nhân với tổng quan số dư, giao dịch gần đây, thống kê chi tiêu theo danh mục/hũ và snapshot tiến độ mục tiêu. Dashboard nên được làm sau khi dữ liệu giao dịch và hũ đã đủ ổn định.
@@ -218,7 +221,7 @@ Nếu ưu tiên triển khai trong vòng 1 tháng đầu, nhóm nên tập trung
    Triển khai hạn mức chi tiêu, cảnh báo vượt ngưỡng, hộp thư thông báo, mục tiêu tiết kiệm, đóng góp vào mục tiêu và theo dõi tiến độ. Nhóm này tạo ra trải nghiệm quản lý tài chính hoàn chỉnh sau khi lõi dữ liệu đã sẵn sàng.
 
 6. `P5 - Import Statement`
-   Bổ sung import sao kê, parse dữ liệu, màn hình xem trước và xác nhận import. Tính năng này nên đi sau transaction core để có thể tái sử dụng logic tạo giao dịch và kiểm soát dữ liệu đầu vào.
+   Bổ sung import sao kê, parse dữ liệu, gắn file import với một nguồn tiền cụ thể, màn hình xem trước và xác nhận import. Tính năng này nên đi sau transaction core để có thể tái sử dụng logic tạo giao dịch và kiểm soát dữ liệu đầu vào.
 
 7. `P6 - Admin User Management & System Notifications`
    Hoàn thiện danh sách user, xem chi tiết tài khoản, khóa/mở khóa tài khoản, gửi broadcast notification, xem lịch sử thông báo và dashboard vận hành cơ bản cho admin.
