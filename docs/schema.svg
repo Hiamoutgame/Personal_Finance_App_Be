@@ -1,0 +1,655 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="2200" height="1840" viewBox="0 0 2200 1840" role="img" aria-labelledby="title desc">
+  <title id="title">Personal Finance schema overview</title>
+  <desc id="desc">Orthogonal ERD overview derived from docs/schema.md. Shared entities are repeated across panels to keep relationships straight and readable.</desc>
+  <defs>
+    <style>
+      .bg { fill: #f7f8fc; }
+      .panel { fill: #ffffff; stroke: #d7dce8; stroke-width: 1.5; rx: 24; ry: 24; }
+      .panel-title { font: 700 24px 'Segoe UI', Arial, sans-serif; fill: #18212f; }
+      .panel-note { font: 400 12px 'Segoe UI', Arial, sans-serif; fill: #5b6472; }
+      .card { fill: #ffffff; stroke: #243041; stroke-width: 1.5; rx: 16; ry: 16; }
+      .card-head { fill: #edf3ff; stroke: #243041; stroke-width: 1.5; rx: 16; ry: 16; }
+      .card-title { font: 700 16px 'Consolas', 'Segoe UI Mono', monospace; fill: #162233; }
+      .card-subtitle { font: 400 11px 'Segoe UI', Arial, sans-serif; fill: #5f6a79; letter-spacing: 0.4px; }
+      .field { font: 400 12px 'Consolas', 'Segoe UI Mono', monospace; fill: #263242; }
+      .pk { fill: #0b5fff; font-weight: 700; }
+      .fk { fill: #0c7a43; font-weight: 700; }
+      .edge { fill: none; stroke: #4b5563; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+      .edge.optional { stroke-dasharray: 7 6; }
+      .edge-label-box { fill: #ffffff; stroke: #c7ceda; stroke-width: 1; rx: 10; ry: 10; }
+      .edge-label { font: 600 11px 'Segoe UI', Arial, sans-serif; fill: #364152; }
+      .cardinality { font: 700 12px 'Segoe UI', Arial, sans-serif; fill: #0f1725; }
+      .legend { fill: #fffaf0; stroke: #d8c79d; stroke-width: 1.2; rx: 16; ry: 16; }
+      .legend-title { font: 700 14px 'Segoe UI', Arial, sans-serif; fill: #43311b; }
+      .legend-text { font: 400 12px 'Segoe UI', Arial, sans-serif; fill: #5b4a31; }
+      .footer { font: 400 13px 'Segoe UI', Arial, sans-serif; fill: #5c6675; }
+    </style>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="2200" height="1840" />
+
+  <text x="40" y="62" font-family="Segoe UI, Arial, sans-serif" font-size="34" font-weight="700" fill="#152033">Database schema overview</text>
+  <text x="40" y="92" font-family="Segoe UI, Arial, sans-serif" font-size="15" fill="#5e6878">
+    Source: docs/schema.md. Shared entities are intentionally repeated across panels so the connectors can stay orthogonal and easy to scan.
+  </text>
+
+  <rect class="legend" x="1590" y="28" width="570" height="74" />
+  <text class="legend-title" x="1612" y="54">Practical note</text>
+  <text class="legend-text" x="1612" y="76">
+    Mermaid is convenient for markdown, but Graphviz DOT or PlantUML is a better source format when you need stable right-angle routing.
+  </text>
+
+  <rect class="panel" x="40" y="140" width="1020" height="740" />
+  <text class="panel-title" x="70" y="182">Identity / Onboarding / Admin</text>
+  <text class="panel-note" x="70" y="205">Auth tables plus admin-controlled configuration and audit records.</text>
+
+  <rect class="panel" x="1140" y="140" width="1020" height="740" />
+  <text class="panel-title" x="1170" y="182">Money Sources / Categories / Jars</text>
+  <text class="panel-note" x="1170" y="205">Operational model for user balances, budgeting jars, and allocation flows.</text>
+
+  <rect class="panel" x="40" y="940" width="1020" height="840" />
+  <text class="panel-title" x="70" y="982">Transactions / Imports</text>
+  <text class="panel-note" x="70" y="1005">Confirmed transactions, import jobs, and review drafts before commit.</text>
+
+  <rect class="panel" x="1140" y="940" width="1020" height="840" />
+  <text class="panel-title" x="1170" y="982">Limits / Goals / Reminders / Notifications</text>
+  <text class="panel-note" x="1170" y="1005">User planning and communication domain. Nullable links are dashed.</text>
+
+  <!-- Panel 1 cards -->
+  <g transform="translate(70,240)">
+    <rect class="card" x="0" y="0" width="220" height="112" />
+    <rect class="card-head" x="0" y="0" width="220" height="36" />
+    <text class="card-title" x="16" y="23">roles</text>
+    <text class="card-subtitle" x="16" y="52">lookup / seed data</text>
+    <text class="field" x="16" y="74"><tspan class="pk">PK</tspan> id</text>
+    <text class="field" x="16" y="92">code</text>
+    <text class="field" x="16" y="110">name</text>
+  </g>
+
+  <g transform="translate(360,220)">
+    <rect class="card" x="0" y="0" width="280" height="164" />
+    <rect class="card-head" x="0" y="0" width="280" height="38" />
+    <text class="card-title" x="16" y="24">accounts</text>
+    <text class="card-subtitle" x="16" y="56">system login account</text>
+    <text class="field" x="16" y="80"><tspan class="pk">PK</tspan> id</text>
+    <text class="field" x="16" y="98"><tspan class="fk">FK</tspan> role_id</text>
+    <text class="field" x="16" y="116">username</text>
+    <text class="field" x="16" y="134">email</text>
+    <text class="field" x="16" y="152">status</text>
+  </g>
+
+  <g transform="translate(760,180)">
+    <rect class="card" x="0" y="0" width="260" height="122" />
+    <rect class="card-head" x="0" y="0" width="260" height="36" />
+    <text class="card-title" x="16" y="23">refresh_token_sessions</text>
+    <text class="card-subtitle" x="16" y="52">token lifecycle</text>
+    <text class="field" x="16" y="74"><tspan class="pk">PK</tspan> id</text>
+    <text class="field" x="16" y="92"><tspan class="fk">FK</tspan> account_id</text>
+    <text class="field" x="16" y="110">expires_at</text>
+  </g>
+
+  <g transform="translate(760,360)">
+    <rect class="card" x="0" y="0" width="260" height="122" />
+    <rect class="card-head" x="0" y="0" width="260" height="36" />
+    <text class="card-title" x="16" y="23">onboarding_profiles</text>
+    <text class="card-subtitle" x="16" y="52">one survey per user</text>
+    <text class="field" x="16" y="74"><tspan class="pk">PK</tspan> id</text>
+    <text class="field" x="16" y="92"><tspan class="fk">FK</tspan> user_id</text>
+    <text class="field" x="16" y="110">recommended_method</text>
+  </g>
+
+  <g transform="translate(360,520)">
+    <rect class="card" x="0" y="0" width="240" height="112" />
+    <rect class="card-head" x="0" y="0" width="240" height="36" />
+    <text class="card-title" x="16" y="23">jar_setups</text>
+    <text class="card-subtitle" x="16" y="52">current budget method</text>
+    <text class="field" x="16" y="74"><tspan class="pk">PK</tspan> id</text>
+    <text class="field" x="16" y="92"><tspan class="fk">FK</tspan> user_id</text>
+    <text class="field" x="16" y="110">method_type</text>
+  </g>
+
+  <g transform="translate(70,520)">
+    <rect class="card" x="0" y="0" width="220" height="112" />
+    <rect class="card-head" x="0" y="0" width="220" height="36" />
+    <text class="card-title" x="16" y="23">ai_settings</text>
+    <text class="card-subtitle" x="16" y="52">admin maintained</text>
+    <text class="field" x="16" y="74"><tspan class="pk">PK</tspan> id</text>
+    <text class="field" x="16" y="92"><tspan class="fk">FK</tspan> updated_by_admin_id</text>
+    <text class="field" x="16" y="110">model_name</text>
+  </g>
+
+  <g transform="translate(760,540)">
+    <rect class="card" x="0" y="0" width="260" height="112" />
+    <rect class="card-head" x="0" y="0" width="260" height="36" />
+    <text class="card-title" x="16" y="23">audit_logs</text>
+    <text class="card-subtitle" x="16" y="52">sensitive admin actions</text>
+    <text class="field" x="16" y="74"><tspan class="pk">PK</tspan> id</text>
+    <text class="field" x="16" y="92"><tspan class="fk">FK</tspan> actor_account_id</text>
+    <text class="field" x="16" y="110">action_type</text>
+  </g>
+
+  <!-- Panel 1 edges -->
+  <path class="edge" d="M290 296 H360" />
+  <text class="cardinality" x="300" y="286">1</text>
+  <text class="cardinality" x="345" y="286">N</text>
+  <rect class="edge-label-box" x="300" y="305" width="58" height="20" />
+  <text class="edge-label" x="314" y="319">assigns</text>
+
+  <path class="edge" d="M640 282 H700 V241 H760" />
+  <text class="cardinality" x="650" y="272">1</text>
+  <text class="cardinality" x="748" y="255">N</text>
+  <rect class="edge-label-box" x="685" y="248" width="48" height="20" />
+  <text class="edge-label" x="699" y="262">owns</text>
+
+  <path class="edge" d="M640 320 H710 V421 H760" />
+  <text class="cardinality" x="650" y="310">1</text>
+  <text class="cardinality" x="748" y="415">1</text>
+  <rect class="edge-label-box" x="687" y="408" width="68" height="20" />
+  <text class="edge-label" x="697" y="422">completes</text>
+
+  <path class="edge" d="M500 384 V520" />
+  <text class="cardinality" x="510" y="398">1</text>
+  <text class="cardinality" x="510" y="510">1</text>
+  <rect class="edge-label-box" x="454" y="445" width="92" height="20" />
+  <text class="edge-label" x="468" y="459">configures</text>
+
+  <path class="edge" d="M360 320 H250 V576 H290" />
+  <text class="cardinality" x="350" y="310">1</text>
+  <text class="cardinality" x="274" y="567">N</text>
+  <rect class="edge-label-box" x="214" y="564" width="64" height="20" />
+  <text class="edge-label" x="230" y="578">updates</text>
+
+  <path class="edge" d="M640 340 H710 V596 H760" />
+  <text class="cardinality" x="650" y="330">1</text>
+  <text class="cardinality" x="748" y="590">N</text>
+  <rect class="edge-label-box" x="696" y="582" width="40" height="20" />
+  <text class="edge-label" x="709" y="596">acts</text>
+
+  <!-- Panel 2 cards -->
+  <g transform="translate(1180,230)">
+    <rect class="card" x="0" y="0" width="280" height="164" />
+    <rect class="card-head" x="0" y="0" width="280" height="38" />
+    <text class="card-title" x="16" y="24">accounts</text>
+    <text class="card-subtitle" x="16" y="56">owner of money objects</text>
+    <text class="field" x="16" y="80"><tspan class="pk">PK</tspan> id</text>
+    <text class="field" x="16" y="98"><tspan class="fk">FK</tspan> role_id</text>
+    <text class="field" x="16" y="116">preferred_currency</text>
+    <text class="field" x="16" y="134">is_onboarding_completed</text>
+    <text class="field" x="16" y="152">created_at</text>
+  </g>
+
+  <g transform="translate(1545,180)">
+    <rect class="card" x="0" y="0" width="300" height="182" />
+    <rect class="card-head" x="0" y="0" width="300" height="38" />
+    <text class="card-title" x="16" y="24">financial_accounts</text>
+    <text class="card-subtitle" x="16" y="56">cash / bank / ewallet</text>
+    <text class="field" x="16" y="80"><tspan class="pk">PK</tspan> id</text>
+    <text class="field" x="16" y="98"><tspan class="fk">FK</tspan> user_id</text>
+    <text class="field" x="16" y="116">account_type</text>
+    <text class="field" x="16" y="134">connection_mode</text>
+    <text class="field" x="16" y="152">current_balance</text>
+    <text class="field" x="16" y="170">sync_status</text>
+  </g>
+
+  <g transform="translate(1870,190)">
+    <rect class="card" x="0" y="0" width="250" height="132" />
+    <rect class="card-head" x="0" y="0" width="250" height="36" />
+    <text class="card-title" x="16" y="23">categories</text>
+    <text class="card-subtitle" x="16" y="52">default or custom</text>
+    <text class="field" x="16" y="74"><tspan class="pk">PK</tspan> id</text>
+    <text class="field" x="16" y="92"><tspan class="fk">FK</tspan> owner_user_id</text>
+    <text class="field" x="16" y="110">is_default</text>
+  </g>
+
+  <g transform="translate(1860,430)">
+    <rect class="card" x="0" y="0" width="260" height="152" />
+    <rect class="card-head" x="0" y="0" width="260" height="36" />
+    <text class="card-title" x="16" y="23">jars</text>
+    <text class="card-subtitle" x="16" y="52">budget buckets</text>
+    <text class="field" x="16" y="74"><tspan class="pk">PK</tspan> id</text>
+    <text class="field" x="16" y="92"><tspan class="fk">FK</tspan> user_id</text>
+    <text class="field" x="16" y="110"><tspan class="fk">FK</tspan> jar_setup_id</text>
+    <text class="field" x="16" y="128">balance</text>
+    <text class="field" x="16" y="146">status</text>
+  </g>
+
+  <g transform="translate(1180,470)">
+    <rect class="card" x="0" y="0" width="280" height="132" />
+    <rect class="card-head" x="0" y="0" width="280" height="36" />
+    <text class="card-title" x="16" y="23">jar_allocations</text>
+    <text class="card-subtitle" x="16" y="52">move total balance into jars</text>
+    <text class="field" x="16" y="74"><tspan class="pk">PK</tspan> id</text>
+    <text class="field" x="16" y="92"><tspan class="fk">FK</tspan> user_id</text>
+    <text class="field" x="16" y="110"><tspan class="fk">FK</tspan> source_financial_account_id</text>
+  </g>
+
+  <g transform="translate(1545,500)">
+    <rect class="card" x="0" y="0" width="300" height="132" />
+    <rect class="card-head" x="0" y="0" width="300" height="36" />
+    <text class="card-title" x="16" y="23">jar_allocation_items</text>
+    <text class="card-subtitle" x="16" y="52">one row per receiving jar</text>
+    <text class="field" x="16" y="74"><tspan class="pk">PK</tspan> id</text>
+    <text class="field" x="16" y="92"><tspan class="fk">FK</tspan> allocation_id</text>
+    <text class="field" x="16" y="110"><tspan class="fk">FK</tspan> jar_id</text>
+  </g>
+
+  <g transform="translate(1545,690)">
+    <rect class="card" x="0" y="0" width="240" height="102" />
+    <rect class="card-head" x="0" y="0" width="240" height="36" />
+    <text class="card-title" x="16" y="23">jar_setups</text>
+    <text class="card-subtitle" x="16" y="52">setup reused here</text>
+    <text class="field" x="16" y="74"><tspan class="pk">PK</tspan> id</text>
+    <text class="field" x="16" y="92"><tspan class="fk">FK</tspan> user_id</text>
+  </g>
+
+  <g transform="translate(1860,670)">
+    <rect class="card" x="0" y="0" width="260" height="122" />
+    <rect class="card-head" x="0" y="0" width="260" height="36" />
+    <text class="card-title" x="16" y="23">jar_transfers</text>
+    <text class="card-subtitle" x="16" y="52">budget moved between jars</text>
+    <text class="field" x="16" y="74"><tspan class="pk">PK</tspan> id</text>
+    <text class="field" x="16" y="92"><tspan class="fk">FK</tspan> from_jar_id</text>
+    <text class="field" x="16" y="110"><tspan class="fk">FK</tspan> to_jar_id</text>
+  </g>
+
+  <!-- Panel 2 edges -->
+  <path class="edge" d="M1460 312 H1545" />
+  <text class="cardinality" x="1470" y="302">1</text>
+  <text class="cardinality" x="1532" y="302">N</text>
+  <rect class="edge-label-box" x="1478" y="319" width="48" height="20" />
+  <text class="edge-label" x="1492" y="333">owns</text>
+
+  <path class="edge" d="M1460 286 H1705 V256 H1870" />
+  <text class="cardinality" x="1470" y="276">1</text>
+  <text class="cardinality" x="1856" y="248">N</text>
+  <rect class="edge-label-box" x="1680" y="243" width="58" height="20" />
+  <text class="edge-label" x="1692" y="257">creates</text>
+
+  <path class="edge" d="M1460 334 H1718 V506 H1860" />
+  <text class="cardinality" x="1470" y="324">1</text>
+  <text class="cardinality" x="1846" y="499">N</text>
+  <rect class="edge-label-box" x="1690" y="493" width="48" height="20" />
+  <text class="edge-label" x="1704" y="507">owns</text>
+
+  <path class="edge" d="M1320 394 V470" />
+  <text class="cardinality" x="1330" y="408">1</text>
+  <text class="cardinality" x="1330" y="460">N</text>
+  <rect class="edge-label-box" x="1288" y="420" width="64" height="20" />
+  <text class="edge-label" x="1301" y="434">creates</text>
+
+  <path class="edge optional" d="M1545 318 H1480 V536 H1460" />
+  <text class="cardinality" x="1500" y="307">0..1</text>
+  <text class="cardinality" x="1440" y="528">N</text>
+  <rect class="edge-label-box" x="1458" y="520" width="52" height="20" />
+  <text class="edge-label" x="1472" y="534">source</text>
+
+  <path class="edge" d="M1460 536 H1545" />
+  <text class="cardinality" x="1470" y="526">1</text>
+  <text class="cardinality" x="1532" y="526">N</text>
+  <rect class="edge-label-box" x="1473" y="543" width="66" height="20" />
+  <text class="edge-label" x="1486" y="557">contains</text>
+
+  <path class="edge" d="M1860 506 H1845" />
+  <text class="cardinality" x="1842" y="494">1</text>
+  <text class="cardinality" x="1850" y="526">N</text>
+  <rect class="edge-label-box" x="1769" y="493" width="70" height="20" />
+  <text class="edge-label" x="1784" y="507">receives</text>
+
+  <path class="edge" d="M1785 742 H1820 V506 H1860" />
+  <text class="cardinality" x="1790" y="732">1</text>
+  <text class="cardinality" x="1848" y="498">N</text>
+  <rect class="edge-label-box" x="1767" y="620" width="58" height="20" />
+  <text class="edge-label" x="1779" y="634">defines</text>
+
+  <path class="edge" d="M1460 350 H1734 V731 H1860" />
+  <text class="cardinality" x="1470" y="340">1</text>
+  <text class="cardinality" x="1848" y="724">N</text>
+  <rect class="edge-label-box" x="1706" y="719" width="60" height="20" />
+  <text class="edge-label" x="1720" y="733">makes</text>
+
+  <path class="edge" d="M1930 582 V632 H1968 V670" />
+  <text class="cardinality" x="1938" y="596">1</text>
+  <text class="cardinality" x="1962" y="660">N</text>
+  <rect class="edge-label-box" x="1883" y="621" width="58" height="20" />
+  <text class="edge-label" x="1897" y="635">from_jar</text>
+
+  <path class="edge" d="M2050 582 V646 H2055 V670" />
+  <text class="cardinality" x="2058" y="598">1</text>
+  <text class="cardinality" x="2063" y="660">N</text>
+  <rect class="edge-label-box" x="1998" y="636" width="48" height="20" />
+  <text class="edge-label" x="2012" y="650">to_jar</text>
+
+  <!-- Panel 3 cards -->
+  <g transform="translate(70,1000)">
+    <rect class="card" x="0" y="0" width="280" height="144" />
+    <rect class="card-head" x="0" y="0" width="280" height="38" />
+    <text class="card-title" x="16" y="24">accounts</text>
+    <text class="card-subtitle" x="16" y="56">transaction owner</text>
+    <text class="field" x="16" y="80"><tspan class="pk">PK</tspan> id</text>
+    <text class="field" x="16" y="98">email</text>
+    <text class="field" x="16" y="116">preferred_currency</text>
+    <text class="field" x="16" y="134">created_at</text>
+  </g>
+
+  <g transform="translate(390,980)">
+    <rect class="card" x="0" y="0" width="300" height="162" />
+    <rect class="card-head" x="0" y="0" width="300" height="38" />
+    <text class="card-title" x="16" y="24">financial_accounts</text>
+    <text class="card-subtitle" x="16" y="56">transaction source</text>
+    <text class="field" x="16" y="80"><tspan class="pk">PK</tspan> id</text>
+    <text class="field" x="16" y="98"><tspan class="fk">FK</tspan> user_id</text>
+    <text class="field" x="16" y="116">connection_mode</text>
+    <text class="field" x="16" y="134">current_balance</text>
+    <text class="field" x="16" y="152">sync_status</text>
+  </g>
+
+  <g transform="translate(770,980)">
+    <rect class="card" x="0" y="0" width="240" height="132" />
+    <rect class="card-head" x="0" y="0" width="240" height="36" />
+    <text class="card-title" x="16" y="23">jars</text>
+    <text class="card-subtitle" x="16" y="52">expense budget bucket</text>
+    <text class="field" x="16" y="74"><tspan class="pk">PK</tspan> id</text>
+    <text class="field" x="16" y="92"><tspan class="fk">FK</tspan> user_id</text>
+    <text class="field" x="16" y="110">balance</text>
+  </g>
+
+  <g transform="translate(770,1170)">
+    <rect class="card" x="0" y="0" width="240" height="112" />
+    <rect class="card-head" x="0" y="0" width="240" height="36" />
+    <text class="card-title" x="16" y="23">categories</text>
+    <text class="card-subtitle" x="16" y="52">classification</text>
+    <text class="field" x="16" y="74"><tspan class="pk">PK</tspan> id</text>
+    <text class="field" x="16" y="92"><tspan class="fk">FK</tspan> owner_user_id</text>
+    <text class="field" x="16" y="110">name</text>
+  </g>
+
+  <g transform="translate(380,1220)">
+    <rect class="card" x="0" y="0" width="320" height="172" />
+    <rect class="card-head" x="0" y="0" width="320" height="38" />
+    <text class="card-title" x="16" y="24">transactions</text>
+    <text class="card-subtitle" x="16" y="56">confirmed income / expense</text>
+    <text class="field" x="16" y="80"><tspan class="pk">PK</tspan> id</text>
+    <text class="field" x="16" y="98"><tspan class="fk">FK</tspan> user_id</text>
+    <text class="field" x="16" y="116"><tspan class="fk">FK</tspan> financial_account_id</text>
+    <text class="field" x="16" y="134"><tspan class="fk">FK</tspan> jar_id / category_id</text>
+    <text class="field" x="16" y="152">type</text>
+    <text class="field" x="16" y="170">transaction_date</text>
+  </g>
+
+  <g transform="translate(70,1260)">
+    <rect class="card" x="0" y="0" width="280" height="132" />
+    <rect class="card-head" x="0" y="0" width="280" height="36" />
+    <text class="card-title" x="16" y="23">import_jobs</text>
+    <text class="card-subtitle" x="16" y="52">statement import batch</text>
+    <text class="field" x="16" y="74"><tspan class="pk">PK</tspan> id</text>
+    <text class="field" x="16" y="92"><tspan class="fk">FK</tspan> user_id</text>
+    <text class="field" x="16" y="110"><tspan class="fk">FK</tspan> financial_account_id</text>
+  </g>
+
+  <g transform="translate(380,1460)">
+    <rect class="card" x="0" y="0" width="360" height="152" />
+    <rect class="card-head" x="0" y="0" width="360" height="38" />
+    <text class="card-title" x="16" y="24">import_transaction_drafts</text>
+    <text class="card-subtitle" x="16" y="56">rows awaiting user review</text>
+    <text class="field" x="16" y="80"><tspan class="pk">PK</tspan> id</text>
+    <text class="field" x="16" y="98"><tspan class="fk">FK</tspan> import_job_id</text>
+    <text class="field" x="16" y="116"><tspan class="fk">FK</tspan> suggested_category_id</text>
+    <text class="field" x="16" y="134"><tspan class="fk">FK</tspan> suggested_jar_id</text>
+    <text class="field" x="16" y="152">row_index</text>
+  </g>
+
+  <!-- Panel 3 edges -->
+  <path class="edge" d="M350 1074 H366 V1306 H380" />
+  <text class="cardinality" x="358" y="1064">1</text>
+  <text class="cardinality" x="370" y="1298">N</text>
+  <rect class="edge-label-box" x="318" y="1180" width="62" height="20" />
+  <text class="edge-label" x="332" y="1194">records</text>
+
+  <path class="edge" d="M540 1142 V1220" />
+  <text class="cardinality" x="550" y="1156">1</text>
+  <text class="cardinality" x="550" y="1212">N</text>
+  <rect class="edge-label-box" x="497" y="1174" width="86" height="20" />
+  <text class="edge-label" x="509" y="1188">pays_from</text>
+
+  <path class="edge optional" d="M770 1046 H732 V1306 H700" />
+  <text class="cardinality" x="742" y="1036">0..1</text>
+  <text class="cardinality" x="710" y="1298">N</text>
+  <rect class="edge-label-box" x="714" y="1180" width="64" height="20" />
+  <text class="edge-label" x="729" y="1194">budgets</text>
+
+  <path class="edge optional" d="M770 1226 H732 V1342 H700" />
+  <text class="cardinality" x="742" y="1216">0..1</text>
+  <text class="cardinality" x="710" y="1334">N</text>
+  <rect class="edge-label-box" x="704" y="1275" width="72" height="20" />
+  <text class="edge-label" x="716" y="1289">classifies</text>
+
+  <path class="edge" d="M210 1144 V1260" />
+  <text class="cardinality" x="220" y="1158">1</text>
+  <text class="cardinality" x="220" y="1252">N</text>
+  <rect class="edge-label-box" x="176" y="1194" width="62" height="20" />
+  <text class="edge-label" x="191" y="1208">uploads</text>
+
+  <path class="edge" d="M390 1062 H362 V1326 H350" />
+  <text class="cardinality" x="368" y="1052">1</text>
+  <text class="cardinality" x="358" y="1318">N</text>
+  <rect class="edge-label-box" x="286" y="1188" width="74" height="20" />
+  <text class="edge-label" x="296" y="1202">belongs_to</text>
+
+  <path class="edge" d="M350 1326 H380 V1536" />
+  <text class="cardinality" x="360" y="1316">1</text>
+  <text class="cardinality" x="390" y="1528">N</text>
+  <rect class="edge-label-box" x="356" y="1420" width="54" height="20" />
+  <text class="edge-label" x="371" y="1434">parses</text>
+
+  <path class="edge optional" d="M350 1294 H380" />
+  <text class="cardinality" x="354" y="1282">0..1</text>
+  <text class="cardinality" x="370" y="1312">N</text>
+  <rect class="edge-label-box" x="314" y="1268" width="60" height="20" />
+  <text class="edge-label" x="322" y="1282">confirms</text>
+
+  <path class="edge optional" d="M890 1226 H822 V1536 H740" />
+  <text class="cardinality" x="832" y="1216">0..1</text>
+  <text class="cardinality" x="748" y="1528">N</text>
+  <rect class="edge-label-box" x="784" y="1440" width="74" height="20" />
+  <text class="edge-label" x="793" y="1454">suggest_cat</text>
+
+  <path class="edge optional" d="M890 1046 H822 V1510 H740" />
+  <text class="cardinality" x="832" y="1036">0..1</text>
+  <text class="cardinality" x="748" y="1502">N</text>
+  <rect class="edge-label-box" x="788" y="1288" width="70" height="20" />
+  <text class="edge-label" x="799" y="1302">suggest_jar</text>
+
+  <!-- Panel 4 cards -->
+  <g transform="translate(1180,980)">
+    <rect class="card" x="0" y="0" width="280" height="144" />
+    <rect class="card-head" x="0" y="0" width="280" height="38" />
+    <text class="card-title" x="16" y="24">accounts</text>
+    <text class="card-subtitle" x="16" y="56">owner of planning objects</text>
+    <text class="field" x="16" y="80"><tspan class="pk">PK</tspan> id</text>
+    <text class="field" x="16" y="98">status</text>
+    <text class="field" x="16" y="116">preferred_currency</text>
+    <text class="field" x="16" y="134">created_at</text>
+  </g>
+
+  <g transform="translate(1510,980)">
+    <rect class="card" x="0" y="0" width="250" height="132" />
+    <rect class="card-head" x="0" y="0" width="250" height="36" />
+    <text class="card-title" x="16" y="23">jars</text>
+    <text class="card-subtitle" x="16" y="52">limits and savings link</text>
+    <text class="field" x="16" y="74"><tspan class="pk">PK</tspan> id</text>
+    <text class="field" x="16" y="92"><tspan class="fk">FK</tspan> user_id</text>
+    <text class="field" x="16" y="110">balance</text>
+  </g>
+
+  <g transform="translate(1820,980)">
+    <rect class="card" x="0" y="0" width="240" height="112" />
+    <rect class="card-head" x="0" y="0" width="240" height="36" />
+    <text class="card-title" x="16" y="23">categories</text>
+    <text class="card-subtitle" x="16" y="52">limit or reminder tag</text>
+    <text class="field" x="16" y="74"><tspan class="pk">PK</tspan> id</text>
+    <text class="field" x="16" y="92"><tspan class="fk">FK</tspan> owner_user_id</text>
+    <text class="field" x="16" y="110">name</text>
+  </g>
+
+  <g transform="translate(1500,1180)">
+    <rect class="card" x="0" y="0" width="280" height="122" />
+    <rect class="card-head" x="0" y="0" width="280" height="36" />
+    <text class="card-title" x="16" y="23">spending_limits</text>
+    <text class="card-subtitle" x="16" y="52">jar or category scoped</text>
+    <text class="field" x="16" y="74"><tspan class="pk">PK</tspan> id</text>
+    <text class="field" x="16" y="92"><tspan class="fk">FK</tspan> user_id / jar_id / category_id</text>
+    <text class="field" x="16" y="110">limit_amount</text>
+  </g>
+
+  <g transform="translate(1180,1180)">
+    <rect class="card" x="0" y="0" width="250" height="122" />
+    <rect class="card-head" x="0" y="0" width="250" height="36" />
+    <text class="card-title" x="16" y="23">goals</text>
+    <text class="card-subtitle" x="16" y="52">saving goal header</text>
+    <text class="field" x="16" y="74"><tspan class="pk">PK</tspan> id</text>
+    <text class="field" x="16" y="92"><tspan class="fk">FK</tspan> user_id / linked_jar_id</text>
+    <text class="field" x="16" y="110">target_amount</text>
+  </g>
+
+  <g transform="translate(1820,1180)">
+    <rect class="card" x="0" y="0" width="250" height="122" />
+    <rect class="card-head" x="0" y="0" width="250" height="36" />
+    <text class="card-title" x="16" y="23">reminders</text>
+    <text class="card-subtitle" x="16" y="52">scheduled bill reminders</text>
+    <text class="field" x="16" y="74"><tspan class="pk">PK</tspan> id</text>
+    <text class="field" x="16" y="92"><tspan class="fk">FK</tspan> user_id / category_id</text>
+    <text class="field" x="16" y="110">next_due_date</text>
+  </g>
+
+  <g transform="translate(1180,1360)">
+    <rect class="card" x="0" y="0" width="240" height="102" />
+    <rect class="card-head" x="0" y="0" width="240" height="36" />
+    <text class="card-title" x="16" y="23">broadcasts</text>
+    <text class="card-subtitle" x="16" y="52">admin fan-out message</text>
+    <text class="field" x="16" y="74"><tspan class="pk">PK</tspan> id</text>
+    <text class="field" x="16" y="92"><tspan class="fk">FK</tspan> created_by_admin_id</text>
+  </g>
+
+  <g transform="translate(1490,1350)">
+    <rect class="card" x="0" y="0" width="300" height="152" />
+    <rect class="card-head" x="0" y="0" width="300" height="38" />
+    <text class="card-title" x="16" y="24">goal_contributions</text>
+    <text class="card-subtitle" x="16" y="56">each transfer into a goal</text>
+    <text class="field" x="16" y="80"><tspan class="pk">PK</tspan> id</text>
+    <text class="field" x="16" y="98"><tspan class="fk">FK</tspan> goal_id / user_id</text>
+    <text class="field" x="16" y="116"><tspan class="fk">FK</tspan> source_jar_id</text>
+    <text class="field" x="16" y="134"><tspan class="fk">FK</tspan> source_financial_account_id</text>
+    <text class="field" x="16" y="152">amount</text>
+  </g>
+
+  <g transform="translate(1810,1350)">
+    <rect class="card" x="0" y="0" width="280" height="132" />
+    <rect class="card-head" x="0" y="0" width="280" height="36" />
+    <text class="card-title" x="16" y="23">notifications</text>
+    <text class="card-subtitle" x="16" y="52">user inbox</text>
+    <text class="field" x="16" y="74"><tspan class="pk">PK</tspan> id</text>
+    <text class="field" x="16" y="92"><tspan class="fk">FK</tspan> user_id / broadcast_id</text>
+    <text class="field" x="16" y="110">type</text>
+    <text class="field" x="16" y="128">is_read</text>
+  </g>
+
+  <g transform="translate(1180,1510)">
+    <rect class="card" x="0" y="0" width="300" height="142" />
+    <rect class="card-head" x="0" y="0" width="300" height="38" />
+    <text class="card-title" x="16" y="24">financial_accounts</text>
+    <text class="card-subtitle" x="16" y="56">optional goal funding source</text>
+    <text class="field" x="16" y="80"><tspan class="pk">PK</tspan> id</text>
+    <text class="field" x="16" y="98"><tspan class="fk">FK</tspan> user_id</text>
+    <text class="field" x="16" y="116">account_type</text>
+    <text class="field" x="16" y="134">current_balance</text>
+  </g>
+
+  <!-- Panel 4 edges -->
+  <path class="edge" d="M1460 1052 H1490 V1242 H1500" />
+  <text class="cardinality" x="1470" y="1042">1</text>
+  <text class="cardinality" x="1480" y="1234">N</text>
+  <rect class="edge-label-box" x="1448" y="1140" width="42" height="20" />
+  <text class="edge-label" x="1463" y="1154">sets</text>
+
+  <path class="edge optional" d="M1635 1112 V1180" />
+  <text class="cardinality" x="1644" y="1126">0..1</text>
+  <text class="cardinality" x="1644" y="1172">N</text>
+  <rect class="edge-label-box" x="1588" y="1140" width="82" height="20" />
+  <text class="edge-label" x="1598" y="1154">target_jar</text>
+
+  <path class="edge optional" d="M1820 1036 H1768 V1242 H1780" />
+  <text class="cardinality" x="1776" y="1026">0..1</text>
+  <text class="cardinality" x="1766" y="1234">N</text>
+  <rect class="edge-label-box" x="1710" y="1142" width="58" height="20" />
+  <text class="edge-label" x="1721" y="1156">target_cat</text>
+
+  <path class="edge" d="M1305 1124 V1180" />
+  <text class="cardinality" x="1315" y="1138">1</text>
+  <text class="cardinality" x="1315" y="1172">N</text>
+  <rect class="edge-label-box" x="1278" y="1144" width="42" height="20" />
+  <text class="edge-label" x="1293" y="1158">sets</text>
+
+  <path class="edge optional" d="M1510 1046 H1468 V1242 H1430" />
+  <text class="cardinality" x="1478" y="1036">0..1</text>
+  <text class="cardinality" x="1438" y="1234">N</text>
+  <rect class="edge-label-box" x="1450" y="1138" width="44" height="20" />
+  <text class="edge-label" x="1462" y="1152">links</text>
+
+  <path class="edge" d="M1460 1078 H1762 V1242 H1820" />
+  <text class="cardinality" x="1470" y="1068">1</text>
+  <text class="cardinality" x="1808" y="1234">N</text>
+  <rect class="edge-label-box" x="1732" y="1138" width="58" height="20" />
+  <text class="edge-label" x="1745" y="1152">creates</text>
+
+  <path class="edge optional" d="M1945 1092 V1180" />
+  <text class="cardinality" x="1955" y="1106">0..1</text>
+  <text class="cardinality" x="1955" y="1172">N</text>
+  <rect class="edge-label-box" x="1917" y="1138" width="36" height="20" />
+  <text class="edge-label" x="1929" y="1152">tags</text>
+
+  <path class="edge" d="M1300 1124 V1360" />
+  <text class="cardinality" x="1310" y="1138">1</text>
+  <text class="cardinality" x="1310" y="1352">N</text>
+  <rect class="edge-label-box" x="1266" y="1240" width="58" height="20" />
+  <text class="edge-label" x="1279" y="1254">creates</text>
+
+  <path class="edge" d="M1420 1411 H1810" />
+  <text class="cardinality" x="1430" y="1401">1</text>
+  <text class="cardinality" x="1798" y="1401">N</text>
+  <rect class="edge-label-box" x="1602" y="1418" width="62" height="20" />
+  <text class="edge-label" x="1615" y="1432">fans_out</text>
+
+  <path class="edge" d="M1460 1096 H1752 V1416 H1810" />
+  <text class="cardinality" x="1470" y="1086">1</text>
+  <text class="cardinality" x="1798" y="1408">N</text>
+  <rect class="edge-label-box" x="1718" y="1302" width="62" height="20" />
+  <text class="edge-label" x="1729" y="1316">receives</text>
+
+  <path class="edge" d="M1430 1242 V1426 H1490" />
+  <text class="cardinality" x="1440" y="1256">1</text>
+  <text class="cardinality" x="1478" y="1418">N</text>
+  <rect class="edge-label-box" x="1398" y="1330" width="60" height="20" />
+  <text class="edge-label" x="1410" y="1344">receives</text>
+
+  <path class="edge" d="M1460 1100 H1480 V1426 H1490" />
+  <text class="cardinality" x="1470" y="1090">1</text>
+  <text class="cardinality" x="1470" y="1418">N</text>
+  <rect class="edge-label-box" x="1438" y="1260" width="50" height="20" />
+  <text class="edge-label" x="1453" y="1274">makes</text>
+
+  <path class="edge optional" d="M1635 1112 V1350" />
+  <text class="cardinality" x="1644" y="1126">0..1</text>
+  <text class="cardinality" x="1644" y="1342">N</text>
+  <rect class="edge-label-box" x="1587" y="1228" width="82" height="20" />
+  <text class="edge-label" x="1598" y="1242">source_jar</text>
+
+  <path class="edge optional" d="M1480 1581 H1490" />
+  <text class="cardinality" x="1432" y="1569">0..1</text>
+  <text class="cardinality" x="1498" y="1569">N</text>
+  <rect class="edge-label-box" x="1368" y="1588" width="108" height="20" />
+  <text class="edge-label" x="1379" y="1602">source_account</text>
+
+  <text class="footer" x="40" y="1820">
+    Suggested source format for future edits: Graphviz DOT with orthogonal routing, then export to SVG for docs.
+  </text>
+</svg>
