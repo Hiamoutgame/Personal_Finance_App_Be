@@ -14,4 +14,5 @@ public class Role: BaseEntity<short>, IAudictableEntity
     
     public DateTimeOffset CreatedAt { get; set; }
     public DateTimeOffset? UpdatedAt { get; set; }
+    public DateTimeOffset? ReadAt { get; set; }
 }
