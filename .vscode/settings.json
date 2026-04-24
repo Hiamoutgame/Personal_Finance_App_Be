@@ -12,5 +12,8 @@
         "statusBar.noFolderBackground": "#4C0A64",
         "statusBar.noFolderForeground": "#FDFAFE"
     },
-    "windowColors.baseColor": "#7a10a0"
+    "windowColors.baseColor": "#7a10a0",
+    "conventionalCommits.scopes": [
+        "add new doc about sql and add some thing with overview"
+    ]
 }
