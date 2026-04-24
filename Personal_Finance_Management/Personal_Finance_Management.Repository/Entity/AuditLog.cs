@@ -12,11 +12,11 @@ public class AuditLog : BaseEntity<Guid>, IAudictableEntity
     public string? IpAddress { get; set; }
 
     // Relationship: 1 AuditLog thuộc về 1 Account (Actor)
-    // Map với cột actor_account_id trong database
+  
     public Guid ActorAccountId { get; set; } 
-    public virtual Account Account { get; set; } = null!;
+    public Account Account { get; set; }
 
-    // Thực thi từ IAuditableEntity
+ 
     public DateTimeOffset CreatedAt { get; set; }
     public DateTimeOffset? UpdatedAt { get; set; }
 }
