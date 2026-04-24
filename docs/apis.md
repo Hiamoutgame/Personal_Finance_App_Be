@@ -65,6 +65,7 @@ Bảng dưới đây dùng để kiểm tra xem `apis.md` cũ có thiếu core A
 | Auth user | Register, login, refresh, logout | Có | Giữ lại, rút gọn payload |
 | Auth admin | Admin login | Có | Giữ lại, rút gọn payload |
 | Profile + financial setup | Xem/cập nhật profile, onboarding summary, budgeting settings | Chưa rõ phần financial setup summary | Bổ sung `GET /users/me/setup` |
+| Financial accounts | CRUD nguồn tiền/tài khoản liên kết, bootstrap cash account | Thiếu API riêng dù DB có `financial_accounts` | Bổ sung `GET/POST/PATCH/DELETE /financial-accounts` |
 | Onboarding | Submit onboarding, nhận jar/category recommendation | Có | Giữ lại, request/response gọn hơn |
 | Category user | Get default/custom, CRUD custom category | Có | Giữ lại |
 | Jar CRUD | Create, edit, delete, view jars | Thiếu create/edit/delete jar riêng | Bổ sung `POST/PATCH/DELETE /jars` |
@@ -95,6 +96,7 @@ Kết luận coverage:
   - `Admin category list`
   - `Admin broadcast history`
   - `Financial setup summary cho user`
+  - `Financial accounts CRUD`
 
 ## 3. Conventions Chung
 
@@ -158,7 +160,7 @@ Các API list dùng format:
 - AI advice cho user
 - Goal saving plan generator
 - Export transaction history
-- Bank link
+- Bank link flow đầy đủ
 - Shared jar
 - Chatbot session/message
 
@@ -166,6 +168,7 @@ Lý do:
 
 - các mục trên đang nằm ở `scale` hoặc `optional` trong `user story.md`;
 - tài liệu này được chốt như bản mô tả chính cho **core 1 tháng**.
+- core MVP vẫn có `financial_accounts` để quản lý nguồn tiền thủ công và làm điểm gắn cho transaction/import; phần chưa mô tả chi tiết chỉ là luồng liên kết ngân hàng end-to-end với provider bên ngoài.
 
 ## 5. API Contracts Theo Nhóm Flow
 
@@ -204,6 +207,7 @@ Lý do:
 
 - `409 Conflict` nếu username hoặc email đã tồn tại
 - password hash dùng `BCrypt`
+- backend map `firstName` + `lastName` thành `accounts.full_name`
 
 ### `POST /api/v1/auth/login`
 
@@ -317,7 +321,7 @@ Lý do:
 - tự động ghi audit log
 - `403 Forbidden` nếu không phải role admin
 
-## P1 — Onboarding, Profile, Category
+## P1 — Onboarding, Profile, Financial Accounts, Category
 
 ### `GET /api/v1/users/me`
 
@@ -379,11 +383,129 @@ Lý do:
   "isOnboardingCompleted": true,
   "monthlyIncome": 15000000,
   "budgetMethod": "SixJars",
+  "financialAccountCount": 2,
+  "defaultFinancialAccountId": "guid | null",
   "jarCount": 6,
   "limitCount": 2,
   "activeGoalCount": 1
 }
 ```
+
+### `GET /api/v1/financial-accounts`
+
+- **Auth**: Bearer
+- **Mục đích**: lấy danh sách nguồn tiền user đang theo dõi, bao gồm tiền mặt thủ công và tài khoản liên kết nếu có
+
+**Response `200 OK`**
+
+```json
+{
+  "data": [
+    {
+      "id": "guid",
+      "name": "Tiền mặt",
+      "accountType": "Cash",
+      "connectionMode": "Manual",
+      "providerName": null,
+      "maskedAccountNumber": null,
+      "currency": "VND",
+      "currentBalance": 3000000,
+      "availableBalance": null,
+      "balanceAsOf": "ISO8601 | null",
+      "syncStatus": "NeverSynced",
+      "isDefault": true,
+      "isActive": true
+    }
+  ]
+}
+```
+
+### `POST /api/v1/financial-accounts`
+
+- **Auth**: Bearer
+- **Mục đích**: tạo nguồn tiền thủ công, ví dụ tiền mặt hoặc một tài khoản user muốn tự theo dõi
+
+**Request**
+
+```json
+{
+  "name": "Tiền mặt",
+  "accountType": "Cash",
+  "currentBalance": 3000000,
+  "currency": "VND",
+  "isDefault": true
+}
+```
+
+**Response `201 Created`**
+
+```json
+{
+  "id": "guid",
+  "name": "Tiền mặt",
+  "accountType": "Cash",
+  "connectionMode": "Manual",
+  "currentBalance": 3000000,
+  "currency": "VND",
+  "isDefault": true,
+  "isActive": true
+}
+```
+
+**Notes**
+
+- API này chỉ tạo record `financial_accounts` ở `connectionMode = Manual`.
+- Record `LinkedApi` được tạo bởi flow bank-link/provider ở phase sau.
+- `financial_accounts` là nguồn tiền để theo dõi, không phải ví do FinJar phát hành.
+
+### `PATCH /api/v1/financial-accounts/{id}`
+
+- **Auth**: Bearer
+
+**Request**
+
+```json
+{
+  "name": "Tiền mặt chính",
+  "currentBalance": 3500000,
+  "isDefault": true
+}
+```
+
+**Response `200 OK`**
+
+```json
+{
+  "id": "guid",
+  "name": "Tiền mặt chính",
+  "currentBalance": 3500000,
+  "isDefault": true,
+  "updatedAt": "ISO8601"
+}
+```
+
+**Notes**
+
+- Chỉ cho user cập nhật nguồn tiền thuộc sở hữu của chính họ.
+- Với `connectionMode = LinkedApi`, backend có thể giới hạn field được sửa thủ công để tránh lệch dữ liệu sync.
+
+### `DELETE /api/v1/financial-accounts/{id}`
+
+- **Auth**: Bearer
+- **Mục đích**: ngưng theo dõi một nguồn tiền
+
+**Response `200 OK`**
+
+```json
+{
+  "message": "Financial account deactivated"
+}
+```
+
+**Notes**
+
+- Nên map thành `is_active = false`, không hard delete nếu đã có transaction/import liên quan.
+- `409 Conflict` nếu đây là nguồn tiền duy nhất hoặc đang bị ràng buộc bởi nghiệp vụ chưa xử lý được.
 
 ### `POST /api/v1/users/onboarding`
 
@@ -561,14 +683,13 @@ Lý do:
 ### `POST /api/v1/jars/setup`
 
 - **Auth**: Bearer
-- **Mục đích**: tạo bộ hũ ban đầu sau onboarding
+- **Mục đích**: tạo bộ hũ ban đầu sau onboarding, chưa bắt buộc phân bổ số dư ngay
 
 **Request**
 
 ```json
 {
   "methodType": "SixJars",
-  "initialBalance": 15000000,
   "customJars": []
 }
 ```
@@ -583,7 +704,7 @@ Lý do:
       "id": "guid",
       "name": "Necessities",
       "percentage": 55,
-      "balance": 8250000
+      "balance": 0
     }
   ],
   "message": "Jars created successfully"
@@ -594,6 +715,7 @@ Lý do:
 
 - `409 Conflict` nếu user đã setup jars trước đó
 - nếu `methodType = Custom` thì tổng `percentage` của `customJars` phải bằng `100`
+- số dư gốc nằm ở `financial_accounts`; nếu user muốn phân bổ tiền vào hũ sau setup thì gọi `POST /api/v1/jars/allocate`
 
 ### `POST /api/v1/jars`
 
@@ -670,12 +792,13 @@ Lý do:
 ### `POST /api/v1/jars/allocate`
 
 - **Auth**: Bearer
-- **Mục đích**: phân bổ một khoản tiền vào các hũ theo tỷ lệ hiện tại
+- **Mục đích**: phân bổ ngân sách từ một nguồn tiền đang theo dõi vào các hũ theo tỷ lệ hiện tại
 
 **Request**
 
 ```json
 {
+  "sourceFinancialAccountId": "guid | null",
   "amount": 15000000,
   "note": "Lương tháng 4"
 }
@@ -686,6 +809,7 @@ Lý do:
 ```json
 {
   "allocationId": "guid",
+  "sourceFinancialAccountId": "guid | null",
   "totalAllocated": 15000000,
   "data": [
     {
@@ -698,10 +822,16 @@ Lý do:
 }
 ```
 
+**Notes**
+
+- `sourceFinancialAccountId` map vào `jar_allocations.source_financial_account_id`.
+- Field này chỉ giúp biết khoản phân bổ được quy chiếu từ nguồn tiền nào; FinJar không rút/chuyển tiền thật khỏi ngân hàng.
+- Nếu không gửi `sourceFinancialAccountId`, backend có thể dùng nguồn mặc định hoặc chỉ ghi nhận allocation không gắn nguồn cụ thể tùy rule nội bộ.
+
 ### `POST /api/v1/jars/transfer`
 
 - **Auth**: Bearer
-- **Mục đích**: chuyển phân bổ giữa các hũ
+- **Mục đích**: chuyển ngân sách nội bộ giữa các hũ
 
 **Request**
 
@@ -738,11 +868,12 @@ Lý do:
 
 - `422 Unprocessable Entity` nếu balance không đủ
 - xử lý atomic ở backend
+- thao tác này không gọi API ngân hàng và không làm phát sinh chuyển tiền thật
 
 ### `GET /api/v1/jars/transfers`
 
 - **Auth**: Bearer
-- **Mục đích**: xem lịch sử chuyển tiền giữa các hũ
+- **Mục đích**: xem lịch sử chuyển ngân sách nội bộ giữa các hũ
 
 **Query Params**
 
@@ -783,6 +914,7 @@ Lý do:
 
 - `page=1`
 - `pageSize=20`
+- `financialAccountId=guid`
 - `type=Income|Expense`
 - `jarId=guid`
 - `categoryId=guid`
@@ -803,6 +935,10 @@ Lý do:
       "amount": 55000,
       "note": "Cà phê sáng",
       "date": "ISO8601",
+      "financialAccount": {
+        "id": "guid",
+        "name": "Tiền mặt"
+      },
       "jar": {
         "id": "guid",
         "name": "Necessities"
@@ -831,6 +967,7 @@ Lý do:
 
 ```json
 {
+  "financialAccountId": "guid",
   "type": "Expense",
   "amount": 55000,
   "categoryId": "guid",
@@ -845,9 +982,11 @@ Lý do:
 ```json
 {
   "id": "guid",
+  "financialAccountId": "guid",
   "type": "Expense",
   "amount": 55000,
   "date": "ISO8601",
+  "financialAccountBalance": 2945000,
   "jarBalance": 8195000,
   "message": "Transaction created"
 }
@@ -855,10 +994,13 @@ Lý do:
 
 **Notes**
 
+- `financialAccountId` bắt buộc vì DB có `transactions.financial_account_id not null`.
+- `financialAccountId` là nguồn tiền phát sinh giao dịch, ví dụ `Tiền mặt`, `Vietcombank`, `MoMo`.
 - `jarId` bắt buộc cho `Expense`
 - `categoryId` bắt buộc cho `Expense`
 - nếu không gửi `date` thì backend dùng thời điểm hiện tại
-- `422 Unprocessable Entity` nếu balance của hũ không đủ
+- `422 Unprocessable Entity` nếu balance của hũ hoặc nguồn tiền không đủ theo rule nghiệp vụ
+- backend cập nhật số dư theo dữ liệu theo dõi trong app; không thực hiện chuyển tiền thật
 
 ### `PATCH /api/v1/transactions/{id}`
 
@@ -868,6 +1010,7 @@ Lý do:
 
 ```json
 {
+  "financialAccountId": "guid",
   "amount": 60000,
   "categoryId": "guid",
   "jarId": "guid",
@@ -882,10 +1025,15 @@ Lý do:
 {
   "id": "guid",
   "amount": 60000,
+  "financialAccountBalance": 2940000,
   "jarBalance": 8190000,
   "updatedAt": "ISO8601"
 }
 ```
+
+**Notes**
+
+- Nếu đổi `financialAccountId`, backend phải đảo tác động số dư ở nguồn cũ và áp dụng lại ở nguồn mới trong cùng transaction.
 
 ### `DELETE /api/v1/transactions/{id}`
 
@@ -908,6 +1056,7 @@ Lý do:
 **Fields**
 
 - `file`: CSV/XLS/XLSX/PDF, max 10MB
+- `financialAccountId`: required, nguồn tiền/tài khoản mà file sao kê thuộc về
 - `bankCode`: optional
 
 **Response `202 Accepted`**
@@ -915,11 +1064,18 @@ Lý do:
 ```json
 {
   "id": "guid",
+  "financialAccountId": "guid",
   "status": "Pending",
   "fileName": "sao_ke_04_2026.xlsx",
   "uploadedAt": "ISO8601"
 }
 ```
+
+**Notes**
+
+- `financialAccountId` map vào `import_jobs.financial_account_id`.
+- Các transaction được tạo sau khi confirm import sẽ kế thừa `financialAccountId` này.
+- `bankCode` chỉ hỗ trợ parser; khóa nghiệp vụ chính vẫn là `financialAccountId`.
 
 ### `GET /api/v1/imports/{id}`
 
@@ -931,6 +1087,7 @@ Lý do:
 ```json
 {
   "id": "guid",
+  "financialAccountId": "guid",
   "status": "Processing",
   "progress": 80,
   "parsedCount": 41,
@@ -950,6 +1107,7 @@ Lý do:
 ```json
 {
   "id": "guid",
+  "financialAccountId": "guid",
   "summary": {
     "totalRows": 43,
     "validRows": 41,
@@ -1004,6 +1162,11 @@ Lý do:
 }
 ```
 
+**Notes**
+
+- Request confirm không cần gửi lại `financialAccountId`; backend lấy từ `import_jobs`.
+- Backend phải kiểm tra import job thuộc đúng user hiện tại trước khi tạo transaction thật.
+
 ## P3 — Personal Dashboard
 
 ### `GET /api/v1/dashboard`
@@ -1023,10 +1186,20 @@ Lý do:
 {
   "balanceSummary": {
     "totalBalance": 15000000,
+    "allocatedBalance": 10000000,
+    "unallocatedBalance": 5000000,
     "totalIncome": 20000000,
     "totalExpense": 5000000,
     "netChange": 15000000
   },
+  "financialAccounts": [
+    {
+      "id": "guid",
+      "name": "Tiền mặt",
+      "currentBalance": 3000000,
+      "isDefault": true
+    }
+  ],
   "jarSummary": [
     {
       "jarId": "guid",
@@ -1162,7 +1335,7 @@ Lý do:
 
 **Query Params**
 
-- `type=SpendingAlert|GoalUpdate|System|Broadcast`
+- `type=SpendingAlert|GoalUpdate|Reminder|System|Broadcast`
 - `status=read|unread`
 - `page=1`
 - `pageSize=20`
@@ -1347,6 +1520,7 @@ Lý do:
 {
   "amount": 1000000,
   "sourceJarId": "guid | null",
+  "sourceFinancialAccountId": "guid | null",
   "note": "Tiết kiệm tuần này"
 }
 ```
@@ -1360,9 +1534,16 @@ Lý do:
   "newSavedAmount": 12250000,
   "newProgressPercentage": 49.0,
   "sourceJarBalance": 7250000,
+  "sourceFinancialAccountBalance": null,
   "isCompleted": false
 }
 ```
+
+**Notes**
+
+- Chỉ gửi một trong hai field: `sourceJarId` hoặc `sourceFinancialAccountId`.
+- `sourceFinancialAccountId` map vào `goal_contributions.source_financial_account_id`.
+- Đây là ghi nhận/phân loại nguồn đóng góp trong app, không phải lệnh chuyển tiền thật vào goal.
 
 ### `GET /api/v1/reminders`
 
@@ -1399,6 +1580,7 @@ Lý do:
   "dayOfMonth": 25,
   "startDate": "2026-04-25",
   "categoryId": "guid | null",
+  "notifyDaysBefore": 1,
   "note": "string"
 }
 ```
@@ -1427,6 +1609,8 @@ Lý do:
   "amount": 600000,
   "frequency": "Monthly",
   "dayOfMonth": 26,
+  "status": "Active",
+  "notifyDaysBefore": 1,
   "note": "string"
 }
 ```
@@ -1681,7 +1865,7 @@ Lý do:
 
 - `page=1`
 - `pageSize=20`
-- `status=Queued|Sent`
+- `status=Queued|Sent|Failed|Cancelled`
 
 **Response `200 OK`**
 

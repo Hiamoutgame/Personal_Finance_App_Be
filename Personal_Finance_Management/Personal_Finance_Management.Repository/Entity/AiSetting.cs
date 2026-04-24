@@ -2,7 +2,7 @@
 
 namespace Personal_Finance_Management.Repository.Entity;
 
-public class AiSetting : BaseEntity<Guid>
+public class AiSetting : BaseEntity<Guid>, IAudictableEntity
 {
     public Guid? UpdatedByAdminId { get; set; }
     public Account? UpdatedByAdmin { get; set; }
@@ -15,5 +15,7 @@ public class AiSetting : BaseEntity<Guid>
     public string? ApiKeyEncrypted { get; set; }
     public bool IsEnabled { get; set; }
 
-    public DateTimeOffset UpdatedAt { get; set; }
+    public DateTimeOffset? UpdatedAt { get; set; }
+    public DateTimeOffset CreatedAt { get; set; }
+
 }
