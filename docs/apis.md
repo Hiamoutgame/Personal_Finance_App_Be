@@ -211,7 +211,12 @@ Response `200 OK`
 }
 ```
 
-## P1 - Onboarding, Profile, Financial Accounts, Categories
+**Notes**
+
+- tự động ghi audit log
+- `403 Forbidden` nếu không phải role admin
+
+## P1 — Onboarding, Profile, Financial Accounts, Category
 
 ### `GET /api/v1/users/me`
 
@@ -268,12 +273,130 @@ Response `200 OK`
   "isOnboardingCompleted": true,
   "monthlyIncome": 15000000,
   "budgetMethod": "SixJars",
+  "financialAccountCount": 2,
+  "defaultFinancialAccountId": "guid | null",
   "jarCount": 6,
   "financialAccountCount": 1,
   "limitCount": 2,
   "activeGoalCount": 1
 }
 ```
+
+### `GET /api/v1/financial-accounts`
+
+- **Auth**: Bearer
+- **Mục đích**: lấy danh sách nguồn tiền user đang theo dõi, bao gồm tiền mặt thủ công và tài khoản liên kết nếu có
+
+**Response `200 OK`**
+
+```json
+{
+  "data": [
+    {
+      "id": "guid",
+      "name": "Tiền mặt",
+      "accountType": "Cash",
+      "connectionMode": "Manual",
+      "providerName": null,
+      "maskedAccountNumber": null,
+      "currency": "VND",
+      "currentBalance": 3000000,
+      "availableBalance": null,
+      "balanceAsOf": "ISO8601 | null",
+      "syncStatus": "NeverSynced",
+      "isDefault": true,
+      "isActive": true
+    }
+  ]
+}
+```
+
+### `POST /api/v1/financial-accounts`
+
+- **Auth**: Bearer
+- **Mục đích**: tạo nguồn tiền thủ công, ví dụ tiền mặt hoặc một tài khoản user muốn tự theo dõi
+
+**Request**
+
+```json
+{
+  "name": "Tiền mặt",
+  "accountType": "Cash",
+  "currentBalance": 3000000,
+  "currency": "VND",
+  "isDefault": true
+}
+```
+
+**Response `201 Created`**
+
+```json
+{
+  "id": "guid",
+  "name": "Tiền mặt",
+  "accountType": "Cash",
+  "connectionMode": "Manual",
+  "currentBalance": 3000000,
+  "currency": "VND",
+  "isDefault": true,
+  "isActive": true
+}
+```
+
+**Notes**
+
+- API này chỉ tạo record `financial_accounts` ở `connectionMode = Manual`.
+- Record `LinkedApi` được tạo bởi flow bank-link/provider ở phase sau.
+- `financial_accounts` là nguồn tiền để theo dõi, không phải ví do FinJar phát hành.
+
+### `PATCH /api/v1/financial-accounts/{id}`
+
+- **Auth**: Bearer
+
+**Request**
+
+```json
+{
+  "name": "Tiền mặt chính",
+  "currentBalance": 3500000,
+  "isDefault": true
+}
+```
+
+**Response `200 OK`**
+
+```json
+{
+  "id": "guid",
+  "name": "Tiền mặt chính",
+  "currentBalance": 3500000,
+  "isDefault": true,
+  "updatedAt": "ISO8601"
+}
+```
+
+**Notes**
+
+- Chỉ cho user cập nhật nguồn tiền thuộc sở hữu của chính họ.
+- Với `connectionMode = LinkedApi`, backend có thể giới hạn field được sửa thủ công để tránh lệch dữ liệu sync.
+
+### `DELETE /api/v1/financial-accounts/{id}`
+
+- **Auth**: Bearer
+- **Mục đích**: ngưng theo dõi một nguồn tiền
+
+**Response `200 OK`**
+
+```json
+{
+  "message": "Financial account deactivated"
+}
+```
+
+**Notes**
+
+- Nên map thành `is_active = false`, không hard delete nếu đã có transaction/import liên quan.
+- `409 Conflict` nếu đây là nguồn tiền duy nhất hoặc đang bị ràng buộc bởi nghiệp vụ chưa xử lý được.
 
 ### `POST /api/v1/users/onboarding`
 
@@ -552,7 +675,8 @@ Response `200 OK`
 
 ### `POST /api/v1/jars/setup`
 
-- Auth: Bearer
+- **Auth**: Bearer
+- **Mục đích**: tạo bộ hũ ban đầu sau onboarding, chưa bắt buộc phân bổ số dư ngay
 
 Request
 
@@ -575,11 +699,17 @@ Response `201 Created`
       "id": "guid",
       "name": "Necessities",
       "percentage": 55,
-      "balance": 8250000
+      "balance": 0
     }
   ]
 }
 ```
+
+**Notes**
+
+- `409 Conflict` nếu user đã setup jars trước đó
+- nếu `methodType = Custom` thì tổng `percentage` của `customJars` phải bằng `100`
+- số dư gốc nằm ở `financial_accounts`; nếu user muốn phân bổ tiền vào hũ sau setup thì gọi `POST /api/v1/jars/allocate`
 
 ### `POST /api/v1/jars`
 
@@ -650,12 +780,14 @@ Response `200 OK`
 
 ### `POST /api/v1/jars/allocate`
 
-- Auth: Bearer
+- **Auth**: Bearer
+- **Mục đích**: phân bổ ngân sách từ một nguồn tiền đang theo dõi vào các hũ theo tỷ lệ hiện tại
 
 Request
 
 ```json
 {
+  "sourceFinancialAccountId": "guid | null",
   "amount": 15000000,
   "sourceFinancialAccountId": "guid | null",
   "note": "Lương tháng 4"
@@ -667,14 +799,22 @@ Response `200 OK`
 ```json
 {
   "allocationId": "guid",
+  "sourceFinancialAccountId": "guid | null",
   "totalAllocated": 15000000,
   "affectedJarCount": 6
 }
 ```
 
+**Notes**
+
+- `sourceFinancialAccountId` map vào `jar_allocations.source_financial_account_id`.
+- Field này chỉ giúp biết khoản phân bổ được quy chiếu từ nguồn tiền nào; FinJar không rút/chuyển tiền thật khỏi ngân hàng.
+- Nếu không gửi `sourceFinancialAccountId`, backend có thể dùng nguồn mặc định hoặc chỉ ghi nhận allocation không gắn nguồn cụ thể tùy rule nội bộ.
+
 ### `POST /api/v1/jars/transfer`
 
-- Auth: Bearer
+- **Auth**: Bearer
+- **Mục đích**: chuyển ngân sách nội bộ giữa các hũ
 
 Request
 
@@ -807,6 +947,7 @@ Response `201 Created`
 ```json
 {
   "id": "guid",
+  "financialAccountId": "guid",
   "type": "Expense",
   "amount": 55000,
   "date": "ISO8601"
@@ -841,6 +982,10 @@ Response `200 OK`
 }
 ```
 
+**Notes**
+
+- Nếu đổi `financialAccountId`, backend phải đảo tác động số dư ở nguồn cũ và áp dụng lại ở nguồn mới trong cùng transaction.
+
 ### `DELETE /api/v1/transactions/{id}`
 
 - Auth: Bearer
@@ -869,10 +1014,17 @@ Response `202 Accepted`
 ```json
 {
   "id": "guid",
+  "financialAccountId": "guid",
   "status": "Pending",
   "fileName": "sao_ke_04_2026.xlsx"
 }
 ```
+
+**Notes**
+
+- `financialAccountId` map vào `import_jobs.financial_account_id`.
+- Các transaction được tạo sau khi confirm import sẽ kế thừa `financialAccountId` này.
+- `bankCode` chỉ hỗ trợ parser; khóa nghiệp vụ chính vẫn là `financialAccountId`.
 
 ### `GET /api/v1/imports/{id}`
 
@@ -883,6 +1035,7 @@ Response `200 OK`
 ```json
 {
   "id": "guid",
+  "financialAccountId": "guid",
   "status": "Processing",
   "progress": 80,
   "parsedCount": 41,
@@ -900,6 +1053,7 @@ Response `200 OK`
 ```json
 {
   "id": "guid",
+  "financialAccountId": "guid",
   "summary": {
     "totalRows": 43,
     "validRows": 41,
@@ -976,6 +1130,14 @@ Response `200 OK`
     "totalExpense": 5000000,
     "netChange": 15000000
   },
+  "financialAccounts": [
+    {
+      "id": "guid",
+      "name": "Tiền mặt",
+      "currentBalance": 3000000,
+      "isDefault": true
+    }
+  ],
   "jarSummary": [
     {
       "jarId": "guid",
@@ -1110,7 +1272,7 @@ Response `200 OK`
 
 Query Params
 
-- `type=SpendingAlert|GoalUpdate|System|Broadcast`
+- `type=SpendingAlert|GoalUpdate|Reminder|System|Broadcast`
 - `status=read|unread`
 - `page=1`
 - `pageSize=20`
@@ -1311,6 +1473,12 @@ Response `200 OK`
 }
 ```
 
+**Notes**
+
+- Chỉ gửi một trong hai field: `sourceJarId` hoặc `sourceFinancialAccountId`.
+- `sourceFinancialAccountId` map vào `goal_contributions.source_financial_account_id`.
+- Đây là ghi nhận/phân loại nguồn đóng góp trong app, không phải lệnh chuyển tiền thật vào goal.
+
 ### `GET /api/v1/reminders`
 
 - Auth: Bearer
@@ -1346,6 +1514,7 @@ Request
   "dayOfMonth": 25,
   "startDate": "2026-04-25",
   "categoryId": "guid | null",
+  "notifyDaysBefore": 1,
   "note": "string"
 }
 ```
@@ -1374,6 +1543,8 @@ Request
   "amount": 600000,
   "frequency": "Monthly",
   "dayOfMonth": 26,
+  "status": "Active",
+  "notifyDaysBefore": 1,
   "note": "string"
 }
 ```
@@ -1616,7 +1787,7 @@ Query Params
 
 - `page=1`
 - `pageSize=20`
-- `status=Queued|Sent`
+- `status=Queued|Sent|Failed|Cancelled`
 
 Response `200 OK`
 

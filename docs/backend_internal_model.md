@@ -55,7 +55,7 @@ Thiết kế nội bộ nên xoay quanh các hành động nghiệp vụ:
 - contribute vào goal;
 - import statement;
 - broadcast notification;
-- AI chat session.
+- AI settings.
 
 ### 2.4. Tiền tệ luôn dùng decimal
 
@@ -177,7 +177,7 @@ Frontend DTO
 
 ## 5.1. Base entity
 
-Các entity lưu DB nên có một base structure thống nhất:
+Phần lớn entity nghiệp vụ dùng UUID trong `finjar_schema.sql` có thể dùng base structure thống nhất:
 
 ```csharp
 public abstract class BaseEntity
@@ -185,17 +185,17 @@ public abstract class BaseEntity
     public Guid Id { get; set; }
     public DateTime CreatedAtUtc { get; set; }
     public DateTime? UpdatedAtUtc { get; set; }
-    public bool IsDeleted { get; set; }
 }
 ```
 
-Không phải mọi entity đều cần soft delete, nhưng đây là base hữu ích cho:
+Không phải mọi entity đều cần soft delete. Với phase 1 theo `finjar_schema.sql`, chỉ thêm trạng thái soft delete/active đúng các bảng có cột tương ứng, ví dụ:
 
 - transactions
 - categories
-- notifications
-- reminders
-- admin categories
+
+Các bảng còn lại dùng status hoặc `is_active` nếu schema đã có, không ép mọi entity phải có `IsDeleted`.
+
+Ngoại lệ như `roles.id` dùng `smallint` seed cố định thì không cần kế thừa base UUID này.
 
 ## 5.2. Auditable entity
 
@@ -237,16 +237,21 @@ Nếu team muốn đơn giản hơn ở phase đầu, có thể chưa implement 
 
 - `UserRole`: `User`, `Admin`, `SuperAdmin`
 - `AccountStatus`: `Active`, `Banned`
+- `FinancialAccountType`: `Cash`, `Bank`, `EWallet`, `Other`
+- `ConnectionMode`: `Manual`, `LinkedApi`
+- `SyncStatus`: `NeverSynced`, `Synced`, `Syncing`, `Error`, `Disconnected`
 - `BudgetMethodType`: `SixJars`, `Rule503020`, `Custom`, `Undecided`
 - `JarStatus`: `Active`, `Paused`, `Archived`
-- `TransactionType`: `Income`, `Expense`, `Transfer`
+- `TransactionType`: `Income`, `Expense`
+- `TransactionSourceType`: `Manual`, `Imported`, `OCR`, `Synced`, `System`
 - `LimitTargetType`: `Jar`, `Category`
 - `LimitPeriodType`: `Daily`, `Monthly`
-- `NotificationType`: `SpendingAlert`, `GoalUpdate`, `System`, `Broadcast`
+- `NotificationType`: `SpendingAlert`, `GoalUpdate`, `Reminder`, `System`, `Broadcast`
 - `GoalStatus`: `Active`, `Completed`, `Cancelled`
 - `ReminderFrequency`: `Daily`, `Weekly`, `Monthly`, `Quarterly`, `Yearly`
+- `ReminderStatus`: `Active`, `Paused`, `Completed`, `Cancelled`
 - `ImportJobStatus`: `Pending`, `Processing`, `AwaitingReview`, `Completed`, `Failed`
-- `ChatContextType`: `General`, `SpendingAdvice`, `GoalPlanning`
+- `BroadcastStatus`: `Queued`, `Sent`, `Failed`, `Cancelled`
 
 ## 6. Aggregate và entity nội bộ
 
@@ -267,8 +272,6 @@ Phần này là lõi của internal model. Không nhất thiết aggregate nào 
 - `Username`
 - `Email`
 - `PasswordHash`
-- `FirstName`
-- `LastName`
 - `FullName`
 - `Phone`
 - `AvatarUrl`
@@ -281,12 +284,13 @@ Phần này là lõi của internal model. Không nhất thiết aggregate nào 
 **Quan hệ**
 
 - 1 user có nhiều categories custom
+- 1 user có nhiều financial accounts
 - 1 user có nhiều jars
 - 1 user có nhiều transactions
+- 1 user có nhiều import jobs
 - 1 user có nhiều goals
 - 1 user có nhiều notifications
 - 1 user có nhiều reminders
-- 1 user có nhiều chat sessions
 
 ### B. `RefreshTokenSession`
 
@@ -305,6 +309,8 @@ Phần này là lõi của internal model. Không nhất thiết aggregate nào 
 - `ReplacedByTokenHash`
 - `CreatedByIp`
 - `RevokedByIp`
+- `UserAgent`
+- `CreatedAtUtc`
 
 ### C. `AdminAccount`
 
@@ -327,20 +333,71 @@ Nếu dùng chung, vẫn nên có policy tách rõ cho admin endpoints.
 - `UserId`
 - `MonthlyIncome`
 - `OccupationType`
-- `FinancialGoalTypes` hoặc bảng con
+- `FinancialGoalTypes`
 - `BudgetMethodPreference`
 - `AgeRange`
-- `SpendingChallenges` hoặc bảng con
+- `SpendingChallenges`
 - `RecommendedMethod`
 - `CompletedAtUtc`
 
 **Ghi chú**
 
-- Với các trường nhiều giá trị như `FinancialGoalTypes`, `SpendingChallenges`, có thể lưu:
-  - bảng join riêng; hoặc
-  - PostgreSQL array/jsonb nếu team muốn tối ưu tốc độ triển khai.
+- Theo `finjar_schema.sql`, các trường nhiều giá trị như `FinancialGoalTypes`, `SpendingChallenges` lưu bằng PostgreSQL `TEXT[]` trong phase 1.
 
-## 6.3. Category aggregate
+## 6.3. Financial Account aggregate
+
+### `FinancialAccount`
+
+**Vai trò**
+
+- đại diện cho nguồn tiền thật mà user đang theo dõi;
+- có thể là tiền mặt thủ công, tài khoản ngân hàng liên kết, ví điện tử hoặc nguồn khác;
+- là điểm gắn bắt buộc cho transaction và import job.
+
+**Field chính**
+
+- `Id`
+- `UserId`
+- `Name`
+- `AccountType`
+- `ConnectionMode`
+- `ProviderCode`
+- `ProviderName`
+- `ExternalAccountId`
+- `ExternalAccountRef`
+- `MaskedAccountNumber`
+- `AccountHolderName`
+- `Currency`
+- `CurrentBalance`
+- `AvailableBalance`
+- `BalanceAsOfUtc`
+- `SyncStatus`
+- `LastSyncedAtUtc`
+- `LastSyncError`
+- `AccessTokenRef`
+- `RefreshTokenRef`
+- `TokenExpiresAtUtc`
+- `ConsentExpiresAtUtc`
+- `LastSyncCursor`
+- `WebhookSubscriptionId`
+- `IsDefault`
+- `IsActive`
+
+**Rule nội bộ**
+
+- `CurrentBalance >= 0`
+- `Manual` account có thể không có provider metadata
+- `LinkedApi` account phải có metadata provider đủ để sync/đối chiếu
+- token thật không trả ra API và không lưu raw nếu tránh được; chỉ lưu encrypted/ref
+- mọi thao tác theo `FinancialAccountId` phải kiểm tra ownership theo `UserId`
+
+**Ghi chú non-custodial**
+
+- `FinancialAccount` không phải ví do FinJar phát hành.
+- App chỉ lưu dữ liệu theo dõi/đồng bộ/đối chiếu; không giữ tiền và không tự thực hiện chuyển khoản ngân hàng.
+- Khi user phân bổ tiền vào jar, tiền thật vẫn ở nguồn tiền gốc; backend chỉ cập nhật lớp ngân sách nội bộ.
+
+## 6.4. Category aggregate
 
 ### `Category`
 
@@ -368,7 +425,7 @@ Nếu dùng chung, vẫn nên có policy tách rõ cho admin endpoints.
 - category custom chỉ được sửa/xóa bởi owner
 - default category soft delete để giữ lịch sử cũ
 
-## 6.4. Budget Setup aggregate
+## 6.5. Budget Setup aggregate
 
 ### A. `JarSetupProfile`
 
@@ -382,8 +439,13 @@ Nếu dùng chung, vẫn nên có policy tách rõ cho admin endpoints.
 - `Id`
 - `UserId`
 - `MethodType`
-- `InitialBalance`
 - `CreatedAtUtc`
+- `UpdatedAtUtc`
+
+**Ghi chú**
+
+- `jar_setups` không lưu `InitialBalance`; số dư gốc nằm ở `financial_accounts`.
+- Nếu user muốn phân bổ số dư vào hũ, backend tạo `JarAllocation` và `JarAllocationItem`.
 
 ### B. `Jar`
 
@@ -397,11 +459,10 @@ Nếu dùng chung, vẫn nên có policy tách rõ cho admin endpoints.
 
 - `Id`
 - `UserId`
-- `JarSetupProfileId`
+- `JarSetupProfileId` nullable
 - `Name`
 - `Percentage`
 - `Balance`
-- `AllocatedAmount`
 - `Currency`
 - `Color`
 - `Icon`
@@ -418,7 +479,7 @@ Nếu dùng chung, vẫn nên có policy tách rõ cho admin endpoints.
 
 **Vai trò**
 
-- lưu lịch sử chuyển tiền giữa các hũ;
+- lưu lịch sử chuyển ngân sách nội bộ giữa các hũ;
 - không thay thế cho `Transaction`, mà là record nghiệp vụ riêng.
 
 **Field chính**
@@ -431,21 +492,32 @@ Nếu dùng chung, vẫn nên có policy tách rõ cho admin endpoints.
 - `Note`
 - `CreatedAtUtc`
 
+**Rule nội bộ**
+
+- `Amount > 0`
+- `FromJarId != ToJarId`
+- chỉ cập nhật `Jar.Balance` hai bên; không gọi API ngân hàng và không tạo transaction thu/chi.
+
 ### D. `JarAllocation`
 
 **Vai trò**
 
-- lưu sự kiện phân bổ thu nhập vào các hũ;
+- lưu sự kiện phân bổ ngân sách vào các hũ;
 - giúp truy vết nguồn allocation.
 
 **Field chính**
 
 - `Id`
 - `UserId`
+- `SourceFinancialAccountId` nullable
 - `TotalAmount`
-- `IncomeTransactionId` nullable
 - `Note`
 - `CreatedAtUtc`
+
+**Ghi chú**
+
+- `SourceFinancialAccountId` map vào `jar_allocations.source_financial_account_id`.
+- Field này chỉ quy chiếu allocation đến nguồn tiền đang theo dõi, không đại diện cho lệnh rút/chuyển tiền thật.
 
 ### E. `JarAllocationItem`
 
@@ -457,7 +529,7 @@ Nếu dùng chung, vẫn nên có policy tách rõ cho admin endpoints.
 - `Amount`
 - `BalanceAfterAllocation`
 
-## 6.5. Transaction aggregate
+## 6.6. Transaction aggregate
 
 ### `Transaction`
 
@@ -470,14 +542,19 @@ Nếu dùng chung, vẫn nên có policy tách rõ cho admin endpoints.
 
 - `Id`
 - `UserId`
+- `FinancialAccountId`
+- `ImportJobId` nullable
 - `Type`
 - `Amount`
 - `JarId` nullable với income
-- `CategoryId`
+- `CategoryId` nullable
 - `Note`
+- `RawDescription`
 - `TransactionDateUtc`
+- `PostedAtUtc` nullable
 - `SourceType`
-- `SourceReferenceId`
+- `ExternalTransactionId` nullable
+- `RawPayloadJson` nullable
 - `IsDeleted`
 - `DeletedAtUtc`
 
@@ -486,14 +563,18 @@ Nếu dùng chung, vẫn nên có policy tách rõ cho admin endpoints.
 - `Manual`
 - `Imported`
 - `OCR`
+- `Synced`
 - `System`
 
 **Rule nội bộ**
 
+- mọi transaction phải có `FinancialAccountId`
+- `FinancialAccountId` là nguồn tiền phát sinh giao dịch, không phải ví nội bộ của FinJar
 - `Expense` bắt buộc có `JarId`
 - `Amount > 0`
 - xóa transaction là soft delete
-- update amount phải tính delta chứ không recalc toàn bộ
+- update amount/source account/jar phải tính delta để đảo tác động cũ và áp dụng tác động mới
+- `Transfer` giữa jar không nằm trong `TransactionType`; nó dùng `JarTransfer`
 
 ### Có cần bảng ledger không?
 
@@ -502,6 +583,7 @@ Có 2 hướng:
 **Hướng A: đơn giản cho phase đầu**
 
 - chỉ lưu `Jar.Balance`
+- lưu `FinancialAccount.CurrentBalance` như số dư theo dõi/snapshot của nguồn tiền
 - khi transfer/expense/contribution thì cập nhật trực tiếp balance
 - lưu lịch sử qua `Transaction`, `JarTransfer`, `GoalContribution`, `JarAllocation`
 
@@ -516,7 +598,7 @@ Khuyến nghị cho phase đầu:
 - dùng **Hướng A** để đội không bị quá tải;
 - nếu sau này hệ thống cần audit tiền tệ sâu hơn thì thêm ledger ở phase sau.
 
-## 6.6. Limits & Alerts aggregate
+## 6.7. Limits & Alerts aggregate
 
 ### A. `SpendingLimit`
 
@@ -563,6 +645,7 @@ Không nhất thiết phải persist ngay từ đầu, nhưng có thể có nế
 - `Body`
 - `IsRead`
 - `ReadAtUtc`
+- `BroadcastId` nullable
 - `MetadataJson`
 - `CreatedAtUtc`
 
@@ -574,7 +657,7 @@ Không nhất thiết phải persist ngay từ đầu, nhưng có thể có nế
 - `currentPercentage`
 - `reminderId`
 
-## 6.7. Goals aggregate
+## 6.8. Goals aggregate
 
 ### A. `FinancialGoal`
 
@@ -620,15 +703,19 @@ Các field derived có thể:
 - `UserId`
 - `Amount`
 - `SourceJarId` nullable
+- `SourceFinancialAccountId` nullable
 - `Note`
 - `CreatedAtUtc`
 
 **Rule nội bộ**
 
+- chỉ set một trong hai: `SourceJarId` hoặc `SourceFinancialAccountId`
 - nếu có `SourceJarId` thì phải trừ `Jar.Balance` atomic
+- nếu có `SourceFinancialAccountId` thì phải kiểm tra ownership; không mặc định trừ `FinancialAccount.CurrentBalance` trừ khi product chốt đây là giao dịch làm giảm số dư
 - sau contribution phải cập nhật lại `SavedAmount` và `GoalStatus`
+- contribution không đại diện cho lệnh chuyển tiền thật vào goal
 
-## 6.8. Reminder aggregate
+## 6.9. Reminder aggregate
 
 ### `RecurringReminder`
 
@@ -657,7 +744,7 @@ Các field derived có thể:
 - sinh notification khi gần đến hạn
 - update `NextDueDate` sau mỗi chu kỳ
 
-## 6.9. Import aggregate
+## 6.10. Import aggregate
 
 ### A. `ImportJob`
 
@@ -669,6 +756,7 @@ Các field derived có thể:
 
 - `Id`
 - `UserId`
+- `FinancialAccountId`
 - `FileName`
 - `OriginalContentType`
 - `StoredFilePath`
@@ -706,10 +794,12 @@ Các field derived có thể:
 
 **Rule nội bộ**
 
+- `FinancialAccountId` bắt buộc vì `import_jobs.financial_account_id` là `NOT NULL`
 - chỉ khi user confirm mới sinh `Transaction` thật
+- transaction sinh ra từ import kế thừa `FinancialAccountId` của import job
 - nếu confirm nhiều row thì insert trong 1 transaction
 
-## 6.10. Admin Operations aggregate
+## 6.11. Admin Operations aggregate
 
 ### A. `BroadcastNotification`
 
@@ -724,10 +814,13 @@ Các field derived có thể:
 - `Body`
 - `TargetAudience`
 - `ScheduledAtUtc`
+- `SentAtUtc`
 - `Status`
 - `TargetCount`
+- `DeliveredCount`
 - `CreatedByAdminId`
 - `CreatedAtUtc`
+- `UpdatedAtUtc`
 
 ### B. `AuditLog`
 
@@ -739,12 +832,12 @@ Các field derived có thể:
 **Field chính**
 
 - `Id`
-- `AdminId`
-- `AdminUsername`
+- `ActorAccountId`
 - `ActionType`
 - `EntityType`
 - `EntityId`
 - `Description`
+- `MetadataJson`
 - `IpAddress`
 - `CreatedAtUtc`
 
@@ -771,42 +864,15 @@ Các field derived có thể:
 - `LastUpdatedAtUtc`
 - `LastUpdatedByAdminId`
 
-## 6.11. Chat aggregate
+## 6.12. Phase-sau models chưa có trong `finjar_schema.sql`
 
-### A. `ChatSession`
+Các model dưới đây từng được nhắc trong scope mở rộng, nhưng **không có bảng trong `finjar_schema.sql` phase 1**. Vì vậy backend không nên scaffold persistence hoặc migration cho chúng trong giai đoạn hiện tại.
 
-**Vai trò**
+### A. `ChatSession` và `ChatMessage`
 
-- lưu một phiên chat của user với AI.
-
-**Field chính**
-
-- `Id`
-- `UserId`
-- `ContextType`
-- `ContextSnapshotJson`
-- `CreatedAtUtc`
-- `LastMessageAtUtc`
-
-### B. `ChatMessage`
-
-**Vai trò**
-
-- lưu lịch sử multi-turn chat.
-
-**Field chính**
-
-- `Id`
-- `SessionId`
-- `Role`
-- `Content`
-- `TokenCount` nullable
-- `CreatedAtUtc`
-
-**Rule nội bộ**
-
-- mỗi AI call lấy tối đa `N` messages gần nhất
-- `N` mặc định là `20`, có thể cấu hình
+- trạng thái: optional/phase sau;
+- nếu cần làm chatbot MVP trước khi có bảng riêng, có thể xử lý stateless hoặc chỉ dùng context từ dashboard/transactions/goals;
+- khi muốn lưu lịch sử chat thật, cần bổ sung migration riêng cho `chat_sessions` và `chat_messages`.
 
 ## 7. Quan hệ nghiệp vụ quan trọng
 
@@ -815,13 +881,13 @@ Các field derived có thể:
 Hầu hết dữ liệu nghiệp vụ đều phải gắn với `UserId`:
 
 - `Jar`
+- `FinancialAccount`
 - `Transaction`
 - `Category` custom
 - `FinancialGoal`
 - `RecurringReminder`
 - `Notification`
 - `ImportJob`
-- `ChatSession`
 
 Điều này giúp:
 
@@ -865,6 +931,7 @@ Frontend gửi:
 
 ```json
 {
+  "financialAccountId": "guid",
   "type": "Expense",
   "amount": 55000,
   "jarId": "guid",
@@ -880,6 +947,7 @@ CreateTransactionRequestDto
 -> CreateTransactionCommand
 -> Domain validation
 -> Transaction entity
+-> FinancialAccount balance update
 -> Jar balance update
 -> Limit evaluation
 -> Optional notification creation
@@ -932,15 +1000,17 @@ Handler mới là nơi load jars, validate balance, update balance, lưu transfe
 
 ## 9. Transaction boundary theo nghiệp vụ
 
-## 9.1. Allocate income vào jars
+## 9.1. Allocate ngân sách vào jars
 
 Trong cùng transaction:
 
+- load `sourceFinancialAccount` nếu command có `SourceFinancialAccountId`
 - load tất cả jars của user
 - tính amount theo percentage
 - update balance từng jar
 - tạo `JarAllocation`
 - tạo `JarAllocationItem`
+- không gọi API ngân hàng; đây chỉ là phân bổ ngân sách nội bộ
 
 Nếu bất kỳ bước nào lỗi thì rollback toàn bộ.
 
@@ -954,17 +1024,19 @@ Trong cùng transaction:
 - trừ `fromJar.Balance`
 - cộng `toJar.Balance`
 - tạo `JarTransfer`
+- không cập nhật `FinancialAccount.CurrentBalance` vì đây là chuyển ngân sách nội bộ
 
-## 9.3. Create expense transaction
+## 9.3. Create transaction
 
 Trong cùng transaction:
 
-- validate category
-- validate jar
-- kiểm tra balance
+- validate financial account
+- validate category/jar nếu là expense
+- kiểm tra balance nếu transaction làm giảm số dư
 - tạo `Transaction`
-- trừ `Jar.Balance`
-- evaluate `SpendingLimit`
+- cập nhật `FinancialAccount.CurrentBalance` theo loại giao dịch
+- nếu là expense có gắn jar thì trừ `Jar.Balance`
+- nếu là expense thì evaluate `SpendingLimit`
 - nếu vượt threshold thì tạo `Notification`
 
 ## 9.4. Update transaction
@@ -974,7 +1046,8 @@ Trong cùng transaction:
 - load transaction cũ
 - tính `delta`
 - update transaction
-- update `Jar.Balance` theo delta
+- update `FinancialAccount.CurrentBalance` theo delta hoặc đảo nguồn cũ/áp nguồn mới nếu đổi `FinancialAccountId`
+- update `Jar.Balance` theo delta hoặc đảo jar cũ/áp jar mới nếu đổi `JarId`
 - re-evaluate limit nếu là expense
 
 ## 9.5. Delete transaction
@@ -982,6 +1055,7 @@ Trong cùng transaction:
 Trong cùng transaction:
 
 - soft delete transaction
+- hoàn/đảo tác động trên `FinancialAccount.CurrentBalance`
 - hoàn balance cho jar nếu là expense
 - re-evaluate limit nếu cần
 
@@ -991,9 +1065,11 @@ Trong cùng transaction:
 
 - load goal
 - nếu có `sourceJarId` thì load jar và check balance
+- nếu có `sourceFinancialAccountId` thì load financial account và check ownership
 - tạo `GoalContribution`
 - tăng `FinancialGoal.SavedAmount`
 - nếu có source jar thì trừ balance
+- nếu có source financial account thì chỉ ghi nhận nguồn; không mặc định trừ `FinancialAccount.CurrentBalance` nếu không có transaction thật tương ứng
 - cập nhật `GoalStatus`
 - nếu hoàn thành thì có thể tạo notification
 
@@ -1004,7 +1080,8 @@ Trong cùng transaction:
 - load import job
 - load selected drafts
 - validate lần cuối
-- tạo hàng loạt `Transaction`
+- tạo hàng loạt `Transaction` với `FinancialAccountId` kế thừa từ import job
+- cập nhật `FinancialAccount.CurrentBalance` theo các transaction được tạo
 - trừ balance cho các expense liên quan
 - update import job status
 
@@ -1048,6 +1125,7 @@ Có thể build từ projection:
 Trả về:
 
 - thông tin transaction
+- financial account name/type
 - jar name/color
 - category name/icon
 - pagination
@@ -1111,6 +1189,7 @@ src/
     Abstractions/
     Auth/
     Users/
+    FinancialAccounts/
     Categories/
     Jars/
     Transactions/
@@ -1121,11 +1200,11 @@ src/
     Reminders/
     Importing/
     Admin/
-    Chat/
 
   PersonalFinance.Domain/
     Common/
     Users/
+    FinancialAccounts/
     Categories/
     Budgeting/
     Transactions/
@@ -1135,7 +1214,6 @@ src/
     Reminders/
     Importing/
     Admin/
-    Chat/
     Events/
 
   PersonalFinance.Infrastructure/
@@ -1157,19 +1235,19 @@ src/
 | Register | `RegisterUserCommand` | `UserAccount` | tạo refresh session nếu cần |
 | Login | `LoginUserCommand` | `UserAccount`, `RefreshTokenSession` | update last login |
 | Onboarding | `CompleteOnboardingCommand` | `UserOnboardingProfile` | gợi ý jars |
+| Financial accounts | `Create/UpdateFinancialAccountCommand` | `FinancialAccount` | default source, balance tracking |
 | Setup jars | `SetupJarsCommand` | `JarSetupProfile`, `Jar` | tạo jars mặc định/custom |
-| Allocate | `AllocateIncomeToJarsCommand` | `Jar`, `JarAllocation` | update balances |
+| Allocate | `AllocateIncomeToJarsCommand` | `FinancialAccount`, `Jar`, `JarAllocation` | update jar balances |
 | Transfer | `TransferBetweenJarsCommand` | `Jar`, `JarTransfer` | update balances |
-| Create transaction | `CreateTransactionCommand` | `Transaction`, `Jar` | evaluate limits, notifications |
+| Create transaction | `CreateTransactionCommand` | `FinancialAccount`, `Transaction`, `Jar` | update tracked balances, evaluate limits, notifications |
 | Dashboard | `GetDashboardQuery` | read models | aggregate nhiều nguồn |
 | Create limit | `CreateSpendingLimitCommand` | `SpendingLimit` | none |
-| Goal contribute | `ContributeToGoalCommand` | `FinancialGoal`, `GoalContribution`, `Jar` | update status, notify |
+| Goal contribute | `ContributeToGoalCommand` | `FinancialGoal`, `GoalContribution`, `Jar`, `FinancialAccount` | update status, notify |
 | Reminder create | `CreateReminderCommand` | `RecurringReminder` | job scheduling |
-| Import confirm | `ConfirmImportJobCommand` | `ImportJob`, `ImportedTransactionDraft`, `Transaction` | update balances |
+| Import confirm | `ConfirmImportJobCommand` | `ImportJob`, `ImportedTransactionDraft`, `FinancialAccount`, `Transaction` | update tracked balances |
 | Ban user | `UpdateUserStatusCommand` | `UserAccount`, `AuditLog` | audit append |
 | Broadcast | `CreateBroadcastCommand` | `BroadcastNotification` | background dispatch |
 | AI settings | `UpdateAiSettingsCommand` | `AiSetting` | encrypt key, audit |
-| Chat message | `SendChatMessageCommand` | `ChatSession`, `ChatMessage` | AI call, persist response |
 
 ## 15. Kết luận
 
@@ -1188,4 +1266,4 @@ Từ tài liệu này, team có thể đi tiếp sang 3 hướng rất thuận:
 
 - thiết kế entity/table schema chi tiết cho PostgreSQL;
 - scaffold command/query/service trong .NET 8;
-- chia task implementation theo module `Auth`, `Budgeting`, `Transactions`, `Goals`, `Import`, `Admin`, `Chat`.
+- chia task implementation theo module `Auth`, `FinancialAccounts`, `Budgeting`, `Transactions`, `Goals`, `Import`, `Admin`.

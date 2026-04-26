@@ -41,13 +41,56 @@ Hướng này phù hợp với tài liệu gốc:
 - dùng để chia tiền theo mục tiêu chi tiêu;
 - không đại diện cho tài khoản ngân hàng hay ví thật.
 
-### 2.2. Dashboard sẽ tính như thế nào
+### 2.2. Cách hiểu các field liên quan đến nguồn tiền
+
+FinJar là hệ thống **non-custodial**: app không giữ tiền, không tạo ví thật và không tự chuyển tiền thật trong tài khoản ngân hàng của user. Các thao tác như phân bổ tiền vào jar, chuyển giữa jar hoặc đóng góp vào goal chỉ là thao tác ghi nhận/phân loại ngân sách trong app.
+
+Vì vậy, các field có chữ `financial_account` cần được hiểu như sau:
+
+| Field | Nằm ở bảng | Ý nghĩa lưu trữ | Không có nghĩa là |
+| --- | --- | --- | --- |
+| `financial_account_id` | `transactions` | giao dịch thu/chi này phát sinh từ nguồn tiền thật nào, ví dụ `Tiền mặt`, `Vietcombank`, `MoMo` | app giữ tiền hoặc thực hiện chuyển khoản |
+| `financial_account_id` | `import_jobs` | file sao kê/import này thuộc nguồn tiền hoặc tài khoản ngân hàng nào | file import tạo tài khoản ngân hàng mới |
+| `source_financial_account_id` | `jar_allocations` | khoản phân bổ vào jar được quy chiếu từ nguồn tiền thật nào | app rút tiền khỏi ngân hàng để nạp vào jar |
+| `source_financial_account_id` | `goal_contributions` | khoản đóng góp goal được quy chiếu từ nguồn tiền thật nào nếu không đi từ một jar | app chuyển tiền thật vào goal |
+
+Ví dụ:
+
+- User link tài khoản `Vietcombank` có số dư 10.000.000 VND.
+- User phân bổ 3.000.000 VND vào jar `Ăn uống`.
+- Tiền thật vẫn nằm ở `Vietcombank`.
+- App chỉ ghi nhận rằng trong lớp ngân sách nội bộ, 3.000.000 VND đang được dành cho jar `Ăn uống`.
+
+Khi đặt tên API/UI, nên ưu tiên các từ như:
+
+- `nguồn tiền`
+- `tài khoản liên kết`
+- `phân bổ ngân sách`
+- `gắn giao dịch với nguồn tiền`
+- `chuyển ngân sách giữa các hũ`
+
+Nên tránh diễn đạt như:
+
+- `nạp tiền vào jar`
+- `rút tiền từ ngân hàng vào app`
+- `chuyển tiền từ tài khoản ngân hàng sang hũ`
+
+Các cách nói này dễ làm người dùng hiểu nhầm rằng FinJar đang giữ hoặc điều khiển tiền thật.
+
+### 2.3. Dashboard sẽ tính như thế nào
 
 - `total_balance = SUM(financial_accounts.current_balance)`
 - `allocated_balance = SUM(jars.balance)`
 - `unallocated_balance = total_balance - allocated_balance`
 
-### 2.3. User không liên kết ngân hàng thì sao
+Ghi chú:
+
+- `total_balance` là tổng số dư của các nguồn tiền user đang theo dõi.
+- `allocated_balance` là tổng số tiền đã được phân bổ vào các jar trong app.
+- `unallocated_balance` là phần tiền thật đang được theo dõi nhưng chưa được gán vào jar nào.
+- Công thức này phục vụ quản lý ngân sách, không phải sổ cái ngân hàng.
+
+### 2.4. User không liên kết ngân hàng thì sao
 
 Sau onboarding, hệ thống nên tự tạo một `financial_account` mặc định:
 
@@ -277,6 +320,12 @@ Unique/index gợi ý:
 
 Ghi chú:
 
+- `financial_accounts` là nguồn tiền để theo dõi và đối chiếu, không phải ví do FinJar phát hành;
+- với `connection_mode = 'LinkedApi'`, app chỉ lưu metadata/token reference để đồng bộ dữ liệu theo quyền user đã cấp;
+- với `connection_mode = 'Manual'`, số dư do user nhập/chỉnh thủ công, phù hợp cho tiền mặt hoặc nguồn tiền chưa liên kết;
+- `current_balance` là số dư app đang biết tại thời điểm gần nhất, có thể đến từ user nhập tay, import sao kê hoặc đồng bộ API;
+- `available_balance` nếu có thì phản ánh số dư khả dụng do provider trả về, không bắt buộc trong phase đầu;
+- `balance_as_of` dùng để biết số dư đang được tính tại thời điểm nào, rất quan trọng khi dữ liệu đến từ bank sync;
 - không nên lưu raw access token nếu tránh được;
 - `access_token_ref` và `refresh_token_ref` nên là dữ liệu đã mã hóa hoặc reference sang secret store.
 
@@ -340,6 +389,9 @@ Ghi chú:
 
 - `source_financial_account_id` có thể `null` với allocation tạo tự động lúc onboarding;
 - nếu user chọn nguồn cụ thể để phân bổ thì lưu vào đây;
+- field này chỉ nói "khoản phân bổ được quy chiếu từ nguồn tiền nào", không có nghĩa là app chuyển tiền thật khỏi ngân hàng;
+- khi allocation có `source_financial_account_id`, backend nên kiểm tra nguồn tiền đó thuộc đúng `user_id`;
+- tổng `total_amount` nên bằng tổng các dòng trong `jar_allocation_items`;
 - trong tháng đầu, record này chủ yếu phục vụ truy vết nghiệp vụ, không phải ledger cứng.
 
 ### `jar_allocation_items`
@@ -372,6 +424,12 @@ Ràng buộc nên có:
 
 - `amount > 0`
 - `from_jar_id <> to_jar_id`
+
+Ghi chú:
+
+- `jar_transfers` chỉ chuyển ngân sách nội bộ giữa hai jar;
+- thao tác này không làm phát sinh giao dịch ngân hàng và không gọi API chuyển tiền thật;
+- backend chỉ cập nhật `jars.balance` của hai jar liên quan, không tự ý cập nhật số dư ngân hàng trừ khi có rule nghiệp vụ riêng được thiết kế rõ.
 
 ### 4.4. Transaction và import
 
@@ -417,9 +475,12 @@ Unique/index gợi ý:
 
 Ghi chú:
 
-- mỗi transaction phải đi qua một `financial_account`;
+- mỗi transaction phải đi qua một `financial_account` để biết giao dịch phát sinh từ nguồn tiền thật nào;
 - với user chỉ có tiền mặt, transaction sẽ trỏ tới record `Tiền mặt`;
-- expense sẽ làm giảm cả `financial_accounts.current_balance` và `jars.balance` theo xử lý nghiệp vụ backend.
+- với tài khoản ngân hàng liên kết, transaction có thể đến từ sync/import và trỏ về đúng bank account đó;
+- `financial_account_id` không có nghĩa là app đang giữ tiền, mà chỉ là khóa tham chiếu để phân loại nguồn phát sinh giao dịch;
+- expense sẽ làm giảm cả `financial_accounts.current_balance` và `jars.balance` theo xử lý nghiệp vụ backend nếu giao dịch có gắn jar;
+- income thường làm tăng `financial_accounts.current_balance`; việc tự động phân bổ income vào jar hay để unallocated là rule nghiệp vụ riêng.
 
 ### `import_jobs`
 
@@ -442,6 +503,13 @@ Field chính:
 - `error_message text null`
 - `uploaded_at timestamptz not null default now()`
 - `updated_at timestamptz not null default now()`
+
+Ghi chú:
+
+- `financial_account_id` xác định file sao kê này thuộc nguồn tiền/tài khoản nào;
+- khi confirm import, các transaction thật tạo ra từ draft nên kế thừa `financial_account_id` của `import_jobs`;
+- nếu user upload sao kê Vietcombank thì job phải trỏ tới financial account Vietcombank, không trỏ nhầm sang `Tiền mặt` hoặc ví khác;
+- `bank_code` là metadata hỗ trợ parser, còn `financial_account_id` mới là khóa nghiệp vụ để gắn dữ liệu vào nguồn tiền của user.
 
 ### `import_transaction_drafts`
 
@@ -529,6 +597,13 @@ Ràng buộc nên có:
 
 - `amount > 0`
 - chỉ set một trong hai: `source_jar_id` hoặc `source_financial_account_id`
+
+Ghi chú:
+
+- `source_jar_id` dùng khi user muốn lấy phần ngân sách đã phân bổ trong một jar để ghi nhận đóng góp goal;
+- `source_financial_account_id` dùng khi user muốn ghi nhận đóng góp trực tiếp từ một nguồn tiền thật, không đi qua jar;
+- cả hai trường trên vẫn chỉ là ghi nhận/phân loại ngân sách trong app, không đại diện cho lệnh chuyển tiền thật;
+- nếu goal có `linked_jar_id`, backend có thể ưu tiên flow đóng góp từ jar để dashboard goal và jar nhất quán hơn.
 
 ### `reminders`
 
