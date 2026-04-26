@@ -492,7 +492,7 @@ public class AppDbContext : DbContext
             // N-1 (optional): Transaction → ImportJob
             builder.HasOne(t => t.ImportJob)
                 .WithMany()
-                .HasForeignKey(t => t.ImportJob)
+                .HasForeignKey(t => t.ImportJobId)
                 .OnDelete(DeleteBehavior.SetNull);
         });
 
@@ -633,6 +633,9 @@ public class AppDbContext : DbContext
                 .IsRequired()
                 .HasMaxLength(20)
                 .HasDefaultValue("Active");
+
+            builder.Property(r => r.NotifyDaysBefore)
+                .HasDefaultValue((short)1);
 
             builder.Property(r => r.Note).HasColumnType("text");
 

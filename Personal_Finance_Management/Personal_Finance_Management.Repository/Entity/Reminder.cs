@@ -13,6 +13,7 @@ public class Reminder : BaseEntity<Guid>, IAudictableEntity
     public DateTime NextDueDate { get; set; }//Này làm gì v ní 
     public string? Note{ get; set; } // Ghi chú cho người dùng sài hẻ | hay mik là người note lại cho ng dùng cái gì đó 
     public string Status{ get; set;} = "Active";  // Active | Paused | Completed | Cancelled này người dùng setup chăng
+    public short NotifyDaysBefore { get; set; } = 1;
     
     //Nối với Account 
     public Guid UserId { get; set; }

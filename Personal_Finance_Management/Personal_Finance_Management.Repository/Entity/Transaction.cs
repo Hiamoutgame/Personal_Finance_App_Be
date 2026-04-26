@@ -28,6 +28,7 @@ public class Transaction : BaseEntity<Guid>, IAudictableEntity
     public Jar? Jar { get; set; }
     public Guid? CategoryId { get; set; }
     public Category? Category { get; set; }
+    public Guid? ImportJobId { get; set; }
     public ImportJob? ImportJob { get; set; }
     
     

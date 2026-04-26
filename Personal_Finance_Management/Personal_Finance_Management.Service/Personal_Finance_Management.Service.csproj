@@ -6,6 +6,7 @@
         <Nullable>enable</Nullable>
     </PropertyGroup>
     <ItemGroup>
+        <PackageReference Include="BCrypt.Net-Next" Version="4.0.3" />
         <PackageReference Include="CloudinaryDotNet" Version="1.28.0" />
         <PackageReference Include="MailKit" Version="4.15.1" />
         <PackageReference Include="Microsoft.AspNetCore.Http" Version="2.3.9" />
@@ -13,5 +14,8 @@
         <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.16.0" />
         <PackageReference Include="Quartz" Version="3.17.1" />
         <PackageReference Include="Quartz.Extensions.Hosting" Version="3.17.1" />
+    </ItemGroup>
+    <ItemGroup>
+        <ProjectReference Include="../Personal_Finance_Management.Repository/Personal_Finance_Management.Repository.csproj" />
     </ItemGroup>
 </Project>
