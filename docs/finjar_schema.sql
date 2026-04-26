@@ -35,20 +35,6 @@ CREATE TABLE accounts (
 CREATE INDEX ix_accounts_role_status    ON accounts(role_id, status);
 CREATE INDEX ix_accounts_last_login_at  ON accounts(last_login_at);
 
-CREATE TABLE refresh_token_sessions (
-    id                    UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
-    account_id            UUID        NOT NULL REFERENCES accounts(id),
-    token_hash            TEXT        NOT NULL,
-    expires_at            TIMESTAMPTZ NOT NULL,
-    revoked_at            TIMESTAMPTZ NULL,
-    replaced_by_token_hash TEXT       NULL,
-    created_by_ip         INET        NULL,
-    revoked_by_ip         INET        NULL,
-    user_agent            TEXT        NULL,
-    created_at            TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-CREATE INDEX ix_refresh_tokens_account_id ON refresh_token_sessions(account_id);
-
 CREATE TABLE audit_logs (
     id               UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
     actor_account_id UUID        NOT NULL REFERENCES accounts(id),
@@ -111,7 +97,6 @@ CREATE TABLE financial_accounts (
     last_synced_at          TIMESTAMPTZ   NULL,
     last_sync_error         TEXT          NULL,
     access_token_ref        TEXT          NULL,
-    refresh_token_ref       TEXT          NULL,
     token_expires_at        TIMESTAMPTZ   NULL,
     consent_expires_at      TIMESTAMPTZ   NULL,
     last_sync_cursor        TEXT          NULL,
