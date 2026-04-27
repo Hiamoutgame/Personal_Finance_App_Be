@@ -2,7 +2,7 @@
 
 namespace Personal_Finance_Management.Repository.Entity;
 
-public class JarAllocationItem : BaseEntity<Guid>,IAudictableEntity
+public class JarAllocationItem : BaseEntity,IAudictableEntity
 {
     
     public decimal Amount { get; set; }

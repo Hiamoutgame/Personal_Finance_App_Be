@@ -1,8 +1,9 @@
 ﻿using Personal_Finance_Management.Repository.Abtraction;
+using Personal_Finance_Management.Repository.Enum;
 
 namespace Personal_Finance_Management.Repository.Entity;
 
-public class Account : BaseEntity<Guid>, IAudictableEntity
+public class Account : BaseEntity, IAudictableEntity
 {
     public string Username { get; set; } = null!;
     public string Email { get; set; } = null!;
@@ -19,7 +20,7 @@ public class Account : BaseEntity<Guid>, IAudictableEntity
 
     //1 Account chỉ có 1 Role
     public Guid RoleId { get; set; }
-    public Role? Role { get; set; }
+    public Role Role { get; set; } = null!; // mặc định role nên được gán qua RoleId hoặc khi tạo dữ liệu seed
     //
     public OnboardingProfile? OnboardingProfile { get; set; }
     //

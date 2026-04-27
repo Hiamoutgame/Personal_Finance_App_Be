@@ -3,6 +3,7 @@ using System.Security.Claims;
 using Microsoft.EntityFrameworkCore;
 using Personal_Finance_Management.Repository;
 using Personal_Finance_Management.Repository.Entity;
+using Personal_Finance_Management.Repository.Enum;
 using ValidationService = Personal_Finance_Management.Service.Validations;
 using JwtService = Personal_Finance_Management.Service.JwtService;
 
@@ -10,6 +11,7 @@ namespace Personal_Finance_Management.Service.Auth;
 
 public class Service : IService
 {
+    private static readonly Guid DefaultRoleId = Guid.Parse("11111111-1111-1111-1111-111111111111");
     private const string DefaultRoleCode = "User";
 
     private readonly AppDbContext _dbContext;
@@ -73,7 +75,7 @@ public class Service : IService
             Username = user.Username,
             FullName = fullName,
             Email = user.Email,
-            Token = token
+            AccessToken = token
         };
     }
 
@@ -87,9 +89,9 @@ public class Service : IService
 
         role = new Role
         {
-            Id = Guid.NewGuid(),
+            Id = DefaultRoleId,
             Code = DefaultRoleCode,
-            Name = "User",
+            Name = AccountRole.User,
             Description = "Default application user",
             CreatedAt = now
         };
@@ -112,5 +114,39 @@ public class Service : IService
             normalizedFullName[..firstSpaceIndex],
             normalizedFullName[(firstSpaceIndex + 1)..]
         );
+    }
+
+    public async Task<Response.LoginResponse> Login(Request.LoginRequest request)
+    {
+        var email = request.Email.Trim().ToLowerInvariant();
+        var user = await _dbContext.Accounts
+            .Include(u => u.Role)
+            .FirstOrDefaultAsync(u => u.Email == email);
+
+        if (user is null || !BCrypt.Net.BCrypt.Verify(request.Password, user.HashPassword))
+        {
+            throw new Exception("Invalid email or password.");
+        }
+
+        var token = _jwtService.GenerateAccessToken(new[]
+        {
+            new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
+            new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
+            new Claim("id", user.Id.ToString()),
+            new Claim(ClaimTypes.Name, user.Username),
+            new Claim("username", user.Username),
+            new Claim(ClaimTypes.Email, user.Email),
+            new Claim("fullName", $"{user.FirstName} {user.LastName}"),
+            new Claim(ClaimTypes.Role, user.Role.Code)
+        });
+
+        return await Task.FromResult(new Response.LoginResponse
+        {
+            Id = user.Id,
+            Username = user.Username,
+            FullName = $"{user.FirstName} {user.LastName}",
+            Email = user.Email,
+            AccessToken = token
+        });
     }
 }

@@ -2,7 +2,7 @@
 
 namespace Personal_Finance_Management.Repository.Entity;
 
-public class Jar : BaseEntity<Guid>, IAudictableEntity
+public class Jar : BaseEntity, IAudictableEntity
 { 
     public string Name { get; set; } = null!;
     public decimal? Percentage { get; set; }

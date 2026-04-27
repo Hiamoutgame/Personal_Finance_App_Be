@@ -2,7 +2,7 @@
 
 namespace Personal_Finance_Management.Repository.Entity;
 
-public class OnboardingProfile : BaseEntity<Guid>, IAudictableEntity
+public class OnboardingProfile : BaseEntity, IAudictableEntity
 {
    
 

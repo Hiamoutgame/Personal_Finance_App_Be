@@ -2,7 +2,7 @@
 
 namespace Personal_Finance_Management.Repository.Entity;
 
-public class Category : BaseEntity<Guid>, IAudictableEntity
+public class Category : BaseEntity, IAudictableEntity
 {
     public string Name { get; set; } = null!;
     public string? Icon { get; set; }

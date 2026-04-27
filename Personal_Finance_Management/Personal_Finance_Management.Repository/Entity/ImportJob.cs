@@ -2,7 +2,7 @@
 
 namespace Personal_Finance_Management.Repository.Entity;
 
-public class ImportJob: BaseEntity<Guid>, IAudictableEntity
+public class ImportJob: BaseEntity, IAudictableEntity
 {
     public string FileName { get; set; }
     public string? OriginalContentType { get; set; }

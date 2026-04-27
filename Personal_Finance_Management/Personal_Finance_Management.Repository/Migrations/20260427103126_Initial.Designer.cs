@@ -12,7 +12,7 @@ using Personal_Finance_Management.Repository;
 namespace Personal_Finance_Management.Repository.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260426085525_Initial")]
+    [Migration("20260427103126_Initial")]
     partial class Initial
     {
         /// <inheritdoc />

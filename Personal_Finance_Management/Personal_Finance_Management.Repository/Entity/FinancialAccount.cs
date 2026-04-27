@@ -2,7 +2,7 @@
 
 namespace Personal_Finance_Management.Repository.Entity;
 
-public class FinancialAccount : BaseEntity<Guid>, IAudictableEntity
+public class FinancialAccount : BaseEntity, IAudictableEntity
 {
     public string Name { get; set; } = null!;
     public string AccountType { get; set; } = null!;

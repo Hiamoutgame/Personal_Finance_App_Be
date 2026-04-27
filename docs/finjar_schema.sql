@@ -7,7 +7,7 @@
 -- Identity & Access
 
 CREATE TABLE roles (
-    id          SMALLINT PRIMARY KEY,
+    id          UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
     code        VARCHAR(30)  NOT NULL UNIQUE,
     name        VARCHAR(50)  NOT NULL,
     description TEXT         NULL,
@@ -16,7 +16,7 @@ CREATE TABLE roles (
 
 CREATE TABLE accounts (
     id                       UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
-    role_id                  SMALLINT     NOT NULL REFERENCES roles(id),
+    role_id                  UUID         NOT NULL REFERENCES roles(id),
     username                 VARCHAR(50)  NOT NULL UNIQUE,
     email                    VARCHAR(255) NOT NULL UNIQUE,
     password_hash            TEXT         NOT NULL,
@@ -346,6 +346,6 @@ CREATE TABLE ai_settings (
 -- ==================== SEED DATA ==========================
 
 INSERT INTO roles(id, code, name) VALUES
-(1, 'User',       'Người dùng'),
-(2, 'Admin',      'Quản trị viên'),
-(3, 'SuperAdmin', 'Super Admin');
+('11111111-1111-1111-1111-111111111111', 'User',       'User'),
+('22222222-2222-2222-2222-222222222222', 'Admin',      'Admin'),
+('33333333-3333-3333-3333-333333333333', 'SuperAdmin', 'SuperAdmin');

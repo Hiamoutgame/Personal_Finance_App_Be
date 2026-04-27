@@ -2,7 +2,7 @@
 
 namespace Personal_Finance_Management.Repository.Entity;
 
-public class Broadcast : BaseEntity<Guid>, IAudictableEntity
+public class Broadcast : BaseEntity, IAudictableEntity
 {
     //Ko biết chức năng của bảng này
     public string Title { get; set; }

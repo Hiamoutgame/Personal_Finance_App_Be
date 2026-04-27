@@ -2,7 +2,7 @@
 
 namespace Personal_Finance_Management.Repository.Entity;
 
-public class JarAllocation : BaseEntity<Guid>, IAudictableEntity
+public class JarAllocation : BaseEntity, IAudictableEntity
 {
     public decimal TotalAmount { get; set; }
     public string? Note { get; set; }

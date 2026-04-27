@@ -2,7 +2,7 @@
 
 namespace Personal_Finance_Management.Repository.Entity;
 
-public class AiSetting : BaseEntity<Guid>, IAudictableEntity
+public class AiSetting : BaseEntity, IAudictableEntity
 {
     public string ModelName { get; set; } = null!;
     public string SystemPrompt { get; set; } = null!; // Này để làm gì ta

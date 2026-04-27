@@ -2,7 +2,7 @@
 
 namespace Personal_Finance_Management.Repository.Entity;
 
-public class Goal : BaseEntity<Guid>, IAudictableEntity
+public class Goal : BaseEntity, IAudictableEntity
 {
     
 

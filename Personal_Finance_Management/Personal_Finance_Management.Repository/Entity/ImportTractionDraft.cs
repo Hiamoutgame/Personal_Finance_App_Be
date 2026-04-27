@@ -2,7 +2,7 @@
 
 namespace Personal_Finance_Management.Repository.Entity;
 
-public class ImportTransactionDraft : BaseEntity<Guid>, IAudictableEntity
+public class ImportTransactionDraft : BaseEntity, IAudictableEntity
 {
     
     public int RowIndex { get; set; }

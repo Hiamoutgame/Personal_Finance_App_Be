@@ -8,6 +8,15 @@ public class Response
         public required string Username { get; set; }
         public required string FullName { get; set; }
         public required string Email { get; set; }
-        public required string Token { get; set; }
+        public required string AccessToken { get; set; }
+    }
+    public class LoginResponse
+    {
+        public Guid Id { get; set; }
+        public required string Username { get; set; }
+        public required string FullName { get; set; }
+        public required string Email { get; set; }
+        public required string AccessToken { get; set; }
+
     }
 }

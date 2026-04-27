@@ -2,7 +2,7 @@
 
 namespace Personal_Finance_Management.Repository.Entity;
 
-public class Notification : BaseEntity<Guid>, IAudictableEntity
+public class Notification : BaseEntity, IAudictableEntity
 {
     
     public string Type { get; set; } = null!; // Type này là gì có bao nhiêu trạng thái rậy

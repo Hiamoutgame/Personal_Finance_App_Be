@@ -2,7 +2,7 @@
 
 namespace Personal_Finance_Management.Repository.Entity;
 
-public class SpendingLimit : BaseEntity<Guid>, IAudictableEntity
+public class SpendingLimit : BaseEntity, IAudictableEntity
 {
     public decimal LimitAmount { get; set; }
 

@@ -2,7 +2,7 @@
 
 namespace Personal_Finance_Management.Repository.Entity;
 
-public class GoalContribution : BaseEntity<Guid>, IAudictableEntity
+public class GoalContribution : BaseEntity, IAudictableEntity
 {
     public decimal Amount { get; set; }
     public string? Note{ get; set; }

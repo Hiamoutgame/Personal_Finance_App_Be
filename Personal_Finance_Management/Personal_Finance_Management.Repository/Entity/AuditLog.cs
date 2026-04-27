@@ -2,7 +2,7 @@
 
 namespace Personal_Finance_Management.Repository.Entity;
 
-public class AuditLog : BaseEntity<Guid>, IAudictableEntity
+public class AuditLog : BaseEntity, IAudictableEntity
 {
     public string ActionType { get; set; } // để làm gì thé
     public string EntityType { get; set; } // để làm gì thé

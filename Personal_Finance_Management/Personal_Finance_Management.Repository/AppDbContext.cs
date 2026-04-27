@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Personal_Finance_Management.Repository.Entity;
+using Personal_Finance_Management.Repository.Enum;
 
 namespace Personal_Finance_Management.Repository;
 
@@ -9,27 +10,27 @@ public class AppDbContext : DbContext
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
 
     // DbSets (21 bảng)
-    public DbSet<Role> Roles{ get; set; }
-    public DbSet<Account> Accounts{ get; set; }
-    public DbSet<AuditLog> AuditLogs{ get; set; }
-    public DbSet<OnboardingProfile> OnboardingProfiles{ get; set; }
-    public DbSet<JarSetup> JarSetups{ get; set; }
+    public DbSet<Role> Roles { get; set; }
+    public DbSet<Account> Accounts { get; set; }
+    public DbSet<AuditLog> AuditLogs { get; set; }
+    public DbSet<OnboardingProfile> OnboardingProfiles { get; set; }
+    public DbSet<JarSetup> JarSetups { get; set; }
     public DbSet<FinancialAccount> FinancialAccounts { get; set; }
-    public DbSet<Category> Categories{ get; set; }
-    public DbSet<Jar> Jars{ get; set; }
-    public DbSet<JarAllocation> JarAllocations{ get; set; }
-    public DbSet<JarAllocationItem> JarAllocationItems{ get; set; }
-    public DbSet<JarTransfer> JarTransfers{ get; set; }
-    public DbSet<ImportJob> ImportJobs{ get; set; }
-    public DbSet<Transaction> Transactions{ get; set; }
-    public DbSet<SpendingLimit> SpendingLimits{ get; set; }
-    public DbSet<Goal> Goals{ get; set; }
-    public DbSet<GoalContribution> GoalContributions{ get; set; }
-    public DbSet<Reminder> Reminders{ get; set; }
-    public DbSet<Broadcast> Broadcasts{ get; set; }
-    public DbSet<Notification> Notifications{ get; set; }
-    public DbSet<ImportTransactionDraft> ImportTransactionDrafts{ get; set; }
-    public DbSet<AiSetting> AiSettings{ get; set; }
+    public DbSet<Category> Categories { get; set; }
+    public DbSet<Jar> Jars { get; set; }
+    public DbSet<JarAllocation> JarAllocations { get; set; }
+    public DbSet<JarAllocationItem> JarAllocationItems { get; set; }
+    public DbSet<JarTransfer> JarTransfers { get; set; }
+    public DbSet<ImportJob> ImportJobs { get; set; }
+    public DbSet<Transaction> Transactions { get; set; }
+    public DbSet<SpendingLimit> SpendingLimits { get; set; }
+    public DbSet<Goal> Goals { get; set; }
+    public DbSet<GoalContribution> GoalContributions { get; set; }
+    public DbSet<Reminder> Reminders { get; set; }
+    public DbSet<Broadcast> Broadcasts { get; set; }
+    public DbSet<Notification> Notifications { get; set; }
+    public DbSet<ImportTransactionDraft> ImportTransactionDrafts { get; set; }
+    public DbSet<AiSetting> AiSettings { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -48,11 +49,12 @@ public class AppDbContext : DbContext
 
             builder.Property(r => r.Name)
                 .IsRequired()
+                .HasConversion<string>()
                 .HasMaxLength(50);
 
             builder.Property(r => r.Description)
                 .HasColumnType("text");
-            
+
         });
 
         // ── 2. accounts ───────────────────────────────────────────
@@ -65,55 +67,55 @@ public class AppDbContext : DbContext
                 .HasMaxLength(50);
 
             builder.HasIndex(a => a.Username)
-                .IsUnique();
+                        .IsUnique();
 
             builder.Property(a => a.Email)
-                .IsRequired()
-                .HasMaxLength(255);
+                        .IsRequired()
+                        .HasMaxLength(255);
 
             builder.HasIndex(a => a.Email)
-                .IsUnique();
+                        .IsUnique();
 
             builder.Property(a => a.HashPassword)
-                .IsRequired()
-                .HasColumnType("text");
+                        .IsRequired()
+                        .HasColumnType("text");
 
             builder.Property(a => a.FirstName)
-                .IsRequired()
-                .HasMaxLength(150);
-            
+                        .IsRequired()
+                        .HasMaxLength(150);
+
             builder.Property(a => a.LastName)
-                .IsRequired()
-                .HasMaxLength(150);
-            
+                        .IsRequired()
+                        .HasMaxLength(150);
+
             builder.Property(a => a.Phone)
-                .HasMaxLength(20);
+                        .HasMaxLength(20);
 
             builder.Property(a => a.AvatarUrl)
-                .HasColumnType("text");
+                        .HasColumnType("text");
 
             builder.Property(a => a.Status)
-                .IsRequired()
-                .HasMaxLength(20)
-                .HasDefaultValue("Active");
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasDefaultValue("Active");
 
             builder.Property(a => a.PreferredCurrency)
-                .IsRequired()
-                .HasMaxLength(3)
-                .HasDefaultValue("VND");
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasDefaultValue("VND");
 
             builder.Property(a => a.IsOnboardingCompleted)
-                .HasDefaultValue(false);
+                        .HasDefaultValue(false);
 
             // N-1: Account → Role
             builder.HasOne(a => a.Role)
-                .WithMany(r => r.Accounts)
-                .HasForeignKey(a => a.RoleId)
-                .OnDelete(DeleteBehavior.Restrict);
+                        .WithMany(r => r.Accounts)
+                        .HasForeignKey(a => a.RoleId)
+                        .OnDelete(DeleteBehavior.Restrict);
             // Restrict: không xoá Role khi còn Account tham chiếu
 
-            
-            
+
+
         });
 
         // ── 3. audit_logs ─────────────────────────────────────────
@@ -126,27 +128,27 @@ public class AppDbContext : DbContext
                 .HasMaxLength(50);
 
             builder.Property(a => a.EntityType)
-                .IsRequired()
-                .HasMaxLength(50);
+                            .IsRequired()
+                            .HasMaxLength(50);
 
             builder.Property(a => a.Description)
-                .IsRequired()
-                .HasColumnType("text");
+                            .IsRequired()
+                            .HasColumnType("text");
 
             builder.Property(a => a.MetadataJson)
-                .HasColumnType("json");
+                            .HasColumnType("json");
 
             builder.Property(a => a.IpAddress)
-                .HasMaxLength(45);
-            
-            
+                            .HasMaxLength(45);
+
+
             builder.HasOne(a => a.Account)
-                .WithMany(acc => acc.AuditLogs)
-                .HasForeignKey(a => a.ActorAccountId)
-                .OnDelete(DeleteBehavior.Restrict);
+                            .WithMany(acc => acc.AuditLogs)
+                            .HasForeignKey(a => a.ActorAccountId)
+                            .OnDelete(DeleteBehavior.Restrict);
             // Restrict: giữ log lại dù account bị xoá/banned
         });
-        
+
         // ── 4. onboarding_profiles ────────────────────────────────
         modelBuilder.Entity<OnboardingProfile>(builder =>
         {
@@ -180,13 +182,13 @@ public class AppDbContext : DbContext
                 .IsRequired()
                 .HasMaxLength(30);
 
-           
+
             builder.HasOne(j => j.User)
                 .WithOne(a => a.JarSetup)
                 .HasForeignKey<JarSetup>(j => j.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            
+
         });
 
         // ── 6. financial_accounts ─────────────────────────────────
@@ -308,7 +310,7 @@ public class AppDbContext : DbContext
             // SetNull: xoá JarSetup → Jar vẫn tồn tại, JarSetupId = null
         });
 
-        
+
 
         // ── 9. jar_allocations ────────────────────────────────────
         modelBuilder.Entity<JarAllocation>(builder =>
@@ -496,7 +498,7 @@ public class AppDbContext : DbContext
                 .OnDelete(DeleteBehavior.SetNull);
         });
 
-        
+
 
         // ── 14. spending_limits ───────────────────────────────────
         modelBuilder.Entity<SpendingLimit>(builder =>
@@ -723,7 +725,7 @@ public class AppDbContext : DbContext
                 .HasForeignKey(n => n.BroadcastId)
                 .OnDelete(DeleteBehavior.SetNull);
         });
-        
+
 
         // ── 20. import_transaction_drafts ─────────────────────────
         modelBuilder.Entity<ImportTransactionDraft>(builder =>
@@ -762,7 +764,7 @@ public class AppDbContext : DbContext
                 .OnDelete(DeleteBehavior.SetNull);
         });
 
-        
+
 
         // ── 21. ai_settings ───────────────────────────────────────
         modelBuilder.Entity<AiSetting>(builder =>

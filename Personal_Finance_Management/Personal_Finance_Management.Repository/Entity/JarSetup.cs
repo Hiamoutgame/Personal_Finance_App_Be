@@ -2,7 +2,7 @@
 
 namespace Personal_Finance_Management.Repository.Entity;
 
-public class JarSetup : BaseEntity<Guid>, IAudictableEntity
+public class JarSetup : BaseEntity, IAudictableEntity
 {
     public string MethodType { get; set; } = null!;
     

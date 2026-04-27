@@ -1,7 +1,7 @@
 namespace Personal_Finance_Management.Repository.Abtraction;
 
-public abstract class BaseEntity<TKey>
+public abstract class BaseEntity
 {
-    public TKey Id  { get; set; } // Id thôi tùy loại dữ liệu mình chọn
+    public Guid Id  { get; set; } // Id dùng Guid thống nhất cho toàn bộ entity
     public bool IsDeleted  { get; set; } // xóa mềm bth là false mà xóa là true
 }

@@ -7,20 +7,26 @@ public class Request
     public class RegisterRequest
     {
         [Required]
-        [MaxLength(50)]
+
         public required string Username { get; set; }
 
         [Required]
-        [EmailAddress]
-        [MaxLength(255)]
+
         public required string Email { get; set; }
 
         [Required]
-        [MinLength(6)]
-        [MaxLength(100)]
+
         public required string Password { get; set; }
 
-        [MaxLength(300)]
+
         public string? FullName { get; set; }
+    }
+    public class LoginRequest
+    {
+        [Required]
+        public required string Email { get; set; }
+
+        [Required]
+        public required string Password { get; set; }
     }
 }

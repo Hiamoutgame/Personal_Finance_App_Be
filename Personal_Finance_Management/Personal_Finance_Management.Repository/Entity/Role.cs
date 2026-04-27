@@ -1,11 +1,12 @@
 ﻿using Personal_Finance_Management.Repository.Abtraction;
+using Personal_Finance_Management.Repository.Enum;
 
 namespace Personal_Finance_Management.Repository.Entity;
 
-public class Role : BaseEntity<Guid>, IAudictableEntity
+public class Role : BaseEntity, IAudictableEntity
 {
     public string Code { get; set; } = null!; // để làm gì á
-    public string Name { get; set; } = null!;
+    public AccountRole Name { get; set; } = AccountRole.User; // mặc định là User, sau này có thể có Admin, Moderator, v.v.
     public string? Description { get; set; }
 
     //1 Role có nhiều Account

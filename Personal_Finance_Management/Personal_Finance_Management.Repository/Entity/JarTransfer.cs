@@ -2,7 +2,7 @@
 
 namespace Personal_Finance_Management.Repository.Entity;
 
-public class JarTransfer : BaseEntity<Guid>,IAudictableEntity
+public class JarTransfer : BaseEntity,IAudictableEntity
 {
        // FK → accounts
     public Guid FromJarId { get; set; }   // FK → jars

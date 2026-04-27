@@ -2,7 +2,7 @@
 
 namespace Personal_Finance_Management.Repository.Entity;
 
-public class Reminder : BaseEntity<Guid>, IAudictableEntity
+public class Reminder : BaseEntity, IAudictableEntity
 {
     public string Title { get; set; }
     public decimal? Amount { get; set; }

@@ -2,7 +2,7 @@
 
 namespace Personal_Finance_Management.Repository.Entity;
 
-public class Transaction : BaseEntity<Guid>, IAudictableEntity
+public class Transaction : BaseEntity, IAudictableEntity
 {
     public string Type{ get; set; }  
     public decimal Amount{ get; set; }   

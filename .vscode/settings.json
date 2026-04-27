@@ -1,19 +1,20 @@
 {
-    "workbench.colorCustomizations": {
-        "activityBar.background": "#4C0A64",
-        "titleBar.activeBackground": "#6A0E8C",
-        "titleBar.activeForeground": "#FDFAFE",
-        "titleBar.inactiveBackground": "#4C0A64",
-        "titleBar.inactiveForeground": "#FDFAFE",
-        "statusBar.background": "#4C0A64",
-        "statusBar.foreground": "#FDFAFE",
-        "statusBar.debuggingBackground": "#4C0A64",
-        "statusBar.debuggingForeground": "#FDFAFE",
-        "statusBar.noFolderBackground": "#4C0A64",
-        "statusBar.noFolderForeground": "#FDFAFE"
-    },
-    "windowColors.baseColor": "#7a10a0",
-    "conventionalCommits.scopes": [
-        "add new doc about sql and add some thing with overview"
-    ]
+  "workbench.colorCustomizations": {
+    "activityBar.background": "#4C0A64",
+    "titleBar.activeBackground": "#6A0E8C",
+    "titleBar.activeForeground": "#FDFAFE",
+    "titleBar.inactiveBackground": "#4C0A64",
+    "titleBar.inactiveForeground": "#FDFAFE",
+    "statusBar.background": "#4C0A64",
+    "statusBar.foreground": "#FDFAFE",
+    "statusBar.debuggingBackground": "#4C0A64",
+    "statusBar.debuggingForeground": "#FDFAFE",
+    "statusBar.noFolderBackground": "#4C0A64",
+    "statusBar.noFolderForeground": "#FDFAFE"
+  },
+  "windowColors.baseColor": "#7a10a0",
+  "conventionalCommits.scopes": [
+    "add new doc about sql and add some thing with overview",
+    "BE"
+  ]
 }
