@@ -11,4 +11,4 @@
     3. code cho đã
     4. git add .
     5. git commit-m"commit"
-    4. git push origin < tên branch>
+    6. git push origin < tên branch>

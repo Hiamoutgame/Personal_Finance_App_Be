@@ -5,12 +5,14 @@ using Personal_Finance_Management.Repository;
 using authService = Personal_Finance_Management.Service.Auth;
 using jwtService = Personal_Finance_Management.Service.JwtService;
 using validationService = Personal_Finance_Management.Service.Validations;
-
+using OnboardingService = Personal_Finance_Management.Service.Onboarding;
+using UserService = Personal_Finance_Management.Service.User;
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 
 builder.Services.AddControllers();
+builder.Services.AddHttpContextAccessor();
 builder.Services.Configure<ApiBehaviorOptions>(options =>
 {
     options.SuppressModelStateInvalidFilter = true;
@@ -31,7 +33,8 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 builder.Services.AddScoped<authService.IService, authService.Service>();
 builder.Services.AddScoped<jwtService.IService, jwtService.Service>();
 builder.Services.AddScoped<validationService.IServices, validationService.ValidationServices>();
-
+builder.Services.AddScoped<OnboardingService.IService, OnboardingService.Service>();
+builder.Services.AddScoped<UserService.IService, UserService.Service>();
 var app = builder.Build();
 
 app.UseMiddleware<GlobalExceptionHandlerMiddleware>();
