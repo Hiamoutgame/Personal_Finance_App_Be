@@ -4,8 +4,6 @@ namespace Personal_Finance_Management.Repository.Entity;
 
 public class Goal : BaseEntity, IAudictableEntity
 {
-    
-
     public string Title { get; set; } = null!;
     public decimal TargetAmount { get; set; }
     public decimal SavedAmount { get; set; }

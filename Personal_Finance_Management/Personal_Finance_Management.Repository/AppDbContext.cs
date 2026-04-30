@@ -1,13 +1,16 @@
+using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Personal_Finance_Management.Repository.Entity;
 using Personal_Finance_Management.Repository.Enum;
 
 namespace Personal_Finance_Management.Repository;
 
-
 public class AppDbContext : DbContext
 {
-    public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
+    public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
+    {
+    }
 
     // DbSets (21 bảng)
     public DbSet<Role> Roles { get; set; }
@@ -54,7 +57,6 @@ public class AppDbContext : DbContext
 
             builder.Property(r => r.Description)
                 .HasColumnType("text");
-
         });
 
         // ── 2. accounts ───────────────────────────────────────────
@@ -81,12 +83,12 @@ public class AppDbContext : DbContext
                         .HasColumnType("text");
 
             builder.Property(a => a.FirstName)
-                        .IsRequired()
-                        .HasMaxLength(150);
+                .IsRequired()
+                .HasMaxLength(150);
 
             builder.Property(a => a.LastName)
-                        .IsRequired()
-                        .HasMaxLength(150);
+                .IsRequired()
+                .HasMaxLength(150);
 
             builder.Property(a => a.Phone)
                         .HasMaxLength(20);
@@ -113,9 +115,6 @@ public class AppDbContext : DbContext
                         .HasForeignKey(a => a.RoleId)
                         .OnDelete(DeleteBehavior.Restrict);
             // Restrict: không xoá Role khi còn Account tham chiếu
-
-
-
         });
 
         // ── 3. audit_logs ─────────────────────────────────────────
@@ -139,7 +138,7 @@ public class AppDbContext : DbContext
                             .HasColumnType("json");
 
             builder.Property(a => a.IpAddress)
-                            .HasMaxLength(45);
+                .HasMaxLength(45);
 
 
             builder.HasOne(a => a.Account)
@@ -171,6 +170,18 @@ public class AppDbContext : DbContext
                 .HasForeignKey<OnboardingProfile>(o => o.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
             // Cascade: xoá Account → xoá OnboardingProfile theo
+            builder.Property(x => x.FinancialGoalTypes)
+                .HasConversion(
+                    v => JsonSerializer.Serialize(v, (JsonSerializerOptions)null),
+                    v => JsonSerializer.Deserialize<List<string>>(v, (JsonSerializerOptions)null) ?? new List<string>()
+                )
+                .Metadata.SetValueComparer(
+                    new ValueComparer<List<string>>(
+                        (c1, c2) => c1.SequenceEqual(c2),
+                        c => c.Aggregate(0, (a, v) => HashCode.Combine(a, v.GetHashCode())),
+                        c => c.ToList()
+                    )
+                );
         });
 
         // ── 5. jar_setups ─────────────────────────────────────────
@@ -187,8 +198,6 @@ public class AppDbContext : DbContext
                 .WithOne(a => a.JarSetup)
                 .HasForeignKey<JarSetup>(j => j.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
-
-
         });
 
         // ── 6. financial_accounts ─────────────────────────────────
@@ -309,7 +318,6 @@ public class AppDbContext : DbContext
                 .OnDelete(DeleteBehavior.SetNull);
             // SetNull: xoá JarSetup → Jar vẫn tồn tại, JarSetupId = null
         });
-
 
 
         // ── 9. jar_allocations ────────────────────────────────────
@@ -497,7 +505,6 @@ public class AppDbContext : DbContext
                 .HasForeignKey(t => t.ImportJobId)
                 .OnDelete(DeleteBehavior.SetNull);
         });
-
 
 
         // ── 14. spending_limits ───────────────────────────────────
@@ -763,7 +770,6 @@ public class AppDbContext : DbContext
                 .HasForeignKey(d => d.SuggestedJarId)
                 .OnDelete(DeleteBehavior.SetNull);
         });
-
 
 
         // ── 21. ai_settings ───────────────────────────────────────
