@@ -4,9 +4,10 @@ namespace Personal_Finance_Management.Repository.Entity;
 
 public class JarAllocationItem : BaseEntity,IAudictableEntity
 {
-    
+    //Phân loại hủ bên trong của các hủ nhỏ 
+    //Là lấy tiền đã phân ra 
     public decimal Amount { get; set; }
-
+    //sau khi giao dịch xong
     public decimal BalanceAfterAllocation { get; set; }
     
     //Nối tới hủ jarAllocation

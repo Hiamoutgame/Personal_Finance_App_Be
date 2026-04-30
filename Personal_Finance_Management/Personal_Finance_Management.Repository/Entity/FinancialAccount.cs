@@ -4,9 +4,14 @@ namespace Personal_Finance_Management.Repository.Entity;
 
 public class FinancialAccount : BaseEntity, IAudictableEntity
 {
+    //Thẳng lớn giữ tiền cho mình 
+    //Bản chất là 1 jar luôn 
+    //Tài khoản đó có bao nhiêu tiền
+    //Biến tổng tiền
+    
     public string Name { get; set; } = null!;
     public string AccountType { get; set; } = null!;
-    public required string ConnectionMode        { get; set; }  // Manual | LinkedApi
+    public required string ConnectionMode { get; set; } // Manual | LinkedApi 
     public string?ProviderCode { get; set; }
     public string?ProviderName { get; set; }
     public string?ExternalAccountId { get; set; }

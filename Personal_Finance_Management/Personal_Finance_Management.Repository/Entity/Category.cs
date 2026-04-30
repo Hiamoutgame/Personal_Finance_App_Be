@@ -4,6 +4,9 @@ namespace Personal_Finance_Management.Repository.Entity;
 
 public class Category : BaseEntity, IAudictableEntity
 {
+    //Phân loại cho hủ chi tiêu 
+    //Hủ spam sẵn thì cho người dùng vô category
+    
     public string Name { get; set; } = null!;
     public string? Icon { get; set; }
     public string? Color { get; set; }

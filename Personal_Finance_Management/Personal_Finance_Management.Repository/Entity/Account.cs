@@ -12,10 +12,13 @@ public class Account : BaseEntity, IAudictableEntity
     public string LastName { get; set; } = null!;
     public string? Phone { get; set; }
     public string? AvatarUrl { get; set; } = null;
-    public string Status { get; set; } = "Active"; // | Banned 
-    public string? StatusReason { get; set; } // này để làm gì vậy
+    public string Status { get; set; } = "Active"; 
+    // | Banned tránh xóa luôn tài khoản khỏi hệ thống 
+    public string? StatusReason { get; set; } // này để làm gì vậy cần lý do xóa gửi cho người dùng 
     public string PreferredCurrency { get; set; } = "VND"; // này để xác nhận mệnh giá mà ng dùng quản lý tài chính hả
+    // Mệnh giá vnd trước đi
     public bool IsOnboardingCompleted { get; set; } = false; // này để làm gì vậy
+    //coi user có fill thông tin chưa - thấy ko cần lắm thường tr
 
 
     //1 Account chỉ có 1 Role

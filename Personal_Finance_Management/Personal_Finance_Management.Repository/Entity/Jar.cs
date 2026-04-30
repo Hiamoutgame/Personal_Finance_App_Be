@@ -4,6 +4,7 @@ namespace Personal_Finance_Management.Repository.Entity;
 
 public class Jar : BaseEntity, IAudictableEntity
 { 
+    //hủ lớn
     public string Name { get; set; } = null!;
     public decimal? Percentage { get; set; }
 

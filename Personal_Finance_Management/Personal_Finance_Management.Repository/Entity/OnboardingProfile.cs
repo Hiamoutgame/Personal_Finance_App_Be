@@ -6,12 +6,13 @@ public class OnboardingProfile : BaseEntity, IAudictableEntity
 {
    
 
-    public decimal? MonthlyIncome { get; set; }
-    public string? OccupationType { get; set; }
-    public string? FinancialGoalTypes { get; set; }
+    public decimal? MonthlyIncome { get; set; } // thu nhâp hăng thang la bao nhiu
+    public string? OccupationType { get; set; } // 
+    public string? FinancialGoalTypes { get; set; } // List<string>
+    
     public string  BudgetMethodPreference { get; set; }
     public string? AgeRange { get; set; }
-    public string? SpendingChallenges { get; set; }
+    public string? SpendingChallenges { get; set; } //List<string>
     public string? RecommendedMethod { get; set; } 
     public DateTimeOffset  CompletedAt { get; set; }
     

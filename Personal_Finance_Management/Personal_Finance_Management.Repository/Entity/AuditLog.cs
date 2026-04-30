@@ -4,8 +4,10 @@ namespace Personal_Finance_Management.Repository.Entity;
 
 public class AuditLog : BaseEntity, IAudictableEntity
 {
-    public string ActionType { get; set; } // để làm gì thé
+    public string ActionType { get; set; } // để làm gì thé 
+    //update gì thì ghi lại trên hệ thống lịch sử thay đổi
     public string EntityType { get; set; } // để làm gì thé
+    
     public Guid? EntityId { get; set; } // Để nullable vì không phải log nào cũng gắn với 1 entity cụ thể
     public string Description { get; set; }
     public string? MetadataJson { get; set; } // Lưu thông tin chi tiết dưới dạng JSON

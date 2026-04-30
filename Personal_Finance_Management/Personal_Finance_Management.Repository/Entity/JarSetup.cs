@@ -4,9 +4,11 @@ namespace Personal_Finance_Management.Repository.Entity;
 
 public class JarSetup : BaseEntity, IAudictableEntity
 {
+    //Setup sẵn cho ng dùng 
+    //cho user thích costume cái jar của họ 
+    
     public string MethodType { get; set; } = null!;
     
-
     //Nối với Account
     public Guid UserId { get; set; }
     public Account User { get; set; }
