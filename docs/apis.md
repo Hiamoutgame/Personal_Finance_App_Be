@@ -196,39 +196,6 @@ Response `200 OK`
 }
 ```
 
-### `POST /api/v1/admin/auth/login`
-
-- Auth: Public
-
-Request
-
-```json
-{
-  "username": "string",
-  "password": "string"
-}
-```
-
-Response `200 OK`
-
-```json
-{
-  "accessToken": "string",
-  "tokenType": "Bearer",
-  "expiresIn": 3600,
-  "admin": {
-    "id": "guid",
-    "username": "string",
-    "role": "Admin | SuperAdmin"
-  }
-}
-```
-
-**Notes**
-
-- tự động ghi audit log
-- `403 Forbidden` nếu không phải role admin
-
 ## P1 — Onboarding, Profile, Financial Accounts, Category
 
 ### `GET /api/v1/users/me`
