@@ -198,7 +198,7 @@ Response `200 OK`
 
 ## P1 — Onboarding, Profile, Financial Accounts, Category
 
-### `GET /api/v1/users/me`
+### `GET /api/v1/user/me`
 
 - Auth: Bearer
 
@@ -208,7 +208,8 @@ Response `200 OK`
 {
   "id": "guid",
   "username": "string",
-  "fullName": "string",
+  "firstName": "string",
+  "lastName": "string",
   "email": "string",
   "phone": "string | null",
   "avatarUrl": "string | null",
@@ -217,7 +218,7 @@ Response `200 OK`
 }
 ```
 
-### `PATCH /api/v1/users/me`
+### `PATCH /api/v1/user/me`
 
 - Auth: Bearer
 
@@ -225,7 +226,8 @@ Request
 
 ```json
 {
-  "fullName": "string",
+  "firstName": "string",
+  "lastName": "string",
   "phone": "string | null",
   "avatarUrl": "string | null"
 }
@@ -236,13 +238,14 @@ Response `200 OK`
 ```json
 {
   "id": "guid",
-  "fullName": "string",
+  "firstName": "string",
+  "lastName": "string",
   "phone": "string | null",
   "avatarUrl": "string | null"
 }
 ```
 
-### `GET /api/v1/users/me/setup`
+### `GET /api/v1/user/me/setup`
 
 - Auth: Bearer
 
