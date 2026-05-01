@@ -13,8 +13,8 @@ using Personal_Finance_Management.Repository;
 namespace Personal_Finance_Management.Repository.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260430172352_onboarding")]
-    partial class onboarding
+    [Migration("20260430182607_debug_postgre_NamComputer")]
+    partial class debug_postgre_NamComputer
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)

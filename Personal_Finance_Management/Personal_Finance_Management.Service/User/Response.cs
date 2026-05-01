@@ -29,7 +29,7 @@ public class Response
         public bool isOnboardingCompleted { get; set; }
         public decimal? monthlyIncome  { get; set; }
         public string budgetMethod { get; set; }
-        public Guid defaultFinancialAccountId { get; set; }
+        public Guid? defaultFinancialAccountId { get; set; }
         public int jarCount { get; set; }
         public int financialAccountCount  { get; set; }
         public int limitCount { get; set; }

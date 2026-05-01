@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace Personal_Finance_Management.Repository.Migrations
 {
     /// <inheritdoc />
-    public partial class onboarding : Migration
+    public partial class debug_postgre_NamComputer : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)

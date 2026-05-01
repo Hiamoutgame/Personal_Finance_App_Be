@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Http;
+using Microsoft.EntityFrameworkCore;
 using Personal_Finance_Management.Repository;
 using Personal_Finance_Management.Repository.Entity;
 
@@ -17,14 +18,28 @@ public class Service : IService
 
     public async Task<Response.OnboardingResponse> CreateOnboarding(Request.FillOnboardingRequest request)
     {
+        if (request == null)
+        {
+            throw new ArgumentException("Request cannot be null");
+        }
         var userId = _httpContext.HttpContext.User.Claims.FirstOrDefault(x => x.Type == "id")?.Value;
         if (string.IsNullOrEmpty(userId))
             throw new UnauthorizedAccessException("UserId not found in token");
 
         var userIdGuid = Guid.Parse(userId);
 
-        var onboardingDetail = new Personal_Finance_Management.Repository.Entity.OnboardingProfile
+        var user = await _dbContext.Accounts
+            .FirstOrDefaultAsync(x => x.Id == userIdGuid);
+
+        if (user == null)
+            throw new Exception("User not found");
+        if (user.IsOnboardingCompleted == true)
         {
+            throw new Exception("Onboarding is already completed");
+        }
+        var onboardingDetail = new Personal_Finance_Management.Repository.Entity.OnboardingProfile()
+        {
+            
             UserId = userIdGuid,
             MonthlyIncome = request.monthlyIncome,
             OccupationType = request.occupationType,
@@ -34,10 +49,7 @@ public class Service : IService
             SpendingChallenges = request.spendingChallenges,
             RecommendedMethod = request.budgetMethodPreference,
         };
-        _dbContext.Add(onboardingDetail);
-        await _dbContext.SaveChangesAsync();
-
-
+        _dbContext.OnboardingProfiles.Add(onboardingDetail);
         var response = new Response.OnboardingResponse()
         {
             recommendedMethod = request.budgetMethodPreference,
@@ -128,12 +140,36 @@ public class Service : IService
                 accountType = "Cash",
             }
         };
+        var savedFinancialAccount = new Repository.Entity.FinancialAccount
+        {
+            UserId = userIdGuid,
+            Name = response.defaultFinancialAccount.name,
+            AccountType = response.defaultFinancialAccount.accountType,
+            ConnectionMode = "Manual"
+        };
+        _dbContext.FinancialAccounts.Add(savedFinancialAccount);
+        var savedCategory = response.recommendedCategories.Select(x => new Repository.Entity.Category()
+        {
+            OwnerUserId = userIdGuid,
+            Name = x.name,
+            Icon = x.icon,
+            IsDefault = true,
+        });
+        _dbContext.Categories.AddRange(savedCategory);
+        var savedJar = response.recommendedJars.Select(x => new Repository.Entity.Jar()
+        {
+            UserId = userIdGuid,
+            Name = x.name,
+            Percentage = x.percentage,
+            IsDefault = true,
+        });
+        
+        _dbContext.Jars.AddRange(savedJar);
+        user.IsOnboardingCompleted = true;
+        await _dbContext.SaveChangesAsync();
         return response;
     }
 }
 /*
- * Vấn đề: Field hiện tại của FinancialGoalTypes và SpendingChallenges đã được em Nam sửa lại,
- * đúng với kiểu của nó là mảng string hoặc list<String> mà theo em nam đọc lỗi sau khi updateDb
- * thì em nam tìm hiểu được là nó đang bị conflict với các field cũ, em Nam cố gắng tạo cái Db trên máy
- * nhưng mà chưa được. --> Ngày hôm sau phải giải quyết xong vấn đề Db, Entity và test thành công.
+    Đang add thêm các category và thêm các cái jar default cho người dùng
  */
