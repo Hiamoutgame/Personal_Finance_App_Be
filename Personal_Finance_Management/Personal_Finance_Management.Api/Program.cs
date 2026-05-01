@@ -1,48 +1,48 @@
-using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using Personal_Finance_Management.Api.Extensions;
 using Personal_Finance_Management.Api.Middlewares;
 using Personal_Finance_Management.Repository;
 using authService = Personal_Finance_Management.Service.Auth;
 using jwtService = Personal_Finance_Management.Service.JwtService;
+using OnboardingService = Personal_Finance_Management.Service.Onboarding;
+using UserService = Personal_Finance_Management.Service.User;
 using validationService = Personal_Finance_Management.Service.Validations;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-
 builder.Services.AddControllers();
+builder.Services.AddHttpContextAccessor();
 builder.Services.Configure<ApiBehaviorOptions>(options =>
 {
     options.SuppressModelStateInvalidFilter = true;
 });
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+
+builder.Services.AddSwaggerServices();
 
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(
         builder.Configuration.GetConnectionString("DefaultConnection")
     )
 );
-// builder.Services.AddJwtServices(builder.Configuration);
-// builder.Services.AddSwaggerServices(); mốt thế vào
+builder.Services.AddJwtServices(builder.Configuration);
 
-//add Scope
 builder.Services.AddScoped<authService.IService, authService.Service>();
 builder.Services.AddScoped<jwtService.IService, jwtService.Service>();
 builder.Services.AddScoped<validationService.IServices, validationService.ValidationServices>();
+builder.Services.AddScoped<OnboardingService.IService, OnboardingService.Service>();
+builder.Services.AddScoped<UserService.IService, UserService.Service>();
 
 var app = builder.Build();
 
 app.UseMiddleware<GlobalExceptionHandlerMiddleware>();
 
-// Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
-    app.UseSwagger();
-    app.UseSwaggerUI();
+    app.UseSwaggerAPI();
 }
 
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
