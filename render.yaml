@@ -1,0 +1,42 @@
+services:
+  - type: web
+    name: personal-finance-management-api
+    runtime: docker
+    plan: free
+    region: singapore
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /health
+    envVars:
+      - key: PORT
+        value: "8080"
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Production
+      - key: ApplyMigrations
+        value: "false"
+      - key: ConnectionStrings__DefaultConnection
+        value: Host=localhost;Port=5432;Database=PersonalFinanceManagementDb;Username=postgres;Password=postgres123
+      - key: JwtOptions__SecretKey
+        generateValue: true
+      - key: JwtOptions__Issuer
+        value: PersonalFinanceManagement
+      - key: JwtOptions__Audience
+        value: PersonalFinanceManagement
+      - key: JwtOptions__ExpireMinutes
+        value: "120"
+      - key: CloudinaryOptions__CloudName
+        sync: false
+      - key: CloudinaryOptions__ApiKey
+        sync: false
+      - key: CloudinaryOptions__ApiSecret
+        sync: false
+      - key: MailOptions__Mail
+        sync: false
+      - key: MailOptions__DisplayName
+        value: Personal Finance
+      - key: MailOptions__Password
+        sync: false
+      - key: MailOptions__Host
+        value: smtp.gmail.com
+      - key: MailOptions__Port
+        value: "587"
