@@ -31,42 +31,13 @@ public class HealthController : ControllerBase
         });
     }
 
-    [HttpGet("db")]
-    public async Task<IActionResult> GetDatabaseStatus()
-    {
-        return await GetCurrentDatabaseStatus();
-    }
-
-    [HttpGet("db/current")]
-    public async Task<IActionResult> GetCurrentDatabaseStatus()
-    {
-        try
-        {
-            // hien: khuc nay dung de kiem tra app hien tai co ket noi duoc toi database theo connection string dang cau hinh hay khong
-            var canConnect = await _dbContext.Database.CanConnectAsync();
-
-            if (!canConnect)
-            {
-                return DatabaseUnavailable("Current", null);
-            }
-
-            return DatabaseAvailable("Current");
-        }
-        catch (Exception ex)
-        {
-            // hien: khuc nay dung de tra ve loi tong quat khi database khong ket noi duoc ma khong lam lo connection string
-            return DatabaseUnavailable("Current", ex.Message);
-        }
-    }
 
     [HttpGet("db/local")]
     public async Task<IActionResult> GetLocalDatabaseStatus()
     {
         // hien: khuc nay dung de lay connection string danh rieng cho database local khi can test ro local db
-        var connectionString = _configuration.GetConnectionString("LocalConnection")
-                               ?? (_environment.IsDevelopment()
-                                   ? _configuration.GetConnectionString("DefaultConnection")
-                                   : null);
+        var connectionString = _configuration.GetConnectionString("DefaultConnection");
+
 
         return await CheckDatabaseConnection("Local", connectionString);
     }
@@ -74,13 +45,18 @@ public class HealthController : ControllerBase
     [HttpGet("db/render")]
     public async Task<IActionResult> GetRenderDatabaseStatus()
     {
-        // hien: khuc nay dung de lay connection string danh rieng cho database Render khi can test ro hosted db
-        var connectionString = _configuration.GetConnectionString("RenderConnection")
-                               ?? (_environment.IsProduction()
-                                   ? _configuration.GetConnectionString("DefaultConnection")
-                                   : null);
+        // hien: khuc nay dung de lay connection string Render tu environment variable runtime, khong fallback ve appsettings.json
+        var connectionString = GetRuntimeConnectionString("RenderConnection");
+
 
         return await CheckDatabaseConnection("Render", connectionString);
+    }
+
+    private static string? GetRuntimeConnectionString(string name)
+    {
+        // hien: khuc nay dung de doc dung bien moi truong ma Render inject vao container
+        return Environment.GetEnvironmentVariable($"ConnectionStrings__{name}")
+               ?? Environment.GetEnvironmentVariable($"ConnectionStrings:{name}");
     }
 
     private async Task<IActionResult> CheckDatabaseConnection(string target, string? connectionString)

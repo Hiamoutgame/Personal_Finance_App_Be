@@ -5,6 +5,26 @@ namespace Personal_Finance_Management.Api.Extensions;
 
 public static class DatabaseMigrationExtension
 {
+    public static string GetAppDatabaseConnectionString(this WebApplicationBuilder builder)
+    {
+        // hien: khuc nay dung de xac dinh app dang chay local hay hosting dua tren environment
+        var connectionName = builder.Environment.IsDevelopment()
+            ? "DefaultConnection"
+            : "RenderConnection";
+
+        // hien: khuc nay dung de lay connection string dung voi moi truong hien tai
+        var connectionString = builder.Configuration.GetConnectionString(connectionName);
+
+        if (string.IsNullOrWhiteSpace(connectionString))
+        {
+            throw new InvalidOperationException(
+                $"Missing database connection string '{connectionName}' for environment '{builder.Environment.EnvironmentName}'."
+            );
+        }
+
+        return connectionString;
+    }
+
     public static void ApplyDatabaseMigrations(this WebApplication app)
     {
         // hien: khuc nay dung de kiem tra co cho phep chay migration tu config hay khong

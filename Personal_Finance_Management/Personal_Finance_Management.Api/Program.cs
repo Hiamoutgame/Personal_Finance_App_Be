@@ -20,9 +20,12 @@ builder.Services.Configure<ApiBehaviorOptions>(options =>
 
 builder.Services.AddSwaggerServices();
 
+// hien: khuc nay dung de chon connection string dung cho local hoac hosting truoc khi dang ky DbContext
+var databaseConnectionString = builder.GetAppDatabaseConnectionString();
+
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(
-        builder.Configuration.GetConnectionString("DefaultConnection")
+        databaseConnectionString
     )
 );
 builder.Services.AddJwtServices(builder.Configuration);

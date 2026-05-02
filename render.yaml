@@ -14,8 +14,6 @@ services:
         value: Production
       - key: ApplyMigrations
         value: "true"
-      - key: ConnectionStrings__DefaultConnection
-        value: "Host=dpg-d7qs9okm0tmc73ft86g0-a;Port=5432;Database=personalfinancemanagementdb;Username=personal_finance_user;Password=p9Ja0uRqLWzMBMaYaL3HsebJccgoq4hT"
       - key: ConnectionStrings__RenderConnection
         value: "Host=dpg-d7qs9okm0tmc73ft86g0-a;Port=5432;Database=personalfinancemanagementdb;Username=personal_finance_user;Password=p9Ja0uRqLWzMBMaYaL3HsebJccgoq4hT"
       - key: JwtOptions__SecretKey
