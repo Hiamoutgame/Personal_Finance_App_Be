@@ -43,7 +43,10 @@ app.ApplyDatabaseMigrations();
 
 app.UseMiddleware<GlobalExceptionHandlerMiddleware>();
 
-if (app.Environment.IsDevelopment())
+var enableSwagger = app.Environment.IsDevelopment()
+                    || app.Configuration.GetValue<bool>("EnableSwagger");
+
+if (enableSwagger)
 {
     app.UseSwaggerAPI();
 }

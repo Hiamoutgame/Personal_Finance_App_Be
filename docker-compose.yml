@@ -9,6 +9,7 @@ services:
       ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Development}
       PORT: ${API_CONTAINER_PORT:-8080}
       ApplyMigrations: ${APPLY_MIGRATIONS:-false}
+      EnableSwagger: ${ENABLE_SWAGGER:-false}
       ConnectionStrings__DefaultConnection: ${CONNECTION_STRING:-Host=localhost;Port=5432;Database=PersonalFinanceManagementDb;Username=postgres;Password=postgres123}
       JwtOptions__SecretKey: ${JWT_SECRET_KEY:-replace-with-a-long-random-secret-at-least-32-chars}
       JwtOptions__Issuer: ${JWT_ISSUER:-PersonalFinanceManagement}
