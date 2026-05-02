@@ -461,7 +461,7 @@ Quan hệ quan trọng:
 
 ## 9) Nhóm API cần có để FE/BE tách việc
 
-1. `Auth/Profile APIs`: register, login, refresh token, profile.
+1. `Auth/Profile APIs`: register, login, JWT access token, profile.
 2. `Onboarding APIs`: khảo sát, chọn template quản lý, tạo cấu hình mặc định.
 3. `Financial Account APIs`: CRUD nguồn tiền, cập nhật số dư khai báo.
 4. `Jar APIs`: CRUD hũ, chuyển phân bổ giữa các hũ, lịch sử thay đổi.

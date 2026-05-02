@@ -46,7 +46,7 @@ Nguồn đồng bộ:
 
 - Public: không cần token.
 - Bearer: user access token.
-- Admin: access token role `Admin` hoặc `SuperAdmin`.
+- Admin: access token role `Admin`.
 
 ### 3.3. Money và thời gian
 
@@ -206,7 +206,7 @@ Response `200 OK`
   "admin": {
     "id": "guid",
     "username": "string",
-    "role": "Admin | SuperAdmin"
+    "role": "Admin"
   }
 }
 ```

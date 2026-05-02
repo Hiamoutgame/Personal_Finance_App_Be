@@ -113,7 +113,10 @@ Nhờ vậy:
 - Primary key: `uuid`, dùng `gen_random_uuid()`
 - Timestamp: `timestamptz`
 - Amount/balance: `numeric(18,2)`
-- Tên bảng/cột: `snake_case`
+- Hướng triển khai hiện tại: `code-first`, ưu tiên giữ tên property/entity trong code nếu không có lỗi nghiệp vụ nghiêm trọng.
+- Khi đọc tài liệu DB, các tên dạng `snake_case` được hiểu là mapping tương đương với property C# hiện tại, ví dụ `HashPassword = hash_password`, `FirstName = first_name`, `LastName = last_name`.
+- Các bảng dùng chung base/audit field từ code: `Id`, `IsDeleted`, `CreatedAt`, `UpdatedAt`, `ReadAt`.
+- `IsDeleted` mặc định là `false`; `UpdatedAt` và `ReadAt` có thể `null` nếu record chưa được cập nhật hoặc chưa được đọc.
 
 ### 3.2. Cách lưu enum trong tháng đầu
 
@@ -121,7 +124,7 @@ Trong phase đầu nên lưu bằng `varchar` kèm `check constraint`, thay vì 
 
 Các enum chính:
 
-- `user_role`: `User`, `Admin`, `SuperAdmin`
+- `user_role`: `User`, `Admin`
 - `account_status`: `Active`, `Banned`
 - `financial_account_type`: `Cash`, `Bank`, `EWallet`, `Other`
 - `connection_mode`: `Manual`, `LinkedApi`
@@ -175,8 +178,9 @@ Field chính:
 - `role_id uuid not null references roles(id)`
 - `username varchar(50) not null unique`
 - `email varchar(255) not null unique`
-- `password_hash text not null`
-- `full_name varchar(150) not null`
+- `hash_password text not null`
+- `first_name varchar(150) not null`
+- `last_name varchar(150) not null`
 - `phone varchar(20) null`
 - `avatar_url text null`
 - `status varchar(20) not null default 'Active'`
@@ -193,23 +197,6 @@ Index quan trọng:
 - `uq_accounts_email`
 - `ix_accounts_role_status`
 - `ix_accounts_last_login_at`
-
-### `refresh_token_sessions`
-
-Mục đích: quản lý refresh token.
-
-Field chính:
-
-- `id uuid primary key`
-- `account_id uuid not null references accounts(id)`
-- `token_hash text not null`
-- `expires_at timestamptz not null`
-- `revoked_at timestamptz null`
-- `replaced_by_token_hash text null`
-- `created_by_ip inet null`
-- `revoked_by_ip inet null`
-- `user_agent text null`
-- `created_at timestamptz not null default now()`
 
 ### `ai_settings`
 
@@ -243,10 +230,10 @@ Field chính:
 - `user_id uuid not null unique references accounts(id)`
 - `monthly_income numeric(18,2) null`
 - `occupation_type varchar(50) null`
-- `financial_goal_types text[] null`
+- `financial_goal_types jsonb null`
 - `budget_method_preference varchar(30) not null default 'Undecided'`
 - `age_range varchar(30) null`
-- `spending_challenges text[] null`
+- `spending_challenges jsonb null`
 - `recommended_method varchar(30) null`
 - `completed_at timestamptz not null`
 - `created_at timestamptz not null default now()`
@@ -295,7 +282,6 @@ Field chính:
 - `last_synced_at timestamptz null`
 - `last_sync_error text null`
 - `access_token_ref text null`
-- `refresh_token_ref text null`
 - `token_expires_at timestamptz null`
 - `consent_expires_at timestamptz null`
 - `last_sync_cursor text null`
@@ -324,10 +310,12 @@ Ghi chú:
 - với `connection_mode = 'LinkedApi'`, app chỉ lưu metadata/token reference để đồng bộ dữ liệu theo quyền user đã cấp;
 - với `connection_mode = 'Manual'`, số dư do user nhập/chỉnh thủ công, phù hợp cho tiền mặt hoặc nguồn tiền chưa liên kết;
 - `current_balance` là số dư app đang biết tại thời điểm gần nhất, có thể đến từ user nhập tay, import sao kê hoặc đồng bộ API;
+- `current_balance` không có nghĩa là FinJar giữ tiền thật của user; đây chỉ là số dư theo dõi để tính dashboard và đối chiếu ngân sách;
 - `available_balance` nếu có thì phản ánh số dư khả dụng do provider trả về, không bắt buộc trong phase đầu;
 - `balance_as_of` dùng để biết số dư đang được tính tại thời điểm nào, rất quan trọng khi dữ liệu đến từ bank sync;
 - không nên lưu raw access token nếu tránh được;
-- `access_token_ref` và `refresh_token_ref` nên là dữ liệu đã mã hóa hoặc reference sang secret store.
+- `access_token_ref` nên là dữ liệu đã mã hóa hoặc reference sang secret store.
+- Phase 1 chưa lưu credential làm mới phiên của provider ngân hàng; nếu sau này cần bank sync sâu thì thêm lại bằng migration riêng.
 
 ### `categories`
 
@@ -346,6 +334,12 @@ Field chính:
 - `deleted_at timestamptz null`
 - `created_at timestamptz not null default now()`
 - `updated_at timestamptz not null default now()`
+
+Ghi chú:
+
+- `owner_user_id = null` nghĩa là category hệ thống/default, dùng chung cho user.
+- `owner_user_id != null` nghĩa là category custom do user đó tạo.
+- Nếu cần biết admin nào tạo/sửa default category thì dùng `audit_logs`, không cần thêm `created_by_admin_id` trong phase 1.
 
 ### `jars`
 
@@ -683,7 +677,6 @@ Field chính:
 ## 5. Quan hệ chính
 
 - `roles 1-N accounts`
-- `accounts 1-N refresh_token_sessions`
 - `accounts 1-1 onboarding_profiles`
 - `accounts 1-1 jar_setups`
 - `accounts 1-N financial_accounts`
@@ -711,7 +704,6 @@ Field chính:
 
 - `roles`
 - `accounts`
-- `refresh_token_sessions`
 - `audit_logs`
 
 ### Migration 2
@@ -727,6 +719,7 @@ Field chính:
 - `jar_allocations`
 - `jar_allocation_items`
 - `jar_transfers`
+- `import_jobs`
 - `transactions`
 
 ### Migration 4
@@ -740,7 +733,6 @@ Field chính:
 
 ### Migration 5
 
-- `import_jobs`
 - `import_transaction_drafts`
 
 ### Migration 6
@@ -1031,14 +1023,12 @@ flowchart LR
 
     roles[roles]:::entity
     accounts[accounts]:::entity
-    refresh_token_sessions[refresh_token_sessions]:::entity
     onboarding_profiles[onboarding_profiles]:::entity
     jar_setups[jar_setups]:::entity
     ai_settings[ai_settings]:::entity
     audit_logs[audit_logs]:::entity
 
     assigns{assigns}:::relation
-    owns_sessions{owns}:::relation
     completes{completes}:::relation
     configures{configures}:::relation
     updates{updates}:::relation
@@ -1046,9 +1036,6 @@ flowchart LR
 
     roles -->|"1"| assigns
     assigns -->|"N"| accounts
-
-    accounts -->|"1"| owns_sessions
-    owns_sessions -->|"N"| refresh_token_sessions
 
     accounts -->|"1"| completes
     completes -->|"1"| onboarding_profiles

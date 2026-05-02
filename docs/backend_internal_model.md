@@ -45,7 +45,7 @@ Ví dụ:
 Không thiết kế hệ thống xoay quanh table CRUD đơn thuần.  
 Thiết kế nội bộ nên xoay quanh các hành động nghiệp vụ:
 
-- đăng ký, đăng nhập, refresh token;
+- đăng ký, đăng nhập, JWT access token;
 - onboarding;
 - setup jars;
 - allocate income;
@@ -235,7 +235,7 @@ Nếu team muốn đơn giản hơn ở phase đầu, có thể chưa implement 
 
 ## 5.4. Enum nội bộ chính
 
-- `UserRole`: `User`, `Admin`, `SuperAdmin`
+- `UserRole`: `User`, `Admin`
 - `AccountStatus`: `Active`, `Banned`
 - `FinancialAccountType`: `Cash`, `Bank`, `EWallet`, `Other`
 - `ConnectionMode`: `Manual`, `LinkedApi`
@@ -292,27 +292,7 @@ Phần này là lõi của internal model. Không nhất thiết aggregate nào 
 - 1 user có nhiều notifications
 - 1 user có nhiều reminders
 
-### B. `RefreshTokenSession`
-
-**Vai trò**
-
-- quản lý vòng đời refresh token;
-- hỗ trợ revoke, rotate, logout.
-
-**Field chính**
-
-- `Id`
-- `UserId`
-- `TokenHash`
-- `ExpiresAtUtc`
-- `RevokedAtUtc`
-- `ReplacedByTokenHash`
-- `CreatedByIp`
-- `RevokedByIp`
-- `UserAgent`
-- `CreatedAtUtc`
-
-### C. `AdminAccount`
+### B. `AdminAccount`
 
 Có thể dùng chung bảng với `UserAccount` theo `Role`, hoặc tách riêng tùy chiến lược auth của team.  
 Nếu dùng chung, vẫn nên có policy tách rõ cho admin endpoints.
@@ -375,7 +355,6 @@ Nếu dùng chung, vẫn nên có policy tách rõ cho admin endpoints.
 - `LastSyncedAtUtc`
 - `LastSyncError`
 - `AccessTokenRef`
-- `RefreshTokenRef`
 - `TokenExpiresAtUtc`
 - `ConsentExpiresAtUtc`
 - `LastSyncCursor`
@@ -1232,8 +1211,8 @@ src/
 
 | API use case | Internal command/query | Aggregate chính | Side effects |
 | --- | --- | --- | --- |
-| Register | `RegisterUserCommand` | `UserAccount` | tạo refresh session nếu cần |
-| Login | `LoginUserCommand` | `UserAccount`, `RefreshTokenSession` | update last login |
+| Register | `RegisterUserCommand` | `UserAccount` | tạo hồ sơ ban đầu nếu cần |
+| Login | `LoginUserCommand` | `UserAccount` | phát JWT access token, update last login |
 | Onboarding | `CompleteOnboardingCommand` | `UserOnboardingProfile` | gợi ý jars |
 | Financial accounts | `Create/UpdateFinancialAccountCommand` | `FinancialAccount` | default source, balance tracking |
 | Setup jars | `SetupJarsCommand` | `JarSetupProfile`, `Jar` | tạo jars mặc định/custom |
