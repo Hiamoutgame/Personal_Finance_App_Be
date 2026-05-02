@@ -35,6 +35,9 @@ builder.Services.AddScoped<UserService.IService, UserService.Service>();
 
 var app = builder.Build();
 
+// hien: khuc nay dung de tu dong apply database migration khi bien ApplyMigrations duoc bat
+app.ApplyDatabaseMigrations();
+
 app.UseMiddleware<GlobalExceptionHandlerMiddleware>();
 
 if (app.Environment.IsDevelopment())

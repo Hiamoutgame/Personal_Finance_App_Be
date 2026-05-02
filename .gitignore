@@ -53,9 +53,11 @@ CodeCoverage/
 TestResult.xml
 nunit-*.xml
 
-./.vscode
+/.vscode
 
 # Local environment files
 .env
 .env.*
 !.env.example
+
+note/
