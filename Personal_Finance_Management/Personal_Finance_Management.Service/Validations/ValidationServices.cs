@@ -63,6 +63,16 @@ public class ValidationServices : IServices
             throw AppValidationException.BadRequest("Password is required.", "password", "REQUIRED");
         }
 
+        if (string.IsNullOrWhiteSpace(request.FirstName))
+        {
+            throw AppValidationException.BadRequest("First name is required.", "firstName", "REQUIRED");
+        }
+
+        if (string.IsNullOrWhiteSpace(request.LastName))
+        {
+            throw AppValidationException.BadRequest("Last name is required.", "lastName", "REQUIRED");
+        }
+
         if (await _dbContext.Accounts.AnyAsync(a => a.Username.ToLower() == username.ToLower()))
         {
             throw AppValidationException.Conflict("Username already exists.", "username", "AUTH_CONFLICT");

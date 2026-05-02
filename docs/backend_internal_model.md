@@ -216,7 +216,6 @@ Các value object nên được dùng để giảm lỗi logic:
 - `Money`
 - `DateRange`
 - `Percentage`
-- `FullName`
 - `EmailAddress`
 - `PhoneNumber`
 - `ColorHex`
@@ -271,8 +270,9 @@ Phần này là lõi của internal model. Không nhất thiết aggregate nào 
 - `Id`
 - `Username`
 - `Email`
-- `PasswordHash`
-- `FullName`
+- `HashPassword`
+- `FirstName`
+- `LastName`
 - `Phone`
 - `AvatarUrl`
 - `Role`

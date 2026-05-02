@@ -8,6 +8,8 @@ namespace Personal_Finance_Management.Repository;
 
 public class AppDbContext : DbContext
 {
+    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
+
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
     {
     }
@@ -109,6 +111,12 @@ public class AppDbContext : DbContext
             builder.Property(a => a.IsOnboardingCompleted)
                         .HasDefaultValue(false);
 
+            builder.HasIndex(a => new { a.RoleId, a.Status });
+            builder.HasIndex(a => a.LastLoginAt);
+            builder.ToTable(t => t.HasCheckConstraint(
+                "ck_accounts_status",
+                "\"Status\" IN ('Active','Banned')"));
+
             // N-1: Account → Role
             builder.HasOne(a => a.Role)
                         .WithMany(r => r.Accounts)
@@ -135,11 +143,12 @@ public class AppDbContext : DbContext
                             .HasColumnType("text");
 
             builder.Property(a => a.MetadataJson)
-                            .HasColumnType("json");
+                            .HasColumnType("jsonb");
 
             builder.Property(a => a.IpAddress)
                 .HasMaxLength(45);
 
+            builder.HasIndex(a => new { a.ActorAccountId, a.CreatedAt });
 
             builder.HasOne(a => a.Account)
                             .WithMany(acc => acc.AuditLogs)
@@ -170,18 +179,8 @@ public class AppDbContext : DbContext
                 .HasForeignKey<OnboardingProfile>(o => o.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
             // Cascade: xoá Account → xoá OnboardingProfile theo
-            builder.Property(x => x.FinancialGoalTypes)
-                .HasConversion(
-                    v => JsonSerializer.Serialize(v, (JsonSerializerOptions)null),
-                    v => JsonSerializer.Deserialize<List<string>>(v, (JsonSerializerOptions)null) ?? new List<string>()
-                )
-                .Metadata.SetValueComparer(
-                    new ValueComparer<List<string>>(
-                        (c1, c2) => c1.SequenceEqual(c2),
-                        c => c.Aggregate(0, (a, v) => HashCode.Combine(a, v.GetHashCode())),
-                        c => c.ToList()
-                    )
-                );
+            ConfigureStringListJson(builder.Property(x => x.FinancialGoalTypes));
+            ConfigureStringListJson(builder.Property(x => x.SpendingChallenges));
         });
 
         // ── 5. jar_setups ─────────────────────────────────────────
@@ -193,6 +192,9 @@ public class AppDbContext : DbContext
                 .IsRequired()
                 .HasMaxLength(30);
 
+            builder.ToTable(t => t.HasCheckConstraint(
+                "ck_jar_setups_method_type",
+                "\"MethodType\" IN ('SixJars','Rule503020','Custom','Undecided')"));
 
             builder.HasOne(j => j.User)
                 .WithOne(a => a.JarSetup)
@@ -244,6 +246,21 @@ public class AppDbContext : DbContext
 
             builder.Property(f => f.IsDefault).HasDefaultValue(false);
             builder.Property(f => f.IsActive).HasDefaultValue(true);
+
+            builder.HasIndex(f => new { f.UserId, f.IsDefault });
+            builder.HasIndex(f => f.SyncStatus);
+            builder.ToTable(t =>
+            {
+                t.HasCheckConstraint(
+                    "ck_financial_accounts_account_type",
+                    "\"AccountType\" IN ('Cash','Bank','EWallet','Other')");
+                t.HasCheckConstraint(
+                    "ck_financial_accounts_connection_mode",
+                    "\"ConnectionMode\" IN ('Manual','LinkedApi')");
+                t.HasCheckConstraint(
+                    "ck_financial_accounts_current_balance_non_negative",
+                    "\"CurrentBalance\" >= 0");
+            });
 
             // N-1: FinancialAccount → Account
             builder.HasOne(f => f.User)
@@ -305,6 +322,17 @@ public class AppDbContext : DbContext
                 .HasMaxLength(20)
                 .HasDefaultValue("Active");
 
+            builder.HasIndex(j => j.UserId);
+            builder.ToTable(t =>
+            {
+                t.HasCheckConstraint(
+                    "ck_jars_balance_non_negative",
+                    "\"Balance\" >= 0");
+                t.HasCheckConstraint(
+                    "ck_jars_status",
+                    "\"Status\" IN ('Active','Paused','Archived')");
+            });
+
             // N-1: Jar → Account
             builder.HasOne(j => j.User)
                 .WithMany()
@@ -331,6 +359,10 @@ public class AppDbContext : DbContext
 
             builder.Property(j => j.Note)
                 .HasColumnType("text");
+
+            builder.ToTable(t => t.HasCheckConstraint(
+                "ck_jar_allocations_total_amount_positive",
+                "\"TotalAmount\" > 0"));
 
             // N-1: JarAllocation → Account
             builder.HasOne(j => j.User)
@@ -361,6 +393,16 @@ public class AppDbContext : DbContext
                 .IsRequired()
                 .HasColumnType("decimal(18,2)");
 
+            builder.ToTable(t =>
+            {
+                t.HasCheckConstraint(
+                    "ck_jar_allocation_items_amount_positive",
+                    "\"Amount\" > 0");
+                t.HasCheckConstraint(
+                    "ck_jar_allocation_items_balance_after_non_negative",
+                    "\"BalanceAfterAllocation\" >= 0");
+            });
+
             // N-1: JarAllocationItem → JarAllocation
             builder.HasOne(j => j.Allocation)
                 .WithMany(a => a.Items)
@@ -387,6 +429,16 @@ public class AppDbContext : DbContext
 
             builder.Property(j => j.Note)
                 .HasColumnType("text");
+
+            builder.ToTable(t =>
+            {
+                t.HasCheckConstraint(
+                    "ck_jar_transfers_amount_positive",
+                    "\"Amount\" > 0");
+                t.HasCheckConstraint(
+                    "ck_jar_transfers_diff",
+                    "\"FromJarId\" <> \"ToJarId\"");
+            });
 
             // N-1: JarTransfer → Account
             builder.HasOne(j => j.User)
@@ -462,7 +514,7 @@ public class AppDbContext : DbContext
 
             builder.Property(t => t.Note).HasColumnType("text");
             builder.Property(t => t.RawDescription).HasColumnType("text");
-            builder.Property(t => t.RawPayloadJson).HasColumnType("json");
+            builder.Property(t => t.RawPayloadJson).HasColumnType("jsonb");
             builder.Property(t => t.ExternalTransactionId).HasMaxLength(150);
 
             builder.Property(t => t.SourceType)
@@ -474,6 +526,18 @@ public class AppDbContext : DbContext
 
             // Index thường dùng để query theo user + date
             builder.HasIndex(t => new { t.UserId, t.TransactionDate });
+            builder.HasIndex(t => new { t.FinancialAccountId, t.TransactionDate });
+            builder.HasIndex(t => new { t.UserId, t.JarId, t.TransactionDate });
+            builder.HasIndex(t => new { t.UserId, t.CategoryId, t.TransactionDate });
+            builder.ToTable(t =>
+            {
+                t.HasCheckConstraint(
+                    "ck_transactions_type",
+                    "\"Type\" IN ('Income','Expense')");
+                t.HasCheckConstraint(
+                    "ck_transactions_amount_positive",
+                    "\"Amount\" > 0");
+            });
 
             // N-1: Transaction → Account
             builder.HasOne(t => t.User)
@@ -527,6 +591,16 @@ public class AppDbContext : DbContext
 
             builder.Property(s => s.IsActive).HasDefaultValue(true);
 
+            builder.ToTable(t =>
+            {
+                t.HasCheckConstraint(
+                    "ck_spending_limits_period",
+                    "\"Period\" IN ('Daily','Monthly')");
+                t.HasCheckConstraint(
+                    "ck_spending_limits_target_xor",
+                    "((\"JarId\" IS NOT NULL AND \"CategoryId\" IS NULL) OR (\"JarId\" IS NULL AND \"CategoryId\" IS NOT NULL))");
+            });
+
             // N-1: SpendingLimit → Account
             builder.HasOne(s => s.User)
                 .WithMany()
@@ -570,6 +644,10 @@ public class AppDbContext : DbContext
 
             builder.Property(g => g.Note).HasColumnType("text");
 
+            builder.ToTable(t => t.HasCheckConstraint(
+                "ck_goals_status",
+                "\"Status\" IN ('Active','Completed','Cancelled')"));
+
             // N-1: Goal → Account
             builder.HasOne(g => g.User)
                 .WithMany()
@@ -596,6 +674,16 @@ public class AppDbContext : DbContext
                 .HasColumnType("decimal(18,2)");
 
             builder.Property(g => g.Note).HasColumnType("text");
+
+            builder.ToTable(t =>
+            {
+                t.HasCheckConstraint(
+                    "ck_goal_contributions_amount_positive",
+                    "\"Amount\" > 0");
+                t.HasCheckConstraint(
+                    "ck_goal_contributions_source_xor",
+                    "((\"SourceJarId\" IS NOT NULL AND \"SourceFinancialAccountId\" IS NULL) OR (\"SourceJarId\" IS NULL AND \"SourceFinancialAccountId\" IS NOT NULL))");
+            });
 
             // N-1: GoalContribution → Goal
             builder.HasOne(g => g.Goal)
@@ -648,6 +736,16 @@ public class AppDbContext : DbContext
 
             builder.Property(r => r.Note).HasColumnType("text");
 
+            builder.ToTable(t =>
+            {
+                t.HasCheckConstraint(
+                    "ck_reminders_frequency",
+                    "\"Frequency\" IN ('Daily','Weekly','Monthly','Quarterly','Yearly')");
+                t.HasCheckConstraint(
+                    "ck_reminders_status",
+                    "\"Status\" IN ('Active','Paused','Completed','Cancelled')");
+            });
+
             // N-1: Reminder → Account
             builder.HasOne(r => r.User)
                 .WithMany()
@@ -687,8 +785,12 @@ public class AppDbContext : DbContext
             builder.Property(b => b.TargetCount).HasDefaultValue(0);
             builder.Property(b => b.DeliveredCount).HasDefaultValue(0);
 
+            builder.ToTable(t => t.HasCheckConstraint(
+                "ck_broadcasts_status",
+                "\"Status\" IN ('Queued','Sent','Failed','Cancelled')"));
+
             // N-1: Broadcast → Account (admin)
-            builder.HasOne(b => b.CreatByAdmin)
+            builder.HasOne(b => b.CreatedByAdmin)
                 .WithMany()
                 .HasForeignKey(b => b.CreatedByAdminId)
                 .OnDelete(DeleteBehavior.Restrict);
@@ -714,11 +816,15 @@ public class AppDbContext : DbContext
                 .IsRequired()
                 .HasColumnType("text");
 
-            builder.Property(n => n.MetadataJson).HasColumnType("json");
+            builder.Property(n => n.MetadataJson).HasColumnType("jsonb");
             builder.Property(n => n.IsRead).HasDefaultValue(false);
 
             // Index để query nhanh thông báo chưa đọc của 1 user
-            builder.HasIndex(n => new { n.UserId, n.IsRead });
+            builder.HasIndex(n => new { n.UserId, n.IsRead })
+                .HasFilter("\"IsRead\" = false");
+            builder.ToTable(t => t.HasCheckConstraint(
+                "ck_notifications_type",
+                "\"Type\" IN ('SpendingAlert','GoalUpdate','Reminder','System','Broadcast')"));
 
             // N-1: Notification → Account
             builder.HasOne(n => n.User)
@@ -744,7 +850,7 @@ public class AppDbContext : DbContext
             builder.Property(d => d.RawDescription).HasColumnType("text");
             builder.Property(d => d.SuggestedNote).HasColumnType("text");
             builder.Property(d => d.ValidationError).HasColumnType("text");
-            builder.Property(d => d.NormalizedPayloadJson).HasColumnType("json");
+            builder.Property(d => d.NormalizedPayloadJson).HasColumnType("jsonb");
             builder.Property(d => d.IsValid).HasDefaultValue(true);
 
             // Unique constraint: (import_job_id, row_index) — theo DBML
@@ -803,5 +909,20 @@ public class AppDbContext : DbContext
                 .HasForeignKey(a => a.UpdatedByAdminId)
                 .OnDelete(DeleteBehavior.SetNull);
         });
+    }
+
+    private static void ConfigureStringListJson(
+        Microsoft.EntityFrameworkCore.Metadata.Builders.PropertyBuilder<List<string>?> propertyBuilder)
+    {
+        propertyBuilder
+            .HasColumnType("jsonb")
+            .HasConversion(
+                v => JsonSerializer.Serialize(v ?? new List<string>(), JsonOptions),
+                v => JsonSerializer.Deserialize<List<string>>(v, JsonOptions) ?? new List<string>())
+            .Metadata.SetValueComparer(
+                new ValueComparer<List<string>?>(
+                    (c1, c2) => (c1 ?? new List<string>()).SequenceEqual(c2 ?? new List<string>()),
+                    c => (c ?? new List<string>()).Aggregate(0, (a, v) => HashCode.Combine(a, v.GetHashCode())),
+                    c => (c ?? new List<string>()).ToList()));
     }
 }

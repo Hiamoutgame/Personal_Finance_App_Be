@@ -109,7 +109,8 @@ Request
   "username": "string",
   "email": "string",
   "password": "string",
-  "fullName": "string"
+  "firstName": "string",
+  "lastName": "string"
 }
 ```
 
@@ -119,7 +120,8 @@ Response `201 Created`
 {
   "id": "guid",
   "username": "string",
-  "fullName": "string",
+  "firstName": "string",
+  "lastName": "string",
   "email": "string"
 }
 ```
@@ -152,7 +154,8 @@ Response `200 OK`
   "user": {
     "id": "guid",
     "username": "string",
-    "fullName": "string",
+    "firstName": "string",
+    "lastName": "string",
     "email": "string",
     "role": "User | Admin",
     "isOnboardingCompleted": false
@@ -228,7 +231,8 @@ Response `200 OK`
 {
   "id": "guid",
   "username": "string",
-  "fullName": "string",
+  "firstName": "string",
+  "lastName": "string",
   "email": "string",
   "phone": "string | null",
   "avatarUrl": "string | null",
@@ -245,7 +249,8 @@ Request
 
 ```json
 {
-  "fullName": "string",
+  "firstName": "string",
+  "lastName": "string",
   "phone": "string | null",
   "avatarUrl": "string | null"
 }
@@ -256,7 +261,8 @@ Response `200 OK`
 ```json
 {
   "id": "guid",
-  "fullName": "string",
+  "firstName": "string",
+  "lastName": "string",
   "phone": "string | null",
   "avatarUrl": "string | null"
 }
@@ -1596,7 +1602,8 @@ Response `200 OK`
     {
       "id": "guid",
       "username": "string",
-      "fullName": "string",
+      "firstName": "string",
+      "lastName": "string",
       "email": "string",
       "status": "Active",
       "isOnboardingCompleted": true,
@@ -1624,7 +1631,8 @@ Response `200 OK`
 {
   "id": "guid",
   "username": "string",
-  "fullName": "string",
+  "firstName": "string",
+  "lastName": "string",
   "email": "string",
   "status": "Active",
   "isOnboardingCompleted": true,
