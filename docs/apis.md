@@ -46,7 +46,7 @@ Nguồn đồng bộ:
 
 - Public: không cần token.
 - Bearer: user access token.
-- Admin: access token role `Admin` hoặc `SuperAdmin`.
+- Admin: access token role `Admin`.
 
 ### 3.3. Money và thời gian
 
@@ -195,6 +195,39 @@ Response `200 OK`
   "message": "Logged out successfully"
 }
 ```
+
+### `POST /api/v1/admin/auth/login`
+
+- Auth: Public
+
+Request
+
+```json
+{
+  "username": "string",
+  "password": "string"
+}
+```
+
+Response `200 OK`
+
+```json
+{
+  "accessToken": "string",
+  "tokenType": "Bearer",
+  "expiresIn": 3600,
+  "admin": {
+    "id": "guid",
+    "username": "string",
+    "role": "Admin"
+  }
+}
+```
+
+**Notes**
+
+- tự động ghi audit log
+- `403 Forbidden` nếu không phải role admin
 
 ## P1 — Onboarding, Profile, Financial Accounts, Category
 
@@ -1579,7 +1612,8 @@ Response `200 OK`
     {
       "id": "guid",
       "username": "string",
-      "fullName": "string",
+      "firstName": "string",
+      "lastName": "string",
       "email": "string",
       "status": "Active",
       "isOnboardingCompleted": true,
@@ -1607,7 +1641,8 @@ Response `200 OK`
 {
   "id": "guid",
   "username": "string",
-  "fullName": "string",
+  "firstName": "string",
+  "lastName": "string",
   "email": "string",
   "status": "Active",
   "isOnboardingCompleted": true,

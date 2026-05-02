@@ -20,9 +20,12 @@ builder.Services.Configure<ApiBehaviorOptions>(options =>
 
 builder.Services.AddSwaggerServices();
 
+// hien: khuc nay dung de chon connection string dung cho local hoac hosting truoc khi dang ky DbContext
+var databaseConnectionString = builder.GetAppDatabaseConnectionString();
+
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(
-        builder.Configuration.GetConnectionString("DefaultConnection")
+        databaseConnectionString
     )
 );
 builder.Services.AddJwtServices(builder.Configuration);
@@ -35,9 +38,15 @@ builder.Services.AddScoped<UserService.IService, UserService.Service>();
 
 var app = builder.Build();
 
+// hien: khuc nay dung de tu dong apply database migration khi bien ApplyMigrations duoc bat
+app.ApplyDatabaseMigrations();
+
 app.UseMiddleware<GlobalExceptionHandlerMiddleware>();
 
-if (app.Environment.IsDevelopment())
+var enableSwagger = app.Environment.IsDevelopment()
+                    || app.Configuration.GetValue<bool>("EnableSwagger");
+
+if (enableSwagger)
 {
     app.UseSwaggerAPI();
 }

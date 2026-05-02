@@ -148,7 +148,7 @@
           },
           {
             "names": [
-              "password_hash"
+              "hash_password"
             ],
             "order": 5,
             "pkMember": false,
@@ -161,7 +161,7 @@
           },
           {
             "names": [
-              "full_name"
+              "first_name"
             ],
             "order": 6,
             "pkMember": false,
@@ -171,6 +171,19 @@
             "dataType": "varchar",
             "dataTypeSize": "150",
             "id": 11
+          },
+          {
+            "names": [
+              "last_name"
+            ],
+            "order": 7,
+            "pkMember": false,
+            "optional": false,
+            "soloUnique": false,
+            "fk": false,
+            "dataType": "varchar",
+            "dataTypeSize": "150",
+            "id": 1001
           },
           {
             "names": [
@@ -292,155 +305,6 @@
         ],
         "uniqueGroups": [],
         "id": 2
-      }
-    },
-    {
-      "type": "Table",
-      "details": {
-        "name": "refresh_token_sessions",
-        "x": 1040,
-        "y": 80,
-        "sort": "automatic",
-        "attributes": [
-          {
-            "names": [
-              "id"
-            ],
-            "order": 1,
-            "pkMember": true,
-            "optional": false,
-            "soloUnique": false,
-            "fk": false,
-            "dataType": "uuid",
-            "dataTypeSize": null,
-            "id": 21
-          },
-          {
-            "names": [
-              "account_id"
-            ],
-            "order": 2,
-            "pkMember": false,
-            "optional": false,
-            "soloUnique": false,
-            "fk": true,
-            "dataType": "uuid",
-            "dataTypeSize": null,
-            "id": 22,
-            "references": [
-              {
-                "tableId": 2,
-                "attributeId": 6
-              }
-            ]
-          },
-          {
-            "names": [
-              "token_hash"
-            ],
-            "order": 3,
-            "pkMember": false,
-            "optional": false,
-            "soloUnique": false,
-            "fk": false,
-            "dataType": "text",
-            "dataTypeSize": null,
-            "id": 23
-          },
-          {
-            "names": [
-              "expires_at"
-            ],
-            "order": 4,
-            "pkMember": false,
-            "optional": false,
-            "soloUnique": false,
-            "fk": false,
-            "dataType": "timestamptz",
-            "dataTypeSize": null,
-            "id": 24
-          },
-          {
-            "names": [
-              "revoked_at"
-            ],
-            "order": 5,
-            "pkMember": false,
-            "optional": true,
-            "soloUnique": false,
-            "fk": false,
-            "dataType": "timestamptz",
-            "dataTypeSize": null,
-            "id": 25
-          },
-          {
-            "names": [
-              "replaced_by_token_hash"
-            ],
-            "order": 6,
-            "pkMember": false,
-            "optional": true,
-            "soloUnique": false,
-            "fk": false,
-            "dataType": "text",
-            "dataTypeSize": null,
-            "id": 26
-          },
-          {
-            "names": [
-              "created_by_ip"
-            ],
-            "order": 7,
-            "pkMember": false,
-            "optional": true,
-            "soloUnique": false,
-            "fk": false,
-            "dataType": "inet",
-            "dataTypeSize": null,
-            "id": 27
-          },
-          {
-            "names": [
-              "revoked_by_ip"
-            ],
-            "order": 8,
-            "pkMember": false,
-            "optional": true,
-            "soloUnique": false,
-            "fk": false,
-            "dataType": "inet",
-            "dataTypeSize": null,
-            "id": 28
-          },
-          {
-            "names": [
-              "user_agent"
-            ],
-            "order": 9,
-            "pkMember": false,
-            "optional": true,
-            "soloUnique": false,
-            "fk": false,
-            "dataType": "text",
-            "dataTypeSize": null,
-            "id": 29
-          },
-          {
-            "names": [
-              "created_at"
-            ],
-            "order": 10,
-            "pkMember": false,
-            "optional": false,
-            "soloUnique": false,
-            "fk": false,
-            "dataType": "timestamptz",
-            "dataTypeSize": null,
-            "id": 30
-          }
-        ],
-        "uniqueGroups": [],
-        "id": 3
       }
     },
     {
@@ -654,7 +518,7 @@
             "optional": true,
             "soloUnique": false,
             "fk": false,
-            "dataType": "text[]",
+            "dataType": "jsonb",
             "dataTypeSize": null,
             "id": 44
           },
@@ -693,7 +557,7 @@
             "optional": true,
             "soloUnique": false,
             "fk": false,
-            "dataType": "text[]",
+            "dataType": "jsonb",
             "dataTypeSize": null,
             "id": 47
           },
@@ -1098,19 +962,6 @@
             "dataType": "text",
             "dataTypeSize": null,
             "id": 75
-          },
-          {
-            "names": [
-              "refresh_token_ref"
-            ],
-            "order": 20,
-            "pkMember": false,
-            "optional": true,
-            "soloUnique": false,
-            "fk": false,
-            "dataType": "text",
-            "dataTypeSize": null,
-            "id": 76
           },
           {
             "names": [

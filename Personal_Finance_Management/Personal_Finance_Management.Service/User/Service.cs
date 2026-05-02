@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Personal_Finance_Management.Repository;
+using Personal_Finance_Management.Service.Validations;
 
 namespace Personal_Finance_Management.Service.User;
 
@@ -27,7 +28,8 @@ public class Service : IService
         {
             Id = x.Id,
             userName = x.Username,
-            fullName = x.FirstName + " " + x.LastName,
+            firstName = x.FirstName,
+            lastName = x.LastName,
             email = x.Email,
             phone = x.Phone,
             avatarUrl = x.AvatarUrl,
@@ -35,7 +37,7 @@ public class Service : IService
             isOnboardingCompleted = x.IsOnboardingCompleted
         });
         var result = await selectedQuery.FirstOrDefaultAsync();
-        return result;
+        return result ?? throw new Exception("User not found");
     }
 
     public async Task<Response.UpdateUserResponse> UpdateUserProfile(Request.UpdateUserRequest request)
@@ -52,16 +54,33 @@ public class Service : IService
         if (user == null)
             throw new Exception("User not found");
 
-        user.FirstName = request.firstName ?? user.FirstName;
-        user.LastName = request.lastName ?? user.LastName;
-        user.Phone = request.phone ?? user.Phone;
-        user.AvatarUrl = request.avatarUrl ?? user.AvatarUrl;
+        if (request.firstName is not null)
+        {
+            var firstName = request.firstName.Trim();
+            if (string.IsNullOrWhiteSpace(firstName))
+                throw AppValidationException.BadRequest("First name is required.", "firstName", "REQUIRED");
+
+            user.FirstName = firstName;
+        }
+
+        if (request.lastName is not null)
+        {
+            var lastName = request.lastName.Trim();
+            if (string.IsNullOrWhiteSpace(lastName))
+                throw AppValidationException.BadRequest("Last name is required.", "lastName", "REQUIRED");
+
+            user.LastName = lastName;
+        }
+
+        user.Phone = request.phone?.Trim() ?? user.Phone;
+        user.AvatarUrl = request.avatarUrl?.Trim() ?? user.AvatarUrl;
 
         await _dbContext.SaveChangesAsync();
         var result = new Response.UpdateUserResponse()
         {
             Id = user.Id,
-            fullName = user.FirstName + " " + user.LastName,
+            firstName = user.FirstName,
+            lastName = user.LastName,
             phone = user.Phone,
             avatarUrl = user.AvatarUrl,
         };
@@ -81,22 +100,25 @@ public class Service : IService
 
         if (user == null)
             throw new Exception("User not found");
-        var query = _dbContext.Accounts.Where(x => x.Id == userIdGuid);
-        var selectedQuery = query.Select(x => new Response.ViewSetupResponse()
+        var selectedQuery = _dbContext.Accounts
+            .Where(x => x.Id == userIdGuid)
+            .Select(x => new Response.ViewSetupResponse()
         {
             isOnboardingCompleted = x.IsOnboardingCompleted,
-            monthlyIncome = x.OnboardingProfile.MonthlyIncome,
-            budgetMethod = x.OnboardingProfile.BudgetMethodPreference,
-            defaultFinancialAccountId = (x.FinancialAccounts.FirstOrDefault() ?? null).Id,
-            // defaultFinancialAccountId = x.FinancialAccounts.FirstOrDefault().Id,
+            monthlyIncome = x.OnboardingProfile == null ? null : x.OnboardingProfile.MonthlyIncome,
+            budgetMethod = x.OnboardingProfile == null
+                ? "Undecided"
+                : x.OnboardingProfile.BudgetMethodPreference ?? "Undecided",
+            defaultFinancialAccountId = x.FinancialAccounts
+                .Where(f => f.IsDefault)
+                .Select(f => (Guid?)f.Id)
+                .FirstOrDefault(),
             jarCount = _dbContext.Jars.Where(x => x.UserId == userIdGuid).Count(),
             financialAccountCount = _dbContext.FinancialAccounts.Where(x => x.UserId == userIdGuid).Count(),
-            // limitCount = 1,
-            // activeGoalCount = 1,
             limitCount = _dbContext.SpendingLimits.Where(x => x.UserId == userIdGuid).Count(),
             activeGoalCount = _dbContext.Goals.Where(x => x.UserId == userIdGuid).Count(),
         });
         var result = await selectedQuery.FirstOrDefaultAsync();
-        return result;
+        return result ?? throw new Exception("User not found");
     }
 }

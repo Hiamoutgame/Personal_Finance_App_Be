@@ -37,17 +37,19 @@ public class Service : IService
         {
             throw new Exception("Onboarding is already completed");
         }
+        var now = DateTimeOffset.UtcNow;
         var onboardingDetail = new Personal_Finance_Management.Repository.Entity.OnboardingProfile()
         {
-            
             UserId = userIdGuid,
             MonthlyIncome = request.monthlyIncome,
             OccupationType = request.occupationType,
-            FinancialGoalTypes = request.financialGoalTypes,
+            FinancialGoalTypes = request.financialGoalTypes ?? new List<string>(),
             BudgetMethodPreference = request.budgetMethodPreference,
             AgeRange = request.ageRange,
-            SpendingChallenges = request.spendingChallenges,
+            SpendingChallenges = request.spendingChallenges ?? new List<string>(),
             RecommendedMethod = request.budgetMethodPreference,
+            CompletedAt = now,
+            CreatedAt = now
         };
         _dbContext.OnboardingProfiles.Add(onboardingDetail);
         var response = new Response.OnboardingResponse()
@@ -145,7 +147,12 @@ public class Service : IService
             UserId = userIdGuid,
             Name = response.defaultFinancialAccount.name,
             AccountType = response.defaultFinancialAccount.accountType,
-            ConnectionMode = "Manual"
+            ConnectionMode = "Manual",
+            Currency = "VND",
+            CurrentBalance = 0m,
+            IsDefault = true,
+            IsActive = true,
+            CreatedAt = now
         };
         _dbContext.FinancialAccounts.Add(savedFinancialAccount);
         var savedCategory = response.recommendedCategories.Select(x => new Repository.Entity.Category()
@@ -153,7 +160,9 @@ public class Service : IService
             OwnerUserId = userIdGuid,
             Name = x.name,
             Icon = x.icon,
-            IsDefault = true,
+            IsDefault = false,
+            IsActive = true,
+            CreatedAt = now
         });
         _dbContext.Categories.AddRange(savedCategory);
         var savedJar = response.recommendedJars.Select(x => new Repository.Entity.Jar()
@@ -162,6 +171,10 @@ public class Service : IService
             Name = x.name,
             Percentage = x.percentage,
             IsDefault = true,
+            Balance = 0m,
+            Currency = "VND",
+            Status = "Active",
+            CreatedAt = now
         });
         
         _dbContext.Jars.AddRange(savedJar);

@@ -55,6 +55,7 @@ namespace Personal_Finance_Management.Repository.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_accounts", x => x.Id);
+                    table.CheckConstraint("ck_accounts_status", "\"Status\" IN ('Active','Banned')");
                     table.ForeignKey(
                         name: "FK_accounts_roles_RoleId",
                         column: x => x.RoleId,
@@ -100,7 +101,7 @@ namespace Personal_Finance_Management.Repository.Migrations
                     EntityType = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
                     EntityId = table.Column<Guid>(type: "uuid", nullable: true),
                     Description = table.Column<string>(type: "text", nullable: false),
-                    MetadataJson = table.Column<string>(type: "json", nullable: true),
+                    MetadataJson = table.Column<string>(type: "jsonb", nullable: true),
                     IpAddress = table.Column<string>(type: "character varying(45)", maxLength: 45, nullable: true),
                     ActorAccountId = table.Column<Guid>(type: "uuid", nullable: false),
                     CreatedAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
@@ -141,6 +142,7 @@ namespace Personal_Finance_Management.Repository.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_broadcasts", x => x.Id);
+                    table.CheckConstraint("ck_broadcasts_status", "\"Status\" IN ('Queued','Sent','Failed','Cancelled')");
                     table.ForeignKey(
                         name: "FK_broadcasts_accounts_CreatedByAdminId",
                         column: x => x.CreatedByAdminId,
@@ -215,6 +217,9 @@ namespace Personal_Finance_Management.Repository.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_financial_accounts", x => x.Id);
+                    table.CheckConstraint("ck_financial_accounts_account_type", "\"AccountType\" IN ('Cash','Bank','EWallet','Other')");
+                    table.CheckConstraint("ck_financial_accounts_connection_mode", "\"ConnectionMode\" IN ('Manual','LinkedApi')");
+                    table.CheckConstraint("ck_financial_accounts_current_balance_non_negative", "\"CurrentBalance\" >= 0");
                     table.ForeignKey(
                         name: "FK_financial_accounts_accounts_UserId",
                         column: x => x.UserId,
@@ -238,6 +243,7 @@ namespace Personal_Finance_Management.Repository.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_jar_setups", x => x.Id);
+                    table.CheckConstraint("ck_jar_setups_method_type", "\"MethodType\" IN ('SixJars','Rule503020','Custom','Undecided')");
                     table.ForeignKey(
                         name: "FK_jar_setups_accounts_UserId",
                         column: x => x.UserId,
@@ -253,10 +259,10 @@ namespace Personal_Finance_Management.Repository.Migrations
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
                     MonthlyIncome = table.Column<decimal>(type: "numeric", nullable: true),
                     OccupationType = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: true),
-                    FinancialGoalTypes = table.Column<string>(type: "text", nullable: true),
+                    FinancialGoalTypes = table.Column<string>(type: "jsonb", nullable: true),
                     BudgetMethodPreference = table.Column<string>(type: "character varying(30)", maxLength: 30, nullable: false, defaultValue: "Undecided"),
                     AgeRange = table.Column<string>(type: "character varying(30)", maxLength: 30, nullable: true),
-                    SpendingChallenges = table.Column<string>(type: "text", nullable: true),
+                    SpendingChallenges = table.Column<string>(type: "jsonb", nullable: true),
                     RecommendedMethod = table.Column<string>(type: "text", nullable: true),
                     CompletedAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
                     UserId = table.Column<Guid>(type: "uuid", nullable: false),
@@ -285,7 +291,7 @@ namespace Personal_Finance_Management.Repository.Migrations
                     Title = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
                     Body = table.Column<string>(type: "text", nullable: false),
                     IsRead = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false),
-                    MetadataJson = table.Column<string>(type: "json", nullable: true),
+                    MetadataJson = table.Column<string>(type: "jsonb", nullable: true),
                     UserId = table.Column<Guid>(type: "uuid", nullable: false),
                     BroadcastId = table.Column<Guid>(type: "uuid", nullable: true),
                     UpdatedAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true),
@@ -296,6 +302,7 @@ namespace Personal_Finance_Management.Repository.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_notifications", x => x.Id);
+                    table.CheckConstraint("ck_notifications_type", "\"Type\" IN ('SpendingAlert','GoalUpdate','Reminder','System','Broadcast')");
                     table.ForeignKey(
                         name: "FK_notifications_accounts_UserId",
                         column: x => x.UserId,
@@ -334,6 +341,8 @@ namespace Personal_Finance_Management.Repository.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_reminders", x => x.Id);
+                    table.CheckConstraint("ck_reminders_frequency", "\"Frequency\" IN ('Daily','Weekly','Monthly','Quarterly','Yearly')");
+                    table.CheckConstraint("ck_reminders_status", "\"Status\" IN ('Active','Paused','Completed','Cancelled')");
                     table.ForeignKey(
                         name: "FK_reminders_accounts_UserId",
                         column: x => x.UserId,
@@ -405,6 +414,7 @@ namespace Personal_Finance_Management.Repository.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_jar_allocations", x => x.Id);
+                    table.CheckConstraint("ck_jar_allocations_total_amount_positive", "\"TotalAmount\" > 0");
                     table.ForeignKey(
                         name: "FK_jar_allocations_accounts_UserId",
                         column: x => x.UserId,
@@ -442,6 +452,8 @@ namespace Personal_Finance_Management.Repository.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_jars", x => x.Id);
+                    table.CheckConstraint("ck_jars_balance_non_negative", "\"Balance\" >= 0");
+                    table.CheckConstraint("ck_jars_status", "\"Status\" IN ('Active','Paused','Archived')");
                     table.ForeignKey(
                         name: "FK_jars_accounts_UserId",
                         column: x => x.UserId,
@@ -477,6 +489,7 @@ namespace Personal_Finance_Management.Repository.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_goals", x => x.Id);
+                    table.CheckConstraint("ck_goals_status", "\"Status\" IN ('Active','Completed','Cancelled')");
                     table.ForeignKey(
                         name: "FK_goals_accounts_UserId",
                         column: x => x.UserId,
@@ -504,7 +517,7 @@ namespace Personal_Finance_Management.Repository.Migrations
                     SuggestedNote = table.Column<string>(type: "text", nullable: true),
                     IsValid = table.Column<bool>(type: "boolean", nullable: false, defaultValue: true),
                     ValidationError = table.Column<string>(type: "text", nullable: true),
-                    NormalizedPayloadJson = table.Column<string>(type: "json", nullable: true),
+                    NormalizedPayloadJson = table.Column<string>(type: "jsonb", nullable: true),
                     ImportJobId = table.Column<Guid>(type: "uuid", nullable: false),
                     SuggestedCategoryId = table.Column<Guid>(type: "uuid", nullable: true),
                     SuggestedJarId = table.Column<Guid>(type: "uuid", nullable: true),
@@ -553,6 +566,8 @@ namespace Personal_Finance_Management.Repository.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_jar_allocation_items", x => x.Id);
+                    table.CheckConstraint("ck_jar_allocation_items_amount_positive", "\"Amount\" > 0");
+                    table.CheckConstraint("ck_jar_allocation_items_balance_after_non_negative", "\"BalanceAfterAllocation\" >= 0");
                     table.ForeignKey(
                         name: "FK_jar_allocation_items_jar_allocations_AllocationId",
                         column: x => x.AllocationId,
@@ -585,6 +600,8 @@ namespace Personal_Finance_Management.Repository.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_jar_transfers", x => x.Id);
+                    table.CheckConstraint("ck_jar_transfers_amount_positive", "\"Amount\" > 0");
+                    table.CheckConstraint("ck_jar_transfers_diff", "\"FromJarId\" <> \"ToJarId\"");
                     table.ForeignKey(
                         name: "FK_jar_transfers_accounts_UserId",
                         column: x => x.UserId,
@@ -625,6 +642,8 @@ namespace Personal_Finance_Management.Repository.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_spending_limits", x => x.Id);
+                    table.CheckConstraint("ck_spending_limits_period", "\"Period\" IN ('Daily','Monthly')");
+                    table.CheckConstraint("ck_spending_limits_target_xor", "((\"JarId\" IS NOT NULL AND \"CategoryId\" IS NULL) OR (\"JarId\" IS NULL AND \"CategoryId\" IS NOT NULL))");
                     table.ForeignKey(
                         name: "FK_spending_limits_accounts_UserId",
                         column: x => x.UserId,
@@ -658,7 +677,7 @@ namespace Personal_Finance_Management.Repository.Migrations
                     PostedAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true),
                     SourceType = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false, defaultValue: "Manual"),
                     ExternalTransactionId = table.Column<string>(type: "character varying(150)", maxLength: 150, nullable: true),
-                    RawPayloadJson = table.Column<string>(type: "json", nullable: true),
+                    RawPayloadJson = table.Column<string>(type: "jsonb", nullable: true),
                     IsDeleted = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false),
                     UserId = table.Column<Guid>(type: "uuid", nullable: false),
                     FinancialAccountId = table.Column<Guid>(type: "uuid", nullable: false),
@@ -672,6 +691,8 @@ namespace Personal_Finance_Management.Repository.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_transactions", x => x.Id);
+                    table.CheckConstraint("ck_transactions_amount_positive", "\"Amount\" > 0");
+                    table.CheckConstraint("ck_transactions_type", "\"Type\" IN ('Income','Expense')");
                     table.ForeignKey(
                         name: "FK_transactions_accounts_UserId",
                         column: x => x.UserId,
@@ -723,6 +744,8 @@ namespace Personal_Finance_Management.Repository.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_goal_contributions", x => x.Id);
+                    table.CheckConstraint("ck_goal_contributions_amount_positive", "\"Amount\" > 0");
+                    table.CheckConstraint("ck_goal_contributions_source_xor", "((\"SourceJarId\" IS NOT NULL AND \"SourceFinancialAccountId\" IS NULL) OR (\"SourceJarId\" IS NULL AND \"SourceFinancialAccountId\" IS NOT NULL))");
                     table.ForeignKey(
                         name: "FK_goal_contributions_accounts_UserId",
                         column: x => x.UserId,
@@ -756,9 +779,14 @@ namespace Personal_Finance_Management.Repository.Migrations
                 unique: true);
 
             migrationBuilder.CreateIndex(
-                name: "IX_accounts_RoleId",
+                name: "IX_accounts_LastLoginAt",
                 table: "accounts",
-                column: "RoleId");
+                column: "LastLoginAt");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_accounts_RoleId_Status",
+                table: "accounts",
+                columns: new[] { "RoleId", "Status" });
 
             migrationBuilder.CreateIndex(
                 name: "IX_accounts_Username",
@@ -772,9 +800,9 @@ namespace Personal_Finance_Management.Repository.Migrations
                 column: "UpdatedByAdminId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_audit_logs_ActorAccountId",
+                name: "IX_audit_logs_ActorAccountId_CreatedAt",
                 table: "audit_logs",
-                column: "ActorAccountId");
+                columns: new[] { "ActorAccountId", "CreatedAt" });
 
             migrationBuilder.CreateIndex(
                 name: "IX_broadcasts_CreatedByAdminId",
@@ -787,9 +815,14 @@ namespace Personal_Finance_Management.Repository.Migrations
                 column: "OwnerUserId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_financial_accounts_UserId",
+                name: "IX_financial_accounts_SyncStatus",
                 table: "financial_accounts",
-                column: "UserId");
+                column: "SyncStatus");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_financial_accounts_UserId_IsDefault",
+                table: "financial_accounts",
+                columns: new[] { "UserId", "IsDefault" });
 
             migrationBuilder.CreateIndex(
                 name: "IX_goal_contributions_GoalId",
@@ -906,7 +939,8 @@ namespace Personal_Finance_Management.Repository.Migrations
             migrationBuilder.CreateIndex(
                 name: "IX_notifications_UserId_IsRead",
                 table: "notifications",
-                columns: new[] { "UserId", "IsRead" });
+                columns: new[] { "UserId", "IsRead" },
+                filter: "\"IsRead\" = false");
 
             migrationBuilder.CreateIndex(
                 name: "IX_onboarding_profiles_UserId",
@@ -951,9 +985,9 @@ namespace Personal_Finance_Management.Repository.Migrations
                 column: "CategoryId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_transactions_FinancialAccountId",
+                name: "IX_transactions_FinancialAccountId_TransactionDate",
                 table: "transactions",
-                column: "FinancialAccountId");
+                columns: new[] { "FinancialAccountId", "TransactionDate" });
 
             migrationBuilder.CreateIndex(
                 name: "IX_transactions_ImportJobId",
@@ -964,6 +998,16 @@ namespace Personal_Finance_Management.Repository.Migrations
                 name: "IX_transactions_JarId",
                 table: "transactions",
                 column: "JarId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_transactions_UserId_CategoryId_TransactionDate",
+                table: "transactions",
+                columns: new[] { "UserId", "CategoryId", "TransactionDate" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_transactions_UserId_JarId_TransactionDate",
+                table: "transactions",
+                columns: new[] { "UserId", "JarId", "TransactionDate" });
 
             migrationBuilder.CreateIndex(
                 name: "IX_transactions_UserId_TransactionDate",

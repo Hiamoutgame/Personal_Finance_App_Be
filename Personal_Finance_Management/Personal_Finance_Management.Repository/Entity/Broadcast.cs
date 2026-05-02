@@ -18,7 +18,7 @@ public class Broadcast : BaseEntity, IAudictableEntity
 
     // Nối với Account
     public Guid CreatedByAdminId { get; set; }
-    public Account CreatByAdmin { get; set; } = null!;
+    public Account CreatedByAdmin { get; set; } = null!;
 
     //Nối với Notification
     public ICollection<Notification> Notifications { get; set; } = new List<Notification>();

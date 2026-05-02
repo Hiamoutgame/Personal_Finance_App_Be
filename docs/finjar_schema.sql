@@ -1,6 +1,8 @@
 -- ============================================================
 -- FinJar — PostgreSQL Schema (Phase 1 MVP)
--- Convention: uuid PK, timestamptz, numeric(18,2), snake_case
+-- Convention: uuid PK, timestamptz, numeric(18,2)
+-- Code-first note: account fields follow current entity naming decisions:
+-- `hash_password`, `first_name`, `last_name`.
 -- ============================================================
 
 -- ==================== MIGRATION 1 ==========================
@@ -19,8 +21,9 @@ CREATE TABLE accounts (
     role_id                  UUID         NOT NULL REFERENCES roles(id),
     username                 VARCHAR(50)  NOT NULL UNIQUE,
     email                    VARCHAR(255) NOT NULL UNIQUE,
-    password_hash            TEXT         NOT NULL,
-    full_name                VARCHAR(150) NOT NULL,
+    hash_password            TEXT         NOT NULL,
+    first_name               VARCHAR(150) NOT NULL,
+    last_name                VARCHAR(150) NOT NULL,
     phone                    VARCHAR(20)  NULL,
     avatar_url               TEXT         NULL,
     status                   VARCHAR(20)  NOT NULL DEFAULT 'Active'
@@ -56,10 +59,10 @@ CREATE TABLE onboarding_profiles (
     user_id                   UUID        NOT NULL UNIQUE REFERENCES accounts(id),
     monthly_income            NUMERIC(18,2) NULL,
     occupation_type           VARCHAR(50) NULL,
-    financial_goal_types      TEXT[]      NULL,
+    financial_goal_types      JSONB       NULL,
     budget_method_preference  VARCHAR(30) NOT NULL DEFAULT 'Undecided',
     age_range                 VARCHAR(30) NULL,
-    spending_challenges       TEXT[]      NULL,
+    spending_challenges       JSONB       NULL,
     recommended_method        VARCHAR(30) NULL,
     completed_at              TIMESTAMPTZ NOT NULL,
     created_at                TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -346,6 +349,5 @@ CREATE TABLE ai_settings (
 -- ==================== SEED DATA ==========================
 
 INSERT INTO roles(id, code, name) VALUES
-('11111111-1111-1111-1111-111111111111', 'User',       'User'),
-('22222222-2222-2222-2222-222222222222', 'Admin',      'Admin'),
-('33333333-3333-3333-3333-333333333333', 'SuperAdmin', 'SuperAdmin');
+('11111111-1111-1111-1111-111111111111', 'User',  'User'),
+('22222222-2222-2222-2222-222222222222', 'Admin', 'Admin');
