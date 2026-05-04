@@ -1,10 +1,5 @@
 // Render example:
 //   dot -Tsvg docs/schema.dot -o docs/schema.from-dot.svg
-//
-// Why DOT instead of Mermaid for this case:
-// - splines=ortho gives right-angle connectors
-// - rank / cluster controls are more predictable
-// - better fit for "circuit-like" ERD layouts
 
 digraph schema_overview {
   graph [
@@ -12,7 +7,7 @@ digraph schema_overview {
     splines=ortho,
     pad="0.25",
     nodesep="0.55",
-    ranksep="0.9",
+    ranksep="0.85",
     newrank=true,
     compound=true,
     bgcolor="#f7f8fc",
@@ -27,23 +22,11 @@ digraph schema_overview {
 
   edge [
     color="#4b5563",
-    penwidth=1.6,
+    penwidth=1.5,
     arrowsize=0.7,
     fontname="Segoe UI",
     fontsize=10
   ];
-
-  top_left  [shape=point, width=0, label=""];
-  top_right [shape=point, width=0, label=""];
-  bot_left  [shape=point, width=0, label=""];
-  bot_right [shape=point, width=0, label=""];
-
-  { rank=same; top_left; top_right; }
-  { rank=same; bot_left; bot_right; }
-  top_left -> top_right [style=invis, weight=100];
-  bot_left -> bot_right [style=invis, weight=100];
-  top_left -> bot_left [style=invis, weight=100];
-  top_right -> bot_right [style=invis, weight=100];
 
   subgraph cluster_identity {
     label="Identity / Onboarding / Admin";
@@ -54,19 +37,17 @@ digraph schema_overview {
     style="rounded,filled";
     fillcolor="#ffffff";
 
-    p1_anchor [shape=point, width=0, label=""];
-
     roles [label=<
       <table border="1" cellborder="0" cellspacing="0" cellpadding="6" color="#243041">
         <tr><td bgcolor="#edf3ff" align="left"><b>roles</b></td></tr>
-        <tr><td align="left">PK id<br align="left"/>code<br align="left"/>name</td></tr>
+        <tr><td align="left">PK id smallint<br align="left"/>code<br align="left"/>name</td></tr>
       </table>
     >];
 
-    accounts_i [label=<
+    accounts [label=<
       <table border="1" cellborder="0" cellspacing="0" cellpadding="6" color="#243041">
         <tr><td bgcolor="#edf3ff" align="left"><b>accounts</b></td></tr>
-        <tr><td align="left">PK id<br align="left"/>FK role_id<br align="left"/>username<br align="left"/>email</td></tr>
+        <tr><td align="left">PK id<br align="left"/>FK role_id<br align="left"/>username<br align="left"/>password_hash</td></tr>
       </table>
     >];
 
@@ -74,13 +55,6 @@ digraph schema_overview {
       <table border="1" cellborder="0" cellspacing="0" cellpadding="6" color="#243041">
         <tr><td bgcolor="#edf3ff" align="left"><b>onboarding_profiles</b></td></tr>
         <tr><td align="left">PK id<br align="left"/>FK user_id<br align="left"/>recommended_method</td></tr>
-      </table>
-    >];
-
-    jar_setups_i [label=<
-      <table border="1" cellborder="0" cellspacing="0" cellpadding="6" color="#243041">
-        <tr><td bgcolor="#edf3ff" align="left"><b>jar_setups</b></td></tr>
-        <tr><td align="left">PK id<br align="left"/>FK user_id<br align="left"/>method_type</td></tr>
       </table>
     >];
 
@@ -94,19 +68,14 @@ digraph schema_overview {
     audit_logs [label=<
       <table border="1" cellborder="0" cellspacing="0" cellpadding="6" color="#243041">
         <tr><td bgcolor="#edf3ff" align="left"><b>audit_logs</b></td></tr>
-        <tr><td align="left">PK id<br align="left"/>FK actor_account_id<br align="left"/>action_type</td></tr>
+        <tr><td align="left">PK id<br align="left"/>FK actor_account_id<br align="left"/>metadata_json</td></tr>
       </table>
     >];
 
-    { rank=same; roles; accounts_i; }
-    { rank=same; ai_settings; jar_setups_i; onboarding_profiles; audit_logs; }
-
-    p1_anchor -> accounts_i [style=invis, weight=100];
-    roles -> accounts_i [label="1..N assigns"];
-    accounts_i -> onboarding_profiles [label="1..1 completes"];
-    accounts_i -> jar_setups_i [label="1..1 configures"];
-    accounts_i -> ai_settings [label="1..N updates"];
-    accounts_i -> audit_logs [label="1..N acts"];
+    roles -> accounts [label="1..N"];
+    accounts -> onboarding_profiles [label="1..1"];
+    accounts -> ai_settings [label="0..N admin updates"];
+    accounts -> audit_logs [label="0..N acts"];
   }
 
   subgraph cluster_money {
@@ -118,79 +87,39 @@ digraph schema_overview {
     style="rounded,filled";
     fillcolor="#ffffff";
 
-    p2_anchor [shape=point, width=0, label=""];
-
-    accounts_m [label=<
-      <table border="1" cellborder="0" cellspacing="0" cellpadding="6" color="#243041">
-        <tr><td bgcolor="#edf3ff" align="left"><b>accounts</b></td></tr>
-        <tr><td align="left">PK id<br align="left"/>preferred_currency<br align="left"/>created_at</td></tr>
-      </table>
-    >];
-
-    financial_accounts_m [label=<
+    financial_accounts [label=<
       <table border="1" cellborder="0" cellspacing="0" cellpadding="6" color="#243041">
         <tr><td bgcolor="#edf3ff" align="left"><b>financial_accounts</b></td></tr>
         <tr><td align="left">PK id<br align="left"/>FK user_id<br align="left"/>account_type<br align="left"/>current_balance</td></tr>
       </table>
     >];
 
-    categories_m [label=<
+    categories [label=<
       <table border="1" cellborder="0" cellspacing="0" cellpadding="6" color="#243041">
         <tr><td bgcolor="#edf3ff" align="left"><b>categories</b></td></tr>
         <tr><td align="left">PK id<br align="left"/>FK owner_user_id<br align="left"/>is_default</td></tr>
       </table>
     >];
 
-    jars_m [label=<
-      <table border="1" cellborder="0" cellspacing="0" cellpadding="6" color="#243041">
-        <tr><td bgcolor="#edf3ff" align="left"><b>jars</b></td></tr>
-        <tr><td align="left">PK id<br align="left"/>FK user_id<br align="left"/>FK jar_setup_id<br align="left"/>balance</td></tr>
-      </table>
-    >];
-
-    jar_allocations [label=<
-      <table border="1" cellborder="0" cellspacing="0" cellpadding="6" color="#243041">
-        <tr><td bgcolor="#edf3ff" align="left"><b>jar_allocations</b></td></tr>
-        <tr><td align="left">PK id<br align="left"/>FK user_id<br align="left"/>FK source_financial_account_id</td></tr>
-      </table>
-    >];
-
-    jar_allocation_items [label=<
-      <table border="1" cellborder="0" cellspacing="0" cellpadding="6" color="#243041">
-        <tr><td bgcolor="#edf3ff" align="left"><b>jar_allocation_items</b></td></tr>
-        <tr><td align="left">PK id<br align="left"/>FK allocation_id<br align="left"/>FK jar_id</td></tr>
-      </table>
-    >];
-
-    jar_setups_m [label=<
+    jar_setups [label=<
       <table border="1" cellborder="0" cellspacing="0" cellpadding="6" color="#243041">
         <tr><td bgcolor="#edf3ff" align="left"><b>jar_setups</b></td></tr>
         <tr><td align="left">PK id<br align="left"/>FK user_id<br align="left"/>method_type</td></tr>
       </table>
     >];
 
-    jar_transfers [label=<
+    jars [label=<
       <table border="1" cellborder="0" cellspacing="0" cellpadding="6" color="#243041">
-        <tr><td bgcolor="#edf3ff" align="left"><b>jar_transfers</b></td></tr>
-        <tr><td align="left">PK id<br align="left"/>FK from_jar_id<br align="left"/>FK to_jar_id</td></tr>
+        <tr><td bgcolor="#edf3ff" align="left"><b>jars</b></td></tr>
+        <tr><td align="left">PK id<br align="left"/>FK user_id<br align="left"/>FK jar_setup_id<br align="left"/>balance</td></tr>
       </table>
     >];
 
-    { rank=same; accounts_m; financial_accounts_m; categories_m; }
-    { rank=same; jar_allocations; jar_allocation_items; jars_m; }
-    { rank=same; jar_setups_m; jar_transfers; }
-
-    p2_anchor -> accounts_m [style=invis, weight=100];
-    accounts_m -> financial_accounts_m [label="1..N owns"];
-    accounts_m -> categories_m [label="1..N creates"];
-    accounts_m -> jars_m [label="1..N owns"];
-    accounts_m -> jar_allocations [label="1..N creates"];
-    financial_accounts_m -> jar_allocations [label="0..1..N source", style=dashed];
-    jar_allocations -> jar_allocation_items [label="1..N contains"];
-    jars_m -> jar_allocation_items [label="1..N receives"];
-    jar_setups_m -> jars_m [label="1..N defines"];
-    accounts_m -> jar_transfers [label="1..N makes"];
-    jars_m -> jar_transfers [label="from_jar / to_jar"];
+    accounts -> financial_accounts [label="1..N owns"];
+    accounts -> categories [label="0..N custom"];
+    accounts -> jar_setups [label="1..1 configures"];
+    accounts -> jars [label="1..N owns"];
+    jar_setups -> jars [label="0..N defines"];
   }
 
   subgraph cluster_transactions {
@@ -202,43 +131,6 @@ digraph schema_overview {
     style="rounded,filled";
     fillcolor="#ffffff";
 
-    p3_anchor [shape=point, width=0, label=""];
-
-    accounts_t [label=<
-      <table border="1" cellborder="0" cellspacing="0" cellpadding="6" color="#243041">
-        <tr><td bgcolor="#edf3ff" align="left"><b>accounts</b></td></tr>
-        <tr><td align="left">PK id<br align="left"/>preferred_currency<br align="left"/>created_at</td></tr>
-      </table>
-    >];
-
-    financial_accounts_t [label=<
-      <table border="1" cellborder="0" cellspacing="0" cellpadding="6" color="#243041">
-        <tr><td bgcolor="#edf3ff" align="left"><b>financial_accounts</b></td></tr>
-        <tr><td align="left">PK id<br align="left"/>FK user_id<br align="left"/>current_balance</td></tr>
-      </table>
-    >];
-
-    jars_t [label=<
-      <table border="1" cellborder="0" cellspacing="0" cellpadding="6" color="#243041">
-        <tr><td bgcolor="#edf3ff" align="left"><b>jars</b></td></tr>
-        <tr><td align="left">PK id<br align="left"/>FK user_id<br align="left"/>balance</td></tr>
-      </table>
-    >];
-
-    categories_t [label=<
-      <table border="1" cellborder="0" cellspacing="0" cellpadding="6" color="#243041">
-        <tr><td bgcolor="#edf3ff" align="left"><b>categories</b></td></tr>
-        <tr><td align="left">PK id<br align="left"/>FK owner_user_id<br align="left"/>name</td></tr>
-      </table>
-    >];
-
-    transactions [label=<
-      <table border="1" cellborder="0" cellspacing="0" cellpadding="6" color="#243041">
-        <tr><td bgcolor="#edf3ff" align="left"><b>transactions</b></td></tr>
-        <tr><td align="left">PK id<br align="left"/>FK user_id<br align="left"/>FK financial_account_id<br align="left"/>FK jar_id / category_id</td></tr>
-      </table>
-    >];
-
     import_jobs [label=<
       <table border="1" cellborder="0" cellspacing="0" cellpadding="6" color="#243041">
         <tr><td bgcolor="#edf3ff" align="left"><b>import_jobs</b></td></tr>
@@ -246,28 +138,30 @@ digraph schema_overview {
       </table>
     >];
 
-    import_transaction_drafts [label=<
+    transactions [label=<
       <table border="1" cellborder="0" cellspacing="0" cellpadding="6" color="#243041">
-        <tr><td bgcolor="#edf3ff" align="left"><b>import_transaction_drafts</b></td></tr>
-        <tr><td align="left">PK id<br align="left"/>FK import_job_id<br align="left"/>FK suggested_category_id<br align="left"/>FK suggested_jar_id</td></tr>
+        <tr><td bgcolor="#edf3ff" align="left"><b>transactions</b></td></tr>
+        <tr><td align="left">PK id<br align="left"/>FK user_id / financial_account_id<br align="left"/>transactions_amount<br align="left"/>FK from_jar_id / to_jar_id</td></tr>
       </table>
     >];
 
-    { rank=same; accounts_t; financial_accounts_t; jars_t; categories_t; }
-    { rank=same; import_jobs; transactions; }
-    { rank=same; import_transaction_drafts; }
+    import_transaction_drafts [label=<
+      <table border="1" cellborder="0" cellspacing="0" cellpadding="6" color="#243041">
+        <tr><td bgcolor="#edf3ff" align="left"><b>import_transaction_drafts</b></td></tr>
+        <tr><td align="left">PK id<br align="left"/>FK import_job_id<br align="left"/>FK edited_category_id<br align="left"/>FK edited_jar_id</td></tr>
+      </table>
+    >];
 
-    p3_anchor -> accounts_t [style=invis, weight=100];
-    accounts_t -> transactions [label="1..N records"];
-    financial_accounts_t -> transactions [label="1..N pays_from"];
-    jars_t -> transactions [label="0..1..N budgets", style=dashed];
-    categories_t -> transactions [label="0..1..N classifies", style=dashed];
-    accounts_t -> import_jobs [label="1..N uploads"];
-    financial_accounts_t -> import_jobs [label="1..N belongs_to"];
+    accounts -> import_jobs [label="1..N uploads"];
+    financial_accounts -> import_jobs [label="1..N belongs_to"];
     import_jobs -> import_transaction_drafts [label="1..N parses"];
-    import_jobs -> transactions [label="0..1..N confirms", style=dashed];
-    categories_t -> import_transaction_drafts [label="0..1..N suggest_cat", style=dashed];
-    jars_t -> import_transaction_drafts [label="0..1..N suggest_jar", style=dashed];
+    import_jobs -> transactions [label="0..N confirms"];
+    accounts -> transactions [label="1..N records"];
+    financial_accounts -> transactions [label="1..N source"];
+    categories -> transactions [label="0..N classifies"];
+    jars -> transactions [label="0..N from/to jar"];
+    categories -> import_transaction_drafts [label="0..N edited cat"];
+    jars -> import_transaction_drafts [label="0..N edited jar"];
   }
 
   subgraph cluster_planning {
@@ -278,29 +172,6 @@ digraph schema_overview {
     color="#d7dce8";
     style="rounded,filled";
     fillcolor="#ffffff";
-
-    p4_anchor [shape=point, width=0, label=""];
-
-    accounts_p [label=<
-      <table border="1" cellborder="0" cellspacing="0" cellpadding="6" color="#243041">
-        <tr><td bgcolor="#edf3ff" align="left"><b>accounts</b></td></tr>
-        <tr><td align="left">PK id<br align="left"/>status<br align="left"/>preferred_currency</td></tr>
-      </table>
-    >];
-
-    jars_p [label=<
-      <table border="1" cellborder="0" cellspacing="0" cellpadding="6" color="#243041">
-        <tr><td bgcolor="#edf3ff" align="left"><b>jars</b></td></tr>
-        <tr><td align="left">PK id<br align="left"/>FK user_id<br align="left"/>balance</td></tr>
-      </table>
-    >];
-
-    categories_p [label=<
-      <table border="1" cellborder="0" cellspacing="0" cellpadding="6" color="#243041">
-        <tr><td bgcolor="#edf3ff" align="left"><b>categories</b></td></tr>
-        <tr><td align="left">PK id<br align="left"/>FK owner_user_id<br align="left"/>name</td></tr>
-      </table>
-    >];
 
     spending_limits [label=<
       <table border="1" cellborder="0" cellspacing="0" cellpadding="6" color="#243041">
@@ -319,14 +190,14 @@ digraph schema_overview {
     goal_contributions [label=<
       <table border="1" cellborder="0" cellspacing="0" cellpadding="6" color="#243041">
         <tr><td bgcolor="#edf3ff" align="left"><b>goal_contributions</b></td></tr>
-        <tr><td align="left">PK id<br align="left"/>FK goal_id / user_id<br align="left"/>FK source_jar_id<br align="left"/>FK source_financial_account_id</td></tr>
+        <tr><td align="left">PK id<br align="left"/>FK goal_id / user_id<br align="left"/>FK source_jar_id<br align="left"/>amount</td></tr>
       </table>
     >];
 
     reminders [label=<
       <table border="1" cellborder="0" cellspacing="0" cellpadding="6" color="#243041">
         <tr><td bgcolor="#edf3ff" align="left"><b>reminders</b></td></tr>
-        <tr><td align="left">PK id<br align="left"/>FK user_id / category_id<br align="left"/>next_due_date</td></tr>
+        <tr><td align="left">PK id<br align="left"/>FK user_id / category_id<br align="left"/>start_date<br align="left"/>day_of_month</td></tr>
       </table>
     >];
 
@@ -340,41 +211,22 @@ digraph schema_overview {
     notifications [label=<
       <table border="1" cellborder="0" cellspacing="0" cellpadding="6" color="#243041">
         <tr><td bgcolor="#edf3ff" align="left"><b>notifications</b></td></tr>
-        <tr><td align="left">PK id<br align="left"/>FK user_id / broadcast_id<br align="left"/>type</td></tr>
+        <tr><td align="left">PK id<br align="left"/>FK user_id / broadcast_id<br align="left"/>metadata_json</td></tr>
       </table>
     >];
 
-    financial_accounts_p [label=<
-      <table border="1" cellborder="0" cellspacing="0" cellpadding="6" color="#243041">
-        <tr><td bgcolor="#edf3ff" align="left"><b>financial_accounts</b></td></tr>
-        <tr><td align="left">PK id<br align="left"/>FK user_id<br align="left"/>current_balance</td></tr>
-      </table>
-    >];
-
-    { rank=same; accounts_p; jars_p; categories_p; }
-    { rank=same; goals; spending_limits; reminders; }
-    { rank=same; broadcasts; goal_contributions; notifications; }
-    { rank=same; financial_accounts_p; }
-
-    p4_anchor -> accounts_p [style=invis, weight=100];
-    accounts_p -> spending_limits [label="1..N sets"];
-    jars_p -> spending_limits [label="0..1..N target_jar", style=dashed];
-    categories_p -> spending_limits [label="0..1..N target_cat", style=dashed];
-    accounts_p -> goals [label="1..N sets"];
-    jars_p -> goals [label="0..1..N links", style=dashed];
+    accounts -> spending_limits [label="1..N sets"];
+    jars -> spending_limits [label="0..N target"];
+    categories -> spending_limits [label="0..N target"];
+    accounts -> goals [label="1..N owns"];
+    jars -> goals [label="0..N linked"];
     goals -> goal_contributions [label="1..N receives"];
-    accounts_p -> goal_contributions [label="1..N makes"];
-    jars_p -> goal_contributions [label="0..1..N source_jar", style=dashed];
-    financial_accounts_p -> goal_contributions [label="0..1..N source_account", style=dashed];
-    accounts_p -> reminders [label="1..N creates"];
-    categories_p -> reminders [label="0..1..N tags", style=dashed];
-    accounts_p -> broadcasts [label="1..N creates"];
-    broadcasts -> notifications [label="1..N fans_out"];
-    accounts_p -> notifications [label="1..N receives"];
+    accounts -> goal_contributions [label="1..N makes"];
+    jars -> goal_contributions [label="0..N source"];
+    accounts -> reminders [label="1..N creates"];
+    categories -> reminders [label="0..N tags"];
+    accounts -> broadcasts [label="0..N admin creates"];
+    broadcasts -> notifications [label="0..N fans_out"];
+    accounts -> notifications [label="1..N receives"];
   }
-
-  top_left -> p1_anchor [style=invis, weight=100, lhead=cluster_identity];
-  top_right -> p2_anchor [style=invis, weight=100, lhead=cluster_money];
-  bot_left -> p3_anchor [style=invis, weight=100, lhead=cluster_transactions];
-  bot_right -> p4_anchor [style=invis, weight=100, lhead=cluster_planning];
 }

@@ -2,22 +2,17 @@
 
 namespace Personal_Finance_Management.Repository.Entity;
 
-public class AuditLog : BaseEntity, IAudictableEntity
+public class AuditLog : BaseEntity
 {
-    public string ActionType { get; set; } // để làm gì thé
-    public string EntityType { get; set; } // để làm gì thé
-    public Guid? EntityId { get; set; } // Để nullable vì không phải log nào cũng gắn với 1 entity cụ thể
-    public string Description { get; set; }
-    public string? MetadataJson { get; set; } // Lưu thông tin chi tiết dưới dạng JSON
+    public string ActionType { get; set; } = null!;
+    public string EntityType { get; set; } = null!;
+    public Guid? EntityId { get; set; }
+    public string Description { get; set; } = null!;
+    public string? MetadataJson { get; set; }
     public string? IpAddress { get; set; }
 
-    // Relationship: 1 AuditLog thuộc về 1 Account (Actor)
-  
-    public Guid ActorAccountId { get; set; } 
-    public Account Account { get; set; }
+    public Guid ActorAccountId { get; set; }
+    public Account Account { get; set; } = null!;
 
- 
     public DateTimeOffset CreatedAt { get; set; }
-    public DateTimeOffset? UpdatedAt { get; set; }
-    public DateTimeOffset? ReadAt { get; set; }
 }

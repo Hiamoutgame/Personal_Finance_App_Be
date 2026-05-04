@@ -6,7 +6,7 @@ public class FinancialAccount : BaseEntity, IAudictableEntity
 {
     public string Name { get; set; } = null!;
     public string AccountType { get; set; } = null!;
-    public required string ConnectionMode { get; set; }  // Manual | LinkedApi // 36000
+    public string ConnectionMode { get; set; } = null!;
     public string? ProviderCode { get; set; }
     public string? ProviderName { get; set; }
     public string? ExternalAccountId { get; set; }
@@ -15,8 +15,6 @@ public class FinancialAccount : BaseEntity, IAudictableEntity
     public string? AccountHolderName { get; set; }
     public string Currency { get; set; } = "VND";
     public decimal CurrentBalance { get; set; } = 0;
-    public decimal? AvailableBalance { get; set; }
-    public DateTimeOffset? BalanceAsOf { get; set; }
     public string SyncStatus { get; set; } = "NeverSynced";
     public DateTimeOffset? LastSyncedAt { get; set; }
     public string? LastSyncError { get; set; }
@@ -26,13 +24,12 @@ public class FinancialAccount : BaseEntity, IAudictableEntity
     public string? LastSyncCursor { get; set; }
     public string? WebhookSubscriptionId { get; set; }
 
-    public bool IsDefault { get; set; }
+    public bool IsDefault { get; set; } = false;
     public bool IsActive { get; set; } = true;
-    //Nối với Account
+
     public Guid UserId { get; set; }
-    public Account User { get; set; }
+    public Account User { get; set; } = null!;
 
     public DateTimeOffset CreatedAt { get; set; }
-    public DateTimeOffset? UpdatedAt { get; set; }
-    public DateTimeOffset? ReadAt { get; set; }
+    public DateTimeOffset UpdatedAt { get; set; }
 }

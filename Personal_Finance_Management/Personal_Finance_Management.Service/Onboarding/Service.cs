@@ -43,13 +43,18 @@ public class Service : IService
             UserId = userIdGuid,
             MonthlyIncome = request.monthlyIncome,
             OccupationType = request.occupationType,
-            FinancialGoalTypes = request.financialGoalTypes ?? new List<string>(),
-            BudgetMethodPreference = request.budgetMethodPreference,
+            FinancialGoalTypes = request.financialGoalTypes is null
+                ? null
+                : string.Join(",", request.financialGoalTypes),
+            BudgetMethodPreference = request.budgetMethodPreference ?? "Undecided",
             AgeRange = request.ageRange,
-            SpendingChallenges = request.spendingChallenges ?? new List<string>(),
+            SpendingChallenges = request.spendingChallenges is null
+                ? null
+                : string.Join(",", request.spendingChallenges),
             RecommendedMethod = request.budgetMethodPreference,
             CompletedAt = now,
-            CreatedAt = now
+            CreatedAt = now,
+            UpdatedAt = now
         };
         _dbContext.OnboardingProfiles.Add(onboardingDetail);
         var response = new Response.OnboardingResponse()
@@ -152,7 +157,8 @@ public class Service : IService
             CurrentBalance = 0m,
             IsDefault = true,
             IsActive = true,
-            CreatedAt = now
+            CreatedAt = now,
+            UpdatedAt = now
         };
         _dbContext.FinancialAccounts.Add(savedFinancialAccount);
         var savedCategory = response.recommendedCategories.Select(x => new Repository.Entity.Category()
@@ -162,19 +168,20 @@ public class Service : IService
             Icon = x.icon,
             IsDefault = false,
             IsActive = true,
-            CreatedAt = now
+            CreatedAt = now,
+            UpdatedAt = now
         });
         _dbContext.Categories.AddRange(savedCategory);
         var savedJar = response.recommendedJars.Select(x => new Repository.Entity.Jar()
         {
             UserId = userIdGuid,
             Name = x.name,
-            Percentage = x.percentage,
             IsDefault = true,
             Balance = 0m,
             Currency = "VND",
             Status = "Active",
-            CreatedAt = now
+            CreatedAt = now,
+            UpdatedAt = now
         });
         
         _dbContext.Jars.AddRange(savedJar);

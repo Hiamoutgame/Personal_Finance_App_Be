@@ -439,11 +439,11 @@ Response `200 OK`
   "recommendedJars": [
     {
       "name": "Necessities",
-      "percentage": 55
+      "recommendedRatio": 55
     },
     {
       "name": "Savings",
-      "percentage": 10
+      "recommendedRatio": 10
     }
   ],
   "defaultFinancialAccount": {
@@ -669,7 +669,6 @@ Response `200 OK`
     {
       "id": "guid",
       "name": "Necessities",
-      "percentage": 55,
       "balance": 8250000,
       "color": "#4CAF50",
       "icon": "home",
@@ -689,8 +688,6 @@ Request
 ```json
 {
   "methodType": "SixJars",
-  "initialBalance": 15000000,
-  "sourceFinancialAccountId": "guid | null",
   "customJars": []
 }
 ```
@@ -704,7 +701,6 @@ Response `201 Created`
     {
       "id": "guid",
       "name": "Necessities",
-      "percentage": 55,
       "balance": 0
     }
   ]
@@ -714,7 +710,7 @@ Response `201 Created`
 **Notes**
 
 - `409 Conflict` nếu user đã setup jars trước đó
-- nếu `methodType = Custom` thì tổng `percentage` của `customJars` phải bằng `100`
+- tỷ lệ chia hũ là rule ứng dụng theo `methodType`, không persist trong bảng `jars`
 - số dư gốc nằm ở `financial_accounts`; nếu user muốn phân bổ tiền vào hũ sau setup thì gọi `POST /api/v1/jars/allocate`
 
 ### `POST /api/v1/jars`
@@ -726,7 +722,6 @@ Request
 ```json
 {
   "name": "Du lịch",
-  "percentage": 10,
   "color": "#2A9D8F",
   "icon": "plane"
 }
@@ -738,7 +733,6 @@ Response `201 Created`
 {
   "id": "guid",
   "name": "Du lịch",
-  "percentage": 10,
   "balance": 0,
   "status": "Active"
 }
@@ -753,7 +747,6 @@ Request
 ```json
 {
   "name": "Du lịch hè",
-  "percentage": 12,
   "color": "#2A9D8F",
   "icon": "plane"
 }
@@ -765,7 +758,6 @@ Response `200 OK`
 {
   "id": "guid",
   "name": "Du lịch hè",
-  "percentage": 12,
   "color": "#2A9D8F",
   "icon": "plane",
   "status": "Active"
@@ -793,9 +785,8 @@ Request
 
 ```json
 {
-  "sourceFinancialAccountId": "guid | null",
+  "financialAccountId": "guid",
   "amount": 15000000,
-  "sourceFinancialAccountId": "guid | null",
   "note": "Lương tháng 4"
 }
 ```
@@ -804,8 +795,8 @@ Response `200 OK`
 
 ```json
 {
-  "allocationId": "guid",
-  "sourceFinancialAccountId": "guid | null",
+  "transactionIds": ["guid"],
+  "financialAccountId": "guid",
   "totalAllocated": 15000000,
   "affectedJarCount": 6
 }
@@ -813,9 +804,8 @@ Response `200 OK`
 
 **Notes**
 
-- `sourceFinancialAccountId` map vào `jar_allocations.source_financial_account_id`.
-- Field này chỉ giúp biết khoản phân bổ được quy chiếu từ nguồn tiền nào; FinJar không rút/chuyển tiền thật khỏi ngân hàng.
-- Nếu không gửi `sourceFinancialAccountId`, backend có thể dùng nguồn mặc định hoặc chỉ ghi nhận allocation không gắn nguồn cụ thể tùy rule nội bộ.
+- Scope MVP không còn `jar_allocations`; backend ghi nhận phân bổ bằng `transactions.source_type = 'Jar'`, `to_jar_id` và `jar_balance_after_allocation`.
+- Field `financialAccountId` map vào `transactions.financial_account_id`; FinJar không rút/chuyển tiền thật khỏi ngân hàng.
 
 ### `POST /api/v1/jars/transfer`
 
@@ -837,7 +827,7 @@ Response `200 OK`
 
 ```json
 {
-  "transferId": "guid",
+  "transactionId": "guid",
   "amount": 500000,
   "fromJarId": "guid",
   "toJarId": "guid"
@@ -888,7 +878,7 @@ Query Params
 - `pageSize=20`
 - `financialAccountId=guid`
 - `type=Income|Expense`
-- `jarId=guid`
+- `jarId=guid` (filter theo `from_jar_id` hoặc `to_jar_id`)
 - `categoryId=guid`
 - `fromDate=2026-04-01`
 - `toDate=2026-04-30`
@@ -904,7 +894,7 @@ Response `200 OK`
     {
       "id": "guid",
       "type": "Expense",
-      "amount": 55000,
+      "transactionsAmount": -55000,
       "note": "Cà phê sáng",
       "date": "ISO8601",
       "financialAccount": {
@@ -940,9 +930,10 @@ Request
 {
   "financialAccountId": "guid",
   "type": "Expense",
-  "amount": 55000,
+  "transactionsAmount": -55000,
   "categoryId": "guid",
-  "jarId": "guid",
+  "fromJarId": "guid | null",
+  "toJarId": "guid | null",
   "note": "Cà phê sáng",
   "date": "ISO8601"
 }
@@ -955,7 +946,7 @@ Response `201 Created`
   "id": "guid",
   "financialAccountId": "guid",
   "type": "Expense",
-  "amount": 55000,
+  "transactionsAmount": -55000,
   "date": "ISO8601"
 }
 ```
@@ -969,9 +960,10 @@ Request
 ```json
 {
   "financialAccountId": "guid",
-  "amount": 60000,
+  "transactionsAmount": -60000,
   "categoryId": "guid",
-  "jarId": "guid",
+  "fromJarId": "guid | null",
+  "toJarId": "guid | null",
   "note": "Cà phê sáng + bánh",
   "date": "ISO8601"
 }
@@ -983,7 +975,7 @@ Response `200 OK`
 {
   "id": "guid",
   "type": "Expense",
-  "amount": 60000,
+  "transactionsAmount": -60000,
   "date": "ISO8601"
 }
 ```
@@ -991,6 +983,8 @@ Response `200 OK`
 **Notes**
 
 - Nếu đổi `financialAccountId`, backend phải đảo tác động số dư ở nguồn cũ và áp dụng lại ở nguồn mới trong cùng transaction.
+- `transactionsAmount` map trực tiếp vào `transactions.transactions_amount`: Income dương, Expense âm.
+- `fromJarId` / `toJarId` map vào `transactions.from_jar_id` / `transactions.to_jar_id`.
 
 ### `DELETE /api/v1/transactions/{id}`
 
@@ -1072,9 +1066,9 @@ Response `200 OK`
       "amount": 55000,
       "type": "Expense",
       "rawDescription": "HIGHLANDS COFFEE 04/04",
-      "suggestedNote": "Highlands Coffee",
-      "suggestedCategoryId": "guid",
-      "suggestedJarId": "guid",
+      "editedNote": "Highlands Coffee",
+      "editedCategoryId": "guid",
+      "editedJarId": "guid",
       "isValid": true,
       "validationError": null
     }
@@ -1095,7 +1089,8 @@ Request
       "rowIndex": 1,
       "include": true,
       "categoryId": "guid",
-      "jarId": "guid",
+      "fromJarId": "guid | null",
+      "toJarId": "guid | null",
       "note": "Highlands Coffee"
     }
   ]
@@ -1165,7 +1160,7 @@ Response `200 OK`
     {
       "id": "guid",
       "type": "Expense",
-      "amount": 55000,
+      "transactionsAmount": -55000,
       "note": "Cà phê sáng",
       "date": "ISO8601"
     }
@@ -1461,7 +1456,6 @@ Request
 {
   "amount": 1000000,
   "sourceJarId": "guid | null",
-  "sourceFinancialAccountId": "guid | null",
   "note": "Tiết kiệm tuần này"
 }
 ```
@@ -1481,8 +1475,8 @@ Response `200 OK`
 
 **Notes**
 
-- Chỉ gửi một trong hai field: `sourceJarId` hoặc `sourceFinancialAccountId`.
-- `sourceFinancialAccountId` map vào `goal_contributions.source_financial_account_id`.
+- Scope MVP chỉ lưu `sourceJarId` trong `goal_contributions`.
+- Nếu khoản đóng góp đến từ nguồn tiền thật, backend nên tạo `transactions` tương ứng thay vì lưu nguồn tài khoản tài chính trong `goal_contributions`.
 - Đây là ghi nhận/phân loại nguồn đóng góp trong app, không phải lệnh chuyển tiền thật vào goal.
 
 ### `GET /api/v1/reminders`

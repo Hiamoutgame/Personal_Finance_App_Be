@@ -24,9 +24,7 @@ builder.Services.AddSwaggerServices();
 var databaseConnectionString = builder.GetAppDatabaseConnectionString();
 
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseNpgsql(
-        databaseConnectionString
-    )
+    options.UseNpgsql(databaseConnectionString)
 );
 builder.Services.AddJwtServices(builder.Configuration);
 
@@ -45,6 +43,7 @@ app.UseMiddleware<GlobalExceptionHandlerMiddleware>();
 
 var enableSwagger = app.Environment.IsDevelopment()
                     || app.Configuration.GetValue<bool>("EnableSwagger");
+
 
 if (enableSwagger)
 {

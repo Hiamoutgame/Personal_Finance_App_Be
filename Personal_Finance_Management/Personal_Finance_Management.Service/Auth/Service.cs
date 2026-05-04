@@ -3,7 +3,6 @@ using System.Security.Claims;
 using Microsoft.EntityFrameworkCore;
 using Personal_Finance_Management.Repository;
 using Personal_Finance_Management.Repository.Entity;
-using Personal_Finance_Management.Repository.Enum;
 using ValidationService = Personal_Finance_Management.Service.Validations;
 using JwtService = Personal_Finance_Management.Service.JwtService;
 
@@ -11,7 +10,7 @@ namespace Personal_Finance_Management.Service.Auth;
 
 public class Service : IService
 {
-    private static readonly Guid DefaultRoleId = Guid.Parse("11111111-1111-1111-1111-111111111111");
+    private const short DefaultRoleId = 1;
     private const string DefaultRoleCode = "User";
 
     private readonly AppDbContext _dbContext;
@@ -45,11 +44,12 @@ public class Service : IService
             Id = Guid.NewGuid(),
             Username = username,
             Email = email,
-            HashPassword = BCrypt.Net.BCrypt.HashPassword(request.Password, 12),
+            PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password, 12),
             FirstName = firstName,
             LastName = lastName,
             RoleId = role.Id,
-            CreatedAt = now
+            CreatedAt = now,
+            UpdatedAt = now
         };
 
         _dbContext.Accounts.Add(user);
@@ -91,7 +91,7 @@ public class Service : IService
         {
             Id = DefaultRoleId,
             Code = DefaultRoleCode,
-            Name = AccountRole.User,
+            Name = DefaultRoleCode,
             Description = "Default application user",
             CreatedAt = now
         };
@@ -107,7 +107,7 @@ public class Service : IService
             .Include(u => u.Role)
             .FirstOrDefaultAsync(u => u.Email == email);
 
-        if (user is null || !BCrypt.Net.BCrypt.Verify(request.Password, user.HashPassword))
+        if (user is null || !BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
         {
             throw new Exception("Invalid email or password.");
         }
