@@ -118,11 +118,19 @@ Response `201 Created`
 
 ```json
 {
-  "id": "guid",
-  "username": "string",
-  "firstName": "string",
-  "lastName": "string",
-  "email": "string"
+  "accessToken": "string",
+  "tokenType": "Bearer",
+  "expiresIn": 900,
+  "user": {
+    "id": "guid",
+    "username": "string",
+    "firstName": "string",
+    "lastName": "string",
+    "email": "string",
+    "phone": "string | null",
+    "role": "User | Admin",
+    "isOnboardingCompleted": false
+  }
 }
 ```
 
@@ -130,6 +138,7 @@ Notes
 
 - `409 Conflict` nếu username hoặc email đã tồn tại.
 - Password hash dùng BCrypt.
+- Register thành công trả token ngay để FE auto-login vào app
 
 ### `POST /api/v1/auth/login`
 
@@ -157,6 +166,7 @@ Response `200 OK`
     "firstName": "string",
     "lastName": "string",
     "email": "string",
+    "phone": "string | null",
     "role": "User | Admin",
     "isOnboardingCompleted": false
   }
@@ -221,7 +231,7 @@ Response `200 OK`
 
 ## P1 — Onboarding, Profile, Financial Accounts, Category
 
-### `GET /api/v1/users/me`
+### `GET /api/v1/user/me`
 
 - Auth: Bearer
 
@@ -241,7 +251,7 @@ Response `200 OK`
 }
 ```
 
-### `PATCH /api/v1/users/me`
+### `PATCH /api/v1/user/me`
 
 - Auth: Bearer
 
@@ -268,7 +278,7 @@ Response `200 OK`
 }
 ```
 
-### `GET /api/v1/users/me/setup`
+### `GET /api/v1/user/me/setup`
 
 - Auth: Bearer
 
@@ -1820,32 +1830,156 @@ Response `200 OK`
 
 Query Params
 
-- `from=2026-04-01`
-- `to=2026-04-30`
+- `timeframe` (optional, enum: `day | month | year`, default: `day`)
+
+Request Rules
+
+- Nếu không truyền `timeframe`, backend tự dùng `day`.
+- Nếu `timeframe` không thuộc enum hợp lệ, trả `400 Bad Request`.
+- Endpoint không nhận request body.
+
+Example Request
+
+```http
+GET /api/v1/admin/dashboard?timeframe=day
+Authorization: Bearer <admin_access_token>
+```
 
 Response `200 OK`
 
-```json
+```jsonc
 {
-  "totalUsers": 1482,
-  "newUsers": 134,
-  "activeUsers": 892,
-  "totalTransactions": 28400,
-  "totalTransactionVolume": 4200000000,
-  "bannedUsers": 12,
-  "recentActivities": [
+  "statCards": [
     {
-      "type": "BroadcastSent",
-      "label": "Gửi broadcast bảo trì hệ thống",
-      "occurredAt": "ISO8601"
-    }
+      "type": "total_users",
+      "label": "Tổng người dùng",
+      "value": 1357,
+      "deltaPercent": 12, // ((currentTotalUsers - previousTotalUsers) / previousTotalUsers) * 100
+    },
+    {
+      "type": "engagement",
+      "label": "Tương tác (DAU/MAU)",
+      "dau": 892, // distinct users active trong ngày cuối kỳ (hoặc ngày được chọn)
+      "mau": 1234, // distinct users active trong 30 ngày gần nhất
+      "stickinessPercent": 72, // (dau / mau) * 100
+    },
+    {
+      "type": "transactions",
+      "label": "Tổng giá trị giao dịch",
+      "totalTransactionValue": 100000000, // SUM(amount) với transaction status hợp lệ trong kỳ của timeframe
+      "totalTransactions": 200, // COUNT(*) transaction trong kỳ của timeframe
+    },
+    {
+      "type": "system_health",
+      "label": "Sức khỏe hệ thống",
+      "errorRatePercent": 0.02, // (failed_sync_or_ocr_jobs / total_sync_or_ocr_jobs) * 100
+      "status": "Good",
+      "bannedUsers": 12,
+    },
   ],
-  "period": {
-    "from": "ISO8601",
-    "to": "ISO8601"
-  }
+  "transactionVolumeTrend": [
+    //bảng xu hướng thể hiện tổng giá trị giao dịch + số lượng giao dịch theo param day | month | year
+    { "label": "T2", "amount": 14000000, "count": 28 },
+    { "label": "T3", "amount": 12000000, "count": 24 },
+    { "label": "T4", "amount": 16000000, "count": 32 },
+    { "label": "T5", "amount": 13000000, "count": 26 },
+    { "label": "T6", "amount": 17000000, "count": 34 },
+    { "label": "T7", "amount": 12000000, "count": 24 },
+    { "label": "CN", "amount": 16000000, "count": 32 },
+  ],
+  "topSpendingCategories": [
+    { "label": "Ăn uống", "value": 32000000 }, // SUM(amount) của category
+    { "label": "Mua sắm", "value": 24000000 }, // tính theo công thức mô tả bên dưới
+    { "label": "Di chuyển", "value": 18000000 },
+    { "label": "Giải trí", "value": 14000000 },
+    { "label": "Khác", "value": 12000000 }, // Tổng phần còn lại ngoài top category
+  ],
+  "retentionTrend": [
+    {
+      "periodLabel": "D0", // mốc ngày kể từ thời điểm onboarding của cohort
+      "cohortA": 100, // Nhóm Q1/2026: D0 luôn = 100%
+      "cohortB": 100, // Nhóm Q2/2025: D0 luôn = 100%
+      "cohortC": 100, // Nhóm Q3/2025: D0 luôn = 100%
+      "cohortD": 100, // Nhóm Q4/2025: D0 luôn = 100%
+    },
+    {
+      "periodLabel": "D7",
+      "cohortA": 76, // (activeUsersInCohortAtDay7 / totalUsersInCohort) * 100
+      "cohortB": 72, // (activeUsersInCohortAtDay7 / totalUsersInCohort) * 100
+      "cohortC": 68, // (activeUsersInCohortAtDay7 / totalUsersInCohort) * 100
+      "cohortD": 64, // (activeUsersInCohortAtDay7 / totalUsersInCohort) * 100
+    },
+    {
+      "periodLabel": "D14",
+      "cohortA": 66, // (activeUsersInCohortAtDay14 / totalUsersInCohort) * 100
+      "cohortB": 61, // (activeUsersInCohortAtDay14 / totalUsersInCohort) * 100
+      "cohortC": 57, // (activeUsersInCohortAtDay14 / totalUsersInCohort) * 100
+      "cohortD": 53, // (activeUsersInCohortAtDay14 / totalUsersInCohort) * 100
+    },
+    {
+      "periodLabel": "D21",
+      "cohortA": 59, // (activeUsersInCohortAtDay21 / totalUsersInCohort) * 100
+      "cohortB": 55, // (activeUsersInCohortAtDay21 / totalUsersInCohort) * 100
+      "cohortC": 51, // (activeUsersInCohortAtDay21 / totalUsersInCohort) * 100
+      "cohortD": 47, // (activeUsersInCohortAtDay21 / totalUsersInCohort) * 100
+    },
+    {
+      "periodLabel": "D30",
+      "cohortA": 52, // (activeUsersInCohortAtDay30 / totalUsersInCohort) * 100
+      "cohortB": 48, // (activeUsersInCohortAtDay30 / totalUsersInCohort) * 100
+      "cohortC": 44, // (activeUsersInCohortAtDay30 / totalUsersInCohort) * 100
+      "cohortD": 40, // (activeUsersInCohortAtDay30 / totalUsersInCohort) * 100
+    },
+  ],
+  "recentUsers": [
+    //danh sách 10 user mới nhất nhm reverse
+    {
+      "id": "guid",
+      "fullName": "Nguyen Van Anh",
+      "email": "anh@finjar.app",
+      "status": "Active",
+      "createdAt": "ISO8601",
+    },
+  ],
+  "recentTransactions": [
+    //danh sách 10 transaction mới nhất nhm reverse
+    {
+      "id": "guid",
+      "type": "Expense",
+      "amount": 120000,
+      "note": "Ăn trưa",
+      "transactionDate": "ISO8601",
+    },
+  ],
 }
 ```
+
+Ghi chú:
+
+- API này là nguồn dữ liệu duy nhất cho trang Admin Dashboard FE hiện tại.
+- `statCards` giữ dạng array, mỗi phần tử phải có `type` để FE map icon/format ổn định.
+- `statCards` ở phiên bản hiện tại phải trả đúng 4 phần tử theo thứ tự:
+  `total_users`, `engagement`, `transactions`, `system_health`.
+- `transactionVolumeTrend` phải trả về theo đúng `timeframe`:
+  - `day`: 7 điểm gần nhất, `label` = `T2..CN` (hoặc format ngày ngắn), mỗi điểm trả cả `amount` và `count` theo ngày.
+  - `month`: 12 điểm gần nhất, `label` = `T1..T12` (hoặc `YYYY-MM`), mỗi điểm trả cả `amount` và `count` theo tháng.
+  - `year`: 5 điểm gần nhất, `label` = `YYYY`, mỗi điểm trả cả `amount` và `count` theo năm.
+- `topSpendingCategories`:
+  - Công thức: `value = SUM(amount)` theo từng category.
+  - Sắp xếp giảm dần theo `value`, trả top N (khuyến nghị N=4), phần còn lại gộp thành `"Khác"`.
+  - FE tính tỷ trọng hiển thị theo công thức: `value / SUM(value của tất cả category) * 100`.
+- `retentionTrend`:
+  - `periodLabel` là số ngày kể từ mốc onboarding của cohort: `D0`, `D7`, `D14`, `D21`, `D30`.
+  - `cohortA..D` là tỷ lệ % user còn active tại mốc đó, giá trị kỳ vọng trong khoảng `0..100`.
+  - Công thức tại mốc `Dx`:
+    `retentionPercent = (activeUsersInCohortAtDayX / totalUsersInCohortAtD0) * 100`. (này xem từ audit tìm lastLogin)
+  - Định nghĩa cohort (phiên bản hiện tại):
+    - `cohortA`: user hoàn tất onboarding trong Q1/2026
+    - `cohortB`: user hoàn tất onboarding trong Q2/2025
+    - `cohortC`: user hoàn tất onboarding trong Q3/2025
+    - `cohortD`: user hoàn tất onboarding trong Q4/2025
+  - Quy tắc làm tròn: làm tròn số nguyên gần nhất.
+  - Quy tắc dữ liệu: nên đảm bảo xu hướng không tăng bất thường trong cùng cohort (`D0 >= D7 >= D14 >= D21 >= D30`).
 
 ### `GET /api/v1/admin/audit-logs`
 
