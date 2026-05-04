@@ -1,14 +1,16 @@
 -- ============================================================
 -- FinJar - PostgreSQL Schema (1-month MVP scope)
--- Convention: PostgreSQL, Guid PK for business tables, timestamptz,
+-- Convention: PostgreSQL, uuid PK for business tables, timestamptz,
 -- numeric(18,2), JSON for structured metadata.
 -- ============================================================
+
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
 -- ==================== MIGRATION 1 ==========================
 -- Identity, access, and audit logs
 
 CREATE TABLE roles (
-    id         Guid         PRIMARY KEY,
+    id         Guid         PRIMARY KEY DEFAULT gen_random_uuid(),
     code        VARCHAR(30)  NOT NULL UNIQUE,
     name        VARCHAR(50)  NOT NULL,
     description TEXT         NULL,
@@ -16,7 +18,7 @@ CREATE TABLE roles (
 );
 
 CREATE TABLE accounts (
-    id                       Guid         PRIMARY KEY,
+    id                       Guid         PRIMARY KEY DEFAULT gen_random_uuid(),
     role_id                  Guid         NOT NULL REFERENCES roles(id),
     username                 VARCHAR(50)  NOT NULL UNIQUE,
     email                    VARCHAR(255) NOT NULL UNIQUE,
@@ -44,7 +46,7 @@ CREATE INDEX ix_accounts_last_login_at
     ON accounts(last_login_at);
 
 CREATE TABLE audit_logs (
-    id                Guid        PRIMARY KEY,
+    id                Guid        PRIMARY KEY DEFAULT gen_random_uuid(),
     actor_account_id  Guid        NOT NULL REFERENCES accounts(id),
     action_type       VARCHAR(50) NOT NULL,
     entity_type       VARCHAR(50) NOT NULL,
@@ -62,7 +64,7 @@ CREATE INDEX ix_audit_logs_actor_created_at
 -- Onboarding and financial setup
 
 CREATE TABLE onboarding_profiles (
-    id                        Guid        PRIMARY KEY,
+    id                        Guid        PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id                   Guid          NOT NULL UNIQUE REFERENCES accounts(id),
     monthly_income            NUMERIC(18,2) NULL,
     occupation_type           VARCHAR(50) NULL,
@@ -84,7 +86,7 @@ CREATE TABLE onboarding_profiles (
 );
 
 CREATE TABLE jar_setups (
-    id          Guid        PRIMARY KEY,
+    id          Guid        PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id     Guid        NOT NULL UNIQUE REFERENCES accounts(id),
     method_type VARCHAR(30) NOT NULL,
     created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -95,8 +97,8 @@ CREATE TABLE jar_setups (
 );
 
 CREATE TABLE financial_accounts (
-    id                      Guid          PRIMARY KEY,
-    user_id                 Guid          NOT NULL REFERENCES accounts(id),
+    id                      UUID          PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id                 UUID          NOT NULL REFERENCES accounts(id),
     name                    VARCHAR(100)  NOT NULL,
     account_type            VARCHAR(20)   NOT NULL,
     connection_mode         VARCHAR(20)   NOT NULL,
@@ -139,7 +141,7 @@ CREATE INDEX ix_financial_accounts_sync_status
     ON financial_accounts(sync_status);
 
 CREATE TABLE categories (
-    id            Guid         PRIMARY KEY,
+    id            Guid         PRIMARY KEY DEFAULT gen_random_uuid(),
     name          VARCHAR(100) NOT NULL,
     icon          VARCHAR(50)  NULL,
     color         VARCHAR(20)  NULL,
@@ -159,7 +161,7 @@ CREATE INDEX ix_categories_default_active
     ON categories(is_default, is_active);
 
 CREATE TABLE jars (
-    id           Guid          PRIMARY KEY,
+    id           Guid          PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id      Guid          NOT NULL REFERENCES accounts(id),
     jar_setup_id Guid          NULL REFERENCES jar_setups(id),
     name         VARCHAR(100)  NOT NULL,
@@ -186,7 +188,7 @@ CREATE INDEX ix_jars_user_status
 -- Imports and transactions
 
 CREATE TABLE import_jobs (
-    id                    Guid         PRIMARY KEY,
+    id                    Guid         PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id               Guid         NOT NULL REFERENCES accounts(id),
     financial_account_id  Guid         NOT NULL REFERENCES financial_accounts(id),
     file_name             VARCHAR(255) NOT NULL,
@@ -221,7 +223,7 @@ CREATE INDEX ix_import_jobs_account_uploaded_at
     ON import_jobs(financial_account_id, uploaded_at DESC);
 
 CREATE TABLE transactions (
-    id                           Guid          PRIMARY KEY,
+    id                           Guid          PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id                      Guid          NOT NULL REFERENCES accounts(id),
     financial_account_id         Guid          NOT NULL REFERENCES financial_accounts(id),
     category_id                  Guid          NULL REFERENCES categories(id),
@@ -281,7 +283,7 @@ CREATE INDEX ix_transactions_to_jar_id
 -- Limits, goals, reminders, broadcasts, and notifications
 
 CREATE TABLE spending_limits (
-    id                  Guid          PRIMARY KEY,
+    id                  Guid          PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id             Guid          NOT NULL REFERENCES accounts(id),
     jar_id              Guid          NULL REFERENCES jars(id),
     category_id         Guid          NULL REFERENCES categories(id),
@@ -306,7 +308,7 @@ CREATE INDEX ix_spending_limits_user_active
     ON spending_limits(user_id, is_active);
 
 CREATE TABLE goals (
-    id            Guid          PRIMARY KEY,
+    id            Guid          PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id       Guid          NOT NULL REFERENCES accounts(id),
     title         VARCHAR(150)  NOT NULL,
     target_amount NUMERIC(18,2) NOT NULL,
@@ -331,7 +333,7 @@ CREATE INDEX ix_goals_linked_jar_id
     ON goals(linked_jar_id);
 
 CREATE TABLE goal_contributions (
-    id            Guid          PRIMARY KEY,
+    id            Guid          PRIMARY KEY DEFAULT gen_random_uuid(),
     goal_id       Guid          NOT NULL REFERENCES goals(id),
     user_id       Guid          NOT NULL REFERENCES accounts(id),
     source_jar_id Guid            NULL REFERENCES jars(id),
@@ -350,14 +352,14 @@ CREATE INDEX ix_goal_contributions_user_created_at
     ON goal_contributions(user_id, created_at DESC);
 
 CREATE TABLE reminders (
-    id                 Guid          PRIMARY KEY,
-    user_id            Guid          NOT NULL REFERENCES accounts(id),
+    id                 UUID          PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id            UUID          NOT NULL REFERENCES accounts(id),
     title              VARCHAR(150)  NOT NULL,
     amount             NUMERIC(18,2) NULL,
     frequency          VARCHAR(20)   NULL,
     day_of_month       SMALLINT      NULL,
     start_date         DATE          NOT NULL DEFAULT CURRENT_DATE,
-    category_id        Guid          NULL REFERENCES categories(id),
+    category_id        UUID          NULL REFERENCES categories(id),
     note               TEXT          NULL,
     status             VARCHAR(20)   NOT NULL DEFAULT 'Active',
     notify_days_before SMALLINT      NULL DEFAULT 1,
@@ -380,7 +382,7 @@ CREATE INDEX ix_reminders_user_status
     ON reminders(user_id, status);
 
 CREATE TABLE broadcasts (
-    id                  Guid         PRIMARY KEY,
+    id                  Guid         PRIMARY KEY DEFAULT gen_random_uuid(),
     created_by_admin_id Guid             NOT NULL REFERENCES accounts(id),
     title               VARCHAR(200) NOT NULL,
     body                TEXT         NOT NULL,
@@ -407,7 +409,7 @@ CREATE INDEX ix_broadcasts_status_scheduled_at
     ON broadcasts(status, scheduled_at);
 
 CREATE TABLE notifications (
-    id            Guid          PRIMARY KEY,
+    id            Guid          PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id       Guid             NOT NULL REFERENCES accounts(id),
     type          VARCHAR(30)  NOT NULL,
     title         VARCHAR(200) NOT NULL,
@@ -433,7 +435,7 @@ CREATE INDEX ix_notifications_user_unread
 -- Import review drafts
 
 CREATE TABLE import_transaction_drafts (
-    id                      Guid          PRIMARY KEY,
+    id                      Guid          PRIMARY KEY DEFAULT gen_random_uuid(),
     import_job_id           Guid          NOT NULL REFERENCES import_jobs(id),
     row_index               INT           NOT NULL,
     transaction_date        TIMESTAMPTZ   NULL,
@@ -442,7 +444,7 @@ CREATE TABLE import_transaction_drafts (
     raw_description         TEXT          NULL,
     edited_note             TEXT          NULL,
     edited_category_id      Guid          NULL REFERENCES categories(id),
-    edited_jar_id           Guid              NULL REFERENCES jars(id),
+    edited_jar_id           Guid                      NULL REFERENCES jars(id),
     is_valid                BOOLEAN       NOT NULL DEFAULT TRUE,
     validation_error        TEXT          NULL,
     normalized_payload_json JSON         NULL,
@@ -464,8 +466,8 @@ CREATE INDEX ix_import_transaction_drafts_import_job_id
 -- AI settings
 
 CREATE TABLE ai_settings (
-    id                  Guid         PRIMARY KEY,
-    updated_by_admin_id Guid         NULL REFERENCES accounts(id),
+    id                  UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
+    updated_by_admin_id UUID         NULL REFERENCES accounts(id),
     model_name          VARCHAR(100) NOT NULL,
     system_prompt       TEXT         NOT NULL,
     temperature         NUMERIC(3,2) NOT NULL DEFAULT 0.7,

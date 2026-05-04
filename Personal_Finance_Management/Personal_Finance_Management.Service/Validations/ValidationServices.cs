@@ -1,6 +1,10 @@
 using System.ComponentModel.DataAnnotations;
 using Microsoft.EntityFrameworkCore;
 using Personal_Finance_Management.Repository;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Formats.Bmp;
+using SixLabors.ImageSharp.Formats.Jpeg;
+using SixLabors.ImageSharp.Formats.Png;
 using AuthRequest = Personal_Finance_Management.Service.Auth.Request;
 
 namespace Personal_Finance_Management.Service.Validations;
@@ -92,5 +96,55 @@ public class ValidationServices : IServices
         }
 
         return char.ToLowerInvariant(value[0]) + value[1..];
+    }
+
+    public async Task ValidateImportImageRequest(import.Request.ImportData request)
+    {
+        await ValidateFormRequest(request);
+
+        if (request.File.Length == 0)
+        {
+            throw AppValidationException.BadRequest("Image file is required.", "file", "REQUIRED");
+        }
+
+        const long maxSizeInBytes = 5 * 1024 * 1024;
+        if (request.File.Length > maxSizeInBytes)
+        {
+            throw AppValidationException.BadRequest("Image size is too large. Maximum allowed size is 5MB.", "file", "IMAGE_TOO_LARGE");
+        }
+
+        var extension = Path.GetExtension(request.File.FileName).ToLowerInvariant();
+        var supportedExtensions = new HashSet<string> { ".jpg", ".jpeg", ".png", ".bmp" };
+        if (!supportedExtensions.Contains(extension))
+        {
+            throw AppValidationException.BadRequest("Unsupported image extension. Only JPG, JPEG, PNG, and BMP are allowed.", "file", "UNSUPPORTED_IMAGE_EXTENSION");
+        }
+
+        try
+        {
+            await using var formatStream = request.File.OpenReadStream();
+            var format = await Image.DetectFormatAsync(formatStream);
+
+            if (format is not (JpegFormat or PngFormat or BmpFormat))
+            {
+                throw AppValidationException.BadRequest("Unsupported image format. Only JPG, JPEG, PNG, and BMP are allowed.", "file", "UNSUPPORTED_IMAGE_FORMAT");
+            }
+
+            await using var identifyStream = request.File.OpenReadStream();
+            var imageInfo = await Image.IdentifyAsync(identifyStream);
+            if (imageInfo is null)
+            {
+                throw AppValidationException.BadRequest("Invalid image file.", "file", "INVALID_IMAGE");
+            }
+
+            if (imageInfo.Width > 5000 || imageInfo.Height > 5000)
+            {
+                throw AppValidationException.BadRequest("Image dimensions are too large. Maximum allowed size is 5000x5000 pixels.", "file", "IMAGE_DIMENSIONS_TOO_LARGE");
+            }
+        }
+        catch (UnknownImageFormatException)
+        {
+            throw AppValidationException.BadRequest("Invalid image file.", "file", "INVALID_IMAGE");
+        }
     }
 }
