@@ -40,7 +40,7 @@ digraph schema_overview {
     roles [label=<
       <table border="1" cellborder="0" cellspacing="0" cellpadding="6" color="#243041">
         <tr><td bgcolor="#edf3ff" align="left"><b>roles</b></td></tr>
-        <tr><td align="left">PK id smallint<br align="left"/>code<br align="left"/>name</td></tr>
+        <tr><td align="left">PK id Guid<br align="left"/>code<br align="left"/>name</td></tr>
       </table>
     >];
 

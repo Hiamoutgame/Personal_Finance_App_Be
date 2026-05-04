@@ -103,7 +103,7 @@ public interface IUpdatedAtEntity
 }
 ```
 
-Lý do: `roles.id` là `smallint`, `goal_contributions` không có `updated_at`, `notifications` không có `updated_at`, nên một base class quá nặng sẽ làm EF map sai schema.
+Lý do: mọi entity chính dùng `Guid Id`, nhưng `goal_contributions` không có `updated_at`, `notifications` không có `updated_at`, nên một base class quá nặng sẽ làm EF map sai schema.
 
 ### Quy ước đặt tên
 
@@ -151,9 +151,9 @@ MVP có thể lưu property là `string`, nhưng service phải validate bằng 
 #### `Role`
 
 - Bảng: `roles`
-- PK: `short Id`
-- Seed: `1 User`, `2 Admin`
-- Không kế thừa `BaseEntity<Guid>`.
+- PK: `Guid Id`
+- Seed: `00000000-0000-0000-0000-000000000001 User`, `00000000-0000-0000-0000-000000000002 Admin`
+- Có thể kế thừa `BaseEntity` vì `BaseEntity` chỉ chứa `Guid Id`.
 
 #### `Account`
 
@@ -166,7 +166,7 @@ Vai trò:
 Trường cần có:
 
 - `Guid Id`
-- `short RoleId`
+- `Guid RoleId`
 - `string Username`
 - `string Email`
 - `string PasswordHash`
@@ -568,14 +568,14 @@ Kế hoạch:
 - Tạo interface `IHasCreatedAt`, `IHasUpdatedAt` nếu cần auto timestamp.
 - Chỉ thêm `IsDeleted` vào `Transaction`.
 - Category dùng `DeletedAt` và `IsActive`, không bắt buộc `IsDeleted`.
-- `Role` không kế thừa `BaseEntity` vì PK là `short`.
+- `Role` có thể kế thừa `BaseEntity` vì PK là `Guid`.
 
 ### Bước 3 - Sửa scalar properties của entity
 
 Sửa các mismatch lớn (tóm tắt):
 
-- `Role`: `Id` thành `short`.
-- `Account`: `RoleId` thành `short`; `HashPassword` -> `PasswordHash`.
+- `Role`: `Id` là `Guid`.
+- `Account`: `RoleId` là `Guid`; `HashPassword` -> `PasswordHash`.
 - `FinancialAccount`: xóa `AvailableBalance`, `BalanceAsOf`.
 - `OnboardingProfile`: `FinancialGoalTypes`, `SpendingChallenges` là `string?`.
 - `Jar`: xóa `Percentage`.
@@ -620,7 +620,7 @@ Cần đồng bộ DbSet:
 Sửa Fluent API:
 
 - Table/column name theo snake_case.
-- `roles.id` identity smallint.
+- `roles.id` Guid.
 - Check constraints giống `finjar_schema.sql`.
 - Index giống schema:
   - accounts: role/status, last_login
@@ -655,10 +655,10 @@ Seed tối thiểu:
 - default categories nếu sản phẩm cần
 - optional default AI setting nếu muốn AI có config ban đầu
 
-Role seed phải dùng id:
+Role seed phải dùng id Guid ổn định:
 
-- `1 = User`
-- `2 = Admin`
+- `00000000-0000-0000-0000-000000000001 = User`
+- `00000000-0000-0000-0000-000000000002 = Admin`
 
 ### Bước 8 - Verification
 

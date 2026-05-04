@@ -16,7 +16,7 @@ public class Account : BaseEntity, IAudictableEntity
     public string PreferredCurrency { get; set; } = "VND";
     public bool IsOnboardingCompleted { get; set; } = false;
 
-    public short RoleId { get; set; }
+    public Guid RoleId { get; set; }
     public Role Role { get; set; } = null!;
 
     public OnboardingProfile? OnboardingProfile { get; set; }

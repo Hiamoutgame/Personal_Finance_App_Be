@@ -25,6 +25,8 @@ var databaseConnectionString = builder.GetAppDatabaseConnectionString();
 
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(databaseConnectionString)
+        // hien: cai dat de toan bo database dung snake case, neu khong se bi loi khi truy van bang do EF mac dinh se dung PascalCase
+        .UseSnakeCaseNamingConvention()
 );
 builder.Services.AddJwtServices(builder.Configuration);
 

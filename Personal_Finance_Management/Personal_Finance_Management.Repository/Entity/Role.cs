@@ -1,8 +1,9 @@
-﻿namespace Personal_Finance_Management.Repository.Entity;
+using Personal_Finance_Management.Repository.Abtraction;
 
-public class Role
+namespace Personal_Finance_Management.Repository.Entity;
+
+public class Role : BaseEntity
 {
-    public short Id { get; set; }
     public string Code { get; set; } = null!;
     public string Name { get; set; } = null!;
     public string? Description { get; set; }

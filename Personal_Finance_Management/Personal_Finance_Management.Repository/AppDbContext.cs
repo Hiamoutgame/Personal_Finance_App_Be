@@ -37,10 +37,6 @@ public class AppDbContext : DbContext
         {
             builder.ToTable("roles");
 
-            builder.Property(r => r.Id)
-                .HasColumnType("smallint")
-                .ValueGeneratedOnAdd();
-
             builder.Property(r => r.Code)
                 .IsRequired()
                 .HasMaxLength(30);

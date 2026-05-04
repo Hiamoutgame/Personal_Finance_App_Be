@@ -78,6 +78,8 @@ public class HealthController : ControllerBase
             // hien: khuc nay dung de tao DbContext tam thoi voi connection string cua tung loai database can check
             var options = new DbContextOptionsBuilder<AppDbContext>()
                 .UseNpgsql(connectionString)
+                // hien: cai dat de toan bo database dung snake case, neu khong se bi loi khi truy van bang do EF mac dinh se dung PascalCase
+                .UseSnakeCaseNamingConvention()
                 .Options;
 
             await using var dbContext = new AppDbContext(options);

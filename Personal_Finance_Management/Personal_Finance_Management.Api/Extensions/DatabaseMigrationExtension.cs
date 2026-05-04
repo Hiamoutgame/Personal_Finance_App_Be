@@ -21,7 +21,6 @@ public static class DatabaseMigrationExtension
                 $"Missing database connection string '{connectionName}' for environment '{builder.Environment.EnvironmentName}'."
             );
         }
-
         return connectionString;
     }
 

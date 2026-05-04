@@ -183,7 +183,7 @@ public class Service : IService
             CreatedAt = now,
             UpdatedAt = now
         });
-        
+
         _dbContext.Jars.AddRange(savedJar);
         user.IsOnboardingCompleted = true;
         await _dbContext.SaveChangesAsync();
