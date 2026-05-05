@@ -54,33 +54,16 @@ public class Service : IService
         if (user == null)
             throw new Exception("User not found");
 
-        if (request.firstName is not null)
-        {
-            var firstName = request.firstName.Trim();
-            if (string.IsNullOrWhiteSpace(firstName))
-                throw AppValidationException.BadRequest("First name is required.", "firstName", "REQUIRED");
-
-            user.FirstName = firstName;
-        }
-
-        if (request.lastName is not null)
-        {
-            var lastName = request.lastName.Trim();
-            if (string.IsNullOrWhiteSpace(lastName))
-                throw AppValidationException.BadRequest("Last name is required.", "lastName", "REQUIRED");
-
-            user.LastName = lastName;
-        }
-
-        user.Phone = request.phone?.Trim() ?? user.Phone;
-        user.AvatarUrl = request.avatarUrl?.Trim() ?? user.AvatarUrl;
+        user.FirstName = request.firstName ?? user.FirstName;
+        user.LastName = request.lastName ?? user.LastName;
+        user.Phone = request.phone ?? user.Phone;
+        user.AvatarUrl = request.avatarUrl ?? user.AvatarUrl;
 
         await _dbContext.SaveChangesAsync();
         var result = new Response.UpdateUserResponse()
         {
             Id = user.Id,
-            firstName = user.FirstName,
-            lastName = user.LastName,
+            fullName = user.FirstName + " " + user.LastName,
             phone = user.Phone,
             avatarUrl = user.AvatarUrl,
         };
@@ -100,21 +83,18 @@ public class Service : IService
 
         if (user == null)
             throw new Exception("User not found");
-        var selectedQuery = _dbContext.Accounts
-            .Where(x => x.Id == userIdGuid)
-            .Select(x => new Response.ViewSetupResponse()
+        var query = _dbContext.Accounts.Where(x => x.Id == userIdGuid);
+        var selectedQuery = query.Select(x => new Response.ViewSetupResponse()
         {
             isOnboardingCompleted = x.IsOnboardingCompleted,
-            monthlyIncome = x.OnboardingProfile == null ? null : x.OnboardingProfile.MonthlyIncome,
-            budgetMethod = x.OnboardingProfile == null
-                ? "Undecided"
-                : x.OnboardingProfile.BudgetMethodPreference ?? "Undecided",
-            defaultFinancialAccountId = x.FinancialAccounts
-                .Where(f => f.IsDefault)
-                .Select(f => (Guid?)f.Id)
-                .FirstOrDefault(),
+            monthlyIncome = x.OnboardingProfile.MonthlyIncome,
+            budgetMethod = x.OnboardingProfile.BudgetMethodPreference,
+            defaultFinancialAccountId = (x.FinancialAccounts.FirstOrDefault() ?? null).Id,
+            // defaultFinancialAccountId = x.FinancialAccounts.FirstOrDefault().Id,
             jarCount = _dbContext.Jars.Where(x => x.UserId == userIdGuid).Count(),
             financialAccountCount = _dbContext.FinancialAccounts.Where(x => x.UserId == userIdGuid).Count(),
+            // limitCount = 1,
+            // activeGoalCount = 1,
             limitCount = _dbContext.SpendingLimits.Where(x => x.UserId == userIdGuid).Count(),
             activeGoalCount = _dbContext.Goals.Where(x => x.UserId == userIdGuid).Count(),
         });

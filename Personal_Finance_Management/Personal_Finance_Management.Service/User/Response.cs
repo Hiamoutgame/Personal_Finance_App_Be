@@ -20,17 +20,16 @@ public class Response
     public class UpdateUserResponse
     {
         public Guid Id { get; set; }
-        public string firstName { get; set; } = string.Empty;
-        public string lastName { get; set; } = string.Empty;
-        public string? phone { get; set; }
-        public string? avatarUrl { get; set; }
+        public string fullName { get; set; }
+        public string phone { get; set; }
+        public string avatarUrl { get; set; }
     }
 
     public class ViewSetupResponse
     {
         public bool isOnboardingCompleted { get; set; }
         public decimal? monthlyIncome  { get; set; }
-        public string budgetMethod { get; set; } = "Undecided";
+        public string budgetMethod { get; set; }
         public Guid? defaultFinancialAccountId { get; set; }
         public int jarCount { get; set; }
         public int financialAccountCount  { get; set; }

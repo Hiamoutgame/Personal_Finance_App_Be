@@ -112,33 +112,27 @@ public class Service : IService
             {
                 new Response.Jar()
                 {
-                    name = "Food & Dining",
-                    percentage = 25
+                    name = "Food & Dining"
                 },
                 new Response.Jar()
                 {
-                    name = "Shopping",
-                    percentage = 15
+                    name = "Shopping"
                 },
                 new Response.Jar()
                 {
-                    name = "Transportation",
-                    percentage = 10
+                    name = "Transportation"
                 },
                 new Response.Jar()
                 {
-                    name = "Savings",
-                    percentage = 20
+                    name = "Savings"
                 },
                 new Response.Jar()
                 {
-                    name = "Essentials",
-                    percentage = 20
+                    name = "Essentials"
                 },
                 new Response.Jar()
                 {
-                    name = "Entertainment",
-                    percentage = 10
+                    name = "Entertainment"
                 }
             },
             defaultFinancialAccount = new Response.defaultFAccount()
