@@ -23,6 +23,8 @@ from huggingface_hub import snapshot_download
 
 from utils.file_utils import get_project_base_directory
 from utils.settings import PARALLEL_DEVICES
+from vietocr.tool.config import Cfg
+from vietocr.tool.translate import Predictor
 from .operators import *  # noqa: F403
 from . import operators
 import math
@@ -36,8 +38,7 @@ import torch
 
 from .postprocess import build_post_process
 
-from vietocr.tool.predictor import Predictor
-from vietocr.tool.config import Cfg
+
 
 loaded_models = {}
 
@@ -135,11 +136,11 @@ class TextRecognizer:
     def __init__(self, model_dir=None, device_id: int | None = None):
         
         #seq2seq
-        config = Cfg.load_config_from_name('vgg_seq2seq')
+        config = Cfg.load_config_from_name('vgg-seq2seq')
         config['weights'] = r"vietocr\weight\vgg_seq2seq.pth" 
 
         #transformer
-        #config = Cfg.load_config_from_name('vgg_transformer')
+        #config = Cfg.load_config_from_name('vgg-transformer')
         #config['weights'] = r"vietocr\weight\vgg_transformer.pth" 
 
         config['cnn']['pretrained'] = True

@@ -2,6 +2,7 @@ numpy
 opencv-python
 onnxruntime
 torch
+torchvision
 matplotlib
 Pillow
 pdfplumber
@@ -11,3 +12,4 @@ pyclipper
 ruamel.yaml
 cachetools
 six
+trio

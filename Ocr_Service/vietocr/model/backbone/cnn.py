@@ -1,7 +1,9 @@
 import torch
 from torch import nn
 
-import model.backbone.vgg as vgg
+from vietocr.model.backbone import vgg
+
+
 
 class CNN(nn.Module):
     def __init__(self, backbone, **kwargs):

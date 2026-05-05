@@ -1,5 +1,5 @@
-from model.backbone.cnn import CNN
-from model.seqmodel.seq2seq import Seq2Seq
+from .backbone.cnn import CNN
+from .seqmodel.seq2seq import Seq2Seq
 from torch import nn
 
 class VietOCR(nn.Module):

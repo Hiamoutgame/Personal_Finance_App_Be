@@ -15,7 +15,7 @@
 #
 from enum import Enum
 from enum import IntEnum
-from strenum import StrEnum
+from enum import StrEnum
 
 
 class StatusEnum(Enum):

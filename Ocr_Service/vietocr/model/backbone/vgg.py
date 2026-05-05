@@ -1,8 +1,7 @@
 import torch
 from torch import nn
 from torchvision import models
-from einops import rearrange
-from torchvision.models._utils import IntermediateLayerGetter
+
 
 
 class Vgg(nn.Module):
