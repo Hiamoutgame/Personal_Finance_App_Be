@@ -18,11 +18,16 @@ import logging
 import copy
 import time
 import os
+import sys
+
+PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+if PROJECT_ROOT not in sys.path:
+    sys.path.insert(0, PROJECT_ROOT)
 
 from huggingface_hub import snapshot_download
 
-from api.utils.file_utils import get_project_base_directory
-from rag.settings import PARALLEL_DEVICES
+from utils.file_utils import get_project_base_directory
+from utils.settings import PARALLEL_DEVICES
 from .operators import *  # noqa: F403
 from . import operators
 import math
@@ -32,15 +37,16 @@ import onnxruntime as ort
 import torch
 import matplotlib.pyplot as plt
 from PIL import Image
-from tool.config import Cfg
-from tool.translate import build_model, process_input, translate
+from vietocr.tool.config import Cfg
+from vietocr.tool.translate import build_model, process_input, translate
 import torch
 
 from .postprocess import build_post_process
 
 loaded_models = {}
 
-config = Cfg.load_config_from_file('./config/vgg-seq2seq.yml')
+_VIETOCR_CONFIG = get_project_base_directory("vietocr", "config", "vgg-seq2seq.yml")
+config = Cfg.load_config_from_file(_VIETOCR_CONFIG)
 config['cnn']['pretrained']=False
 config['device'] = 'cpu'
 # weight_path = './weight/transformerocr.pth'
@@ -187,9 +193,12 @@ def translate_onnx(img, session, max_seq_length=128, sos_token=1, eos_token=2):
 class TextRecognizer:
     def __init__(self, model_dir, device_id: int | None = None):
         # Load ONNX sessions for CNN, encoder, and decoder
-        self.cnn_session = ort.InferenceSession(os.path.join(model_dir, "cnn.onnx"))
-        self.encoder_session = ort.InferenceSession(os.path.join(model_dir, "encoder.onnx"))
-        self.decoder_session = ort.InferenceSession(os.path.join(model_dir, "decoder.onnx"))
+        weight_dir = model_dir
+        if not os.path.exists(os.path.join(weight_dir, "cnn.onnx")):
+            weight_dir = get_project_base_directory("vietocr", "weight")
+        self.cnn_session = ort.InferenceSession(os.path.join(weight_dir, "cnn.onnx"))
+        self.encoder_session = ort.InferenceSession(os.path.join(weight_dir, "encoder.onnx"))
+        self.decoder_session = ort.InferenceSession(os.path.join(weight_dir, "decoder.onnx"))
         self.session = (self.cnn_session, self.encoder_session, self.decoder_session)
         # You may need to load vocab here, e.g., self.vocab = ... 
 
@@ -373,8 +382,7 @@ class OCR:
                                               local_dir=os.path.join(get_project_base_directory(), "onnx"),
                                               local_dir_use_symlinks=False)
                 
-                if PARALLEL_DEVICES is not None:
-                    assert PARALLEL_DEVICES > 0, "Number of devices must be >= 1"
+                if PARALLEL_DEVICES is not None and PARALLEL_DEVICES > 0:
                     self.text_detector = []
                     self.text_recognizer = []
                     for device_id in range(PARALLEL_DEVICES):

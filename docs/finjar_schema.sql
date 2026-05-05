@@ -436,7 +436,7 @@ CREATE INDEX ix_notifications_user_unread
 
 CREATE TABLE import_transaction_drafts (
     id                      Guid          PRIMARY KEY DEFAULT gen_random_uuid(),
-    import_job_id           Guid          NOT NULL REFERENCES import_jobs(id),
+    import_job_id           Guid          NULL REFERENCES import_jobs(id),
     row_index               INT           NOT NULL,
     transaction_date        TIMESTAMPTZ   NULL,
     amount                  NUMERIC(18,2) NULL,
@@ -447,14 +447,17 @@ CREATE TABLE import_transaction_drafts (
     edited_jar_id           Guid                      NULL REFERENCES jars(id),
     is_valid                BOOLEAN       NOT NULL DEFAULT TRUE,
     validation_error        TEXT          NULL,
-    normalized_payload_json JSON         NULL,
+    normalized_payload_json JSONB        NULL,
     created_at              TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
     updated_at              TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
 
     CONSTRAINT uq_import_transaction_drafts_job_row
         UNIQUE (import_job_id, row_index),
     CONSTRAINT chk_import_transaction_drafts_row_index
-        CHECK (row_index >= 0),
+        CHECK (
+            (import_job_id IS NOT NULL AND row_index >= 0)
+            OR (import_job_id IS NULL AND row_index < 0)
+        ),
     CONSTRAINT chk_import_transaction_drafts_type
         CHECK (type IS NULL OR type IN ('Income', 'Expense'))
 );

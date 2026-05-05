@@ -13,3 +13,6 @@ ruamel.yaml
 cachetools
 six
 trio
+fastapi
+uvicorn
+python-multipart

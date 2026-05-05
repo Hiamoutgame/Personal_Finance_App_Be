@@ -37,7 +37,11 @@ builder.Services.AddScoped<jwtService.IService, jwtService.Service>();
 builder.Services.AddScoped<validationService.IServices, validationService.ValidationServices>();
 builder.Services.AddScoped<OnboardingService.IService, OnboardingService.Service>();
 builder.Services.AddScoped<UserService.IService, UserService.Service>();
-builder.Services.AddScoped<OcrService.IService, OcrService.Service>();
+builder.Services.AddHttpClient<OcrService.IService, OcrService.Service>(client =>
+{
+    var timeoutSeconds = builder.Configuration.GetValue<int?>("Ocr:TimeoutSeconds") ?? 120;
+    client.Timeout = TimeSpan.FromSeconds(timeoutSeconds);
+});
 builder.Services.AddScoped<ImportService.IServices, ImportService.Service>();
 
 var app = builder.Build();

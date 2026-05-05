@@ -893,8 +893,9 @@ public class AppDbContext : DbContext
             builder.Property(d => d.RawDescription).HasColumnType("text");
             builder.Property(d => d.EditedNote).HasColumnType("text");
             builder.Property(d => d.ValidationError).HasColumnType("text");
-            builder.Property(d => d.NormalizedPayloadJson).HasColumnType("json");
+            builder.Property(d => d.NormalizedPayloadJson).HasColumnType("jsonb");
             builder.Property(d => d.IsValid).HasDefaultValue(true);
+            builder.Property(d => d.ImportJobId).IsRequired(false);
 
             builder.Property(d => d.CreatedAt)
                 .HasDefaultValueSql("NOW()");
@@ -913,7 +914,7 @@ public class AppDbContext : DbContext
             {
                 t.HasCheckConstraint(
                     "chk_import_transaction_drafts_row_index",
-                    "\"row_index\" >= 0");
+                    "(\"import_job_id\" IS NOT NULL AND \"row_index\" >= 0) OR (\"import_job_id\" IS NULL AND \"row_index\" < 0)");
                 t.HasCheckConstraint(
                     "chk_import_transaction_drafts_type",
                     "\"type\" IS NULL OR \"type\" IN ('Income','Expense')");
@@ -922,7 +923,8 @@ public class AppDbContext : DbContext
             builder.HasOne(d => d.ImportJob)
                 .WithMany(j => j.Drafts)
                 .HasForeignKey(d => d.ImportJobId)
-                .OnDelete(DeleteBehavior.Restrict);
+                .OnDelete(DeleteBehavior.Restrict)
+                .IsRequired(false);
 
             builder.HasOne(d => d.EditedCategory)
                 .WithMany()

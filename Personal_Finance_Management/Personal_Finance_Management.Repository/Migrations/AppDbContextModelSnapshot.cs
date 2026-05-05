@@ -827,7 +827,7 @@ namespace Personal_Finance_Management.Repository.Migrations
                         .HasColumnType("text")
                         .HasColumnName("edited_note");
 
-                    b.Property<Guid>("ImportJobId")
+                    b.Property<Guid?>("ImportJobId")
                         .HasColumnType("uuid")
                         .HasColumnName("import_job_id");
 
@@ -838,7 +838,7 @@ namespace Personal_Finance_Management.Repository.Migrations
                         .HasColumnName("is_valid");
 
                     b.Property<string>("NormalizedPayloadJson")
-                        .HasColumnType("json")
+                        .HasColumnType("jsonb")
                         .HasColumnName("normalized_payload_json");
 
                     b.Property<string>("RawDescription")
@@ -886,7 +886,7 @@ namespace Personal_Finance_Management.Repository.Migrations
 
                     b.ToTable("import_transaction_drafts", null, t =>
                         {
-                            t.HasCheckConstraint("chk_import_transaction_drafts_row_index", "\"row_index\" >= 0");
+                            t.HasCheckConstraint("chk_import_transaction_drafts_row_index", "(\"import_job_id\" IS NOT NULL AND \"row_index\" >= 0) OR (\"import_job_id\" IS NULL AND \"row_index\" < 0)");
 
                             t.HasCheckConstraint("chk_import_transaction_drafts_type", "\"type\" IS NULL OR \"type\" IN ('Income','Expense')");
                         });

@@ -7,7 +7,7 @@ namespace Personal_Finance_Management.Service.import
         public class ImportData
         {
             public required IFormFile File { get; set; }
-            public string? OcrLanguage { get; set; }
+            public string? Layout { get; set; }
             public bool RunOcr { get; set; } = true;
         }
     }

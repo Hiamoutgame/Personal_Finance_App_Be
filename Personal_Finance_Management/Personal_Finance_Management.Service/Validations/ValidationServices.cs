@@ -107,17 +107,38 @@ public class ValidationServices : IServices
             throw AppValidationException.BadRequest("Image file is required.", "file", "REQUIRED");
         }
 
-        const long maxSizeInBytes = 5 * 1024 * 1024;
+        const long maxSizeInBytes = 10 * 1024 * 1024;
         if (request.File.Length > maxSizeInBytes)
         {
-            throw AppValidationException.BadRequest("Image size is too large. Maximum allowed size is 5MB.", "file", "IMAGE_TOO_LARGE");
+            throw AppValidationException.BadRequest("File size is too large. Maximum allowed size is 10MB.", "file", "FILE_TOO_LARGE");
         }
 
         var extension = Path.GetExtension(request.File.FileName).ToLowerInvariant();
-        var supportedExtensions = new HashSet<string> { ".jpg", ".jpeg", ".png", ".bmp" };
+        var supportedExtensions = new HashSet<string> { ".jpg", ".jpeg", ".png", ".bmp", ".pdf" };
         if (!supportedExtensions.Contains(extension))
         {
-            throw AppValidationException.BadRequest("Unsupported image extension. Only JPG, JPEG, PNG, and BMP are allowed.", "file", "UNSUPPORTED_IMAGE_EXTENSION");
+            throw AppValidationException.BadRequest("Unsupported file extension. Only JPG, JPEG, PNG, BMP, and PDF are allowed.", "file", "UNSUPPORTED_FILE_EXTENSION");
+        }
+
+        var layout = request.Layout?.Trim();
+        if (!string.IsNullOrWhiteSpace(layout))
+        {
+            var supportedLayouts = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            {
+                "none",
+                "invoice",
+                "document"
+            };
+
+            if (!supportedLayouts.Contains(layout))
+            {
+                throw AppValidationException.BadRequest("Unsupported OCR layout. Only none, invoice, and document are allowed.", "layout", "UNSUPPORTED_OCR_LAYOUT");
+            }
+        }
+
+        if (extension == ".pdf")
+        {
+            return;
         }
 
         try

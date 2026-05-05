@@ -37,18 +37,37 @@ namespace Personal_Finance_Management.Service.import
             }
 
             OcrService.OCRResult? ocrResult = null;
+            string? ocrJsonFileName = null;
+            string? storedOcrJsonPath = null;
+
             if (request.RunOcr)
             {
-                ocrResult = await _ocrService.ReadImageAsync(savePath, request.OcrLanguage);
+                ocrResult = await _ocrService.ReadImageAsync(savePath, request.Layout);
+
+                if (!string.IsNullOrWhiteSpace(ocrResult.RawJson))
+                {
+                    var ocrJsonFolder = GetOcrJsonFolderPath();
+                    Directory.CreateDirectory(ocrJsonFolder);
+
+                    ocrJsonFileName = $"{Path.GetFileNameWithoutExtension(fileName)}_ocr.json";
+                    storedOcrJsonPath = Path.Combine(ocrJsonFolder, ocrJsonFileName);
+                    await File.WriteAllTextAsync(storedOcrJsonPath, ocrResult.RawJson);
+                }
             }
 
             return new Response.ImportImageResponse
             {
+                Message = ocrResult is { IsSuccess: true }
+                    ? "OCR completed successfully"
+                    : "Imported file successfully",
                 FileName = fileName,
                 OriginalFileName = Path.GetFileName(request.File.FileName),
                 StoredFilePath = savePath,
                 ContentType = request.File.ContentType,
                 SizeInBytes = request.File.Length,
+                OcrJsonFileName = ocrJsonFileName,
+                StoredOcrJsonPath = storedOcrJsonPath,
+                RawOcrJson = ocrResult?.RawJson,
                 OcrResult = ocrResult
             };
         }
@@ -85,6 +104,11 @@ namespace Personal_Finance_Management.Service.import
                 "Personal_Finance_Management.Service",
                 "import",
                 "Upload");
+        }
+
+        private static string GetOcrJsonFolderPath()
+        {
+            return Path.Combine(GetUploadFolderPath(), "OcrResponses");
         }
     }
 }
