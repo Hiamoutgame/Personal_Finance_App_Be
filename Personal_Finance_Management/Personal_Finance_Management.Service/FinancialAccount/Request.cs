@@ -13,14 +13,8 @@ public class Request
 
     public class UpdateFinancialAccountRequest
     {
-        public Guid id { get; set; }
         public string? name { get; set; }
         public decimal? currentBalance { get; set; }
         public bool? isDefault { get; set; }
-    }
-
-    public class DeleteFinancialAccountRequest
-    {
-        public Guid id { get; set; }
     }
 }

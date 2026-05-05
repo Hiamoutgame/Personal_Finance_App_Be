@@ -2,8 +2,8 @@ namespace Personal_Finance_Management.Service.FinancialAccount;
 
 public interface IService
 {
-    public Task<List<Response.GetFinancialAccountResponse>> GetUserFinancialAccount();
+    public Task<Response.GetFinancialAccountResult> GetUserFinancialAccount();
     public Task<Response.CreateFinancialAccountResponse> CreateFinancialAccount(Request.CreateFinancialAccountRequest request);
-    public Task<Response.UpdateFinancialAccountResponse> UpdateFinancialAccount(Request.UpdateFinancialAccountRequest request);
-    public Task<Response.DeleteFinancialAccountResponse> DeleteFinancialAccount(Request.DeleteFinancialAccountRequest request);
+    public Task<Response.UpdateFinancialAccountResponse> UpdateFinancialAccount(Guid id, Request.UpdateFinancialAccountRequest request);
+    public Task<Response.DeleteFinancialAccountResponse> DeleteFinancialAccount(Guid id);
 }

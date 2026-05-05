@@ -15,7 +15,7 @@ public class Service : IService
         _httpContext = httpContext;
     }
     
-    public async Task<List<Response.GetFinancialAccountResponse>> GetUserFinancialAccount()
+    public async Task<Response.GetFinancialAccountResult> GetUserFinancialAccount()
     {
         var userId = _httpContext.HttpContext.User.Claims.FirstOrDefault(x => x.Type == "id")?.Value;
         if (string.IsNullOrEmpty(userId))
@@ -43,12 +43,17 @@ public class Service : IService
             isDefault = x.IsDefault,
             isActive = x.IsActive
         });
-        var result = await selectedQuery.ToListAsync();
+        var accountList = await selectedQuery.ToListAsync();
+        var result = new Response.GetFinancialAccountResult
+        {
+            data = accountList,
+        };
         return result;
     }
 
     public async Task<Response.CreateFinancialAccountResponse> CreateFinancialAccount(Request.CreateFinancialAccountRequest request)
     {
+        
         var userId = _httpContext.HttpContext.User.Claims.FirstOrDefault(x => x.Type == "id")?.Value;
         if (string.IsNullOrEmpty(userId))
             throw new UnauthorizedAccessException("UserId not found in token");
@@ -60,7 +65,11 @@ public class Service : IService
 
         if (user == null)
             throw new Exception("User not found");
-
+        var existedAccount = _dbContext.FinancialAccounts.FirstOrDefault(x => x.UserId == userIdGuid && x.Name == request.name);
+        if (existedAccount != null)
+        {
+            throw new Exception("FinancialAccount already exists");
+        }
         var FinancialDetail = new Repository.Entity.FinancialAccount()
         {
             Id = Guid.NewGuid(),
@@ -69,6 +78,7 @@ public class Service : IService
             ConnectionMode = "Manual",
             CurrentBalance = request.currentBalance,
             Currency = request.currency,
+            UserId =  user.Id,
             IsDefault = request.isDefault,
             IsActive = true
         };
@@ -89,7 +99,7 @@ public class Service : IService
         return result;
     }
 
-    public async Task<Response.UpdateFinancialAccountResponse> UpdateFinancialAccount(Request.UpdateFinancialAccountRequest request)
+    public async Task<Response.UpdateFinancialAccountResponse> UpdateFinancialAccount(Guid id, Request.UpdateFinancialAccountRequest request)
     {
         var userId = _httpContext.HttpContext.User.Claims.FirstOrDefault(x => x.Type == "id")?.Value;
         if (string.IsNullOrEmpty(userId))
@@ -102,8 +112,12 @@ public class Service : IService
 
         if (user == null)
             throw new Exception("User not found");
-
-        var query = _dbContext.FinancialAccounts.FirstOrDefault(x => x.Id == request.id);
+        var existedAccount = _dbContext.FinancialAccounts.FirstOrDefault(x => x.Id == id && x.Name == request.name);
+        if (existedAccount != null)
+        {
+            throw new Exception("FinancialAccount already exists");
+        }
+        var query = _dbContext.FinancialAccounts.FirstOrDefault(x => x.Id == id);
         query.Name = request.name ?? query.Name;
         query.CurrentBalance = request.currentBalance ?? query.CurrentBalance;
         query.IsDefault = request.isDefault ?? query.IsDefault;
@@ -121,7 +135,7 @@ public class Service : IService
         return result;
     }
 
-    public async Task<Response.DeleteFinancialAccountResponse> DeleteFinancialAccount(Request.DeleteFinancialAccountRequest request)
+    public async Task<Response.DeleteFinancialAccountResponse> DeleteFinancialAccount(Guid id)
     {
         var userId = _httpContext.HttpContext.User.Claims.FirstOrDefault(x => x.Type == "id")?.Value;
         if (string.IsNullOrEmpty(userId))
@@ -134,7 +148,7 @@ public class Service : IService
 
         if (user == null)
             throw new Exception("User not found");
-        var financialAccount = _dbContext.FinancialAccounts.FirstOrDefault(x => x.Id == request.id);
+        var financialAccount = _dbContext.FinancialAccounts.FirstOrDefault(x => x.Id == id);
         financialAccount.IsActive = false;
         await _dbContext.SaveChangesAsync();
         var result = new Response.DeleteFinancialAccountResponse()

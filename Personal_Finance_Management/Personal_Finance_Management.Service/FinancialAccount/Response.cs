@@ -2,6 +2,10 @@ namespace Personal_Finance_Management.Service.FinancialAccount;
 
 public class Response
 {
+    public class GetFinancialAccountResult
+    {
+        public required List<GetFinancialAccountResponse> data { get; set; }
+    }
     public class GetFinancialAccountResponse
     {
         public required Guid id { get; set; }
