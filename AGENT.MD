@@ -1,305 +1,673 @@
-# AGENT CONTEXT - PERSONAL FINANCE MANAGEMENT
+# AGENT.MD - Context dự án Personal Finance Management / FinJar
 
-Tài liệu này giúp người mới vào dự án nắm nhanh bối cảnh kỹ thuật của source Personal_Finance_Management: cấu trúc folder, luồng chạy, và các design pattern (đặc biệt là DI) đang dùng.
+Tài liệu này là bộ nhớ nhanh cho agent khi làm việc trong repo này. Mục tiêu là đọc file này trước để nắm domain, kiến trúc, schema, API contract, tình trạng code hiện tại và các điểm dễ sai mà không cần đọc lại toàn bộ tài liệu gốc mỗi lần.
 
-Lưu ý: trạng thái code hiện tại đang ở mức nền tảng (scaffold), nhiều phần nghiệp vụ chính chưa triển khai đầy đủ.
+Nguồn đã tổng hợp:
 
-## 1) Tổng Quan Kiến Trúc
+- `docs/apis.md`
+- `docs/backend_internal_model.md`
+- `docs/finjar_schema.sql`
+- `docs/user story.md`
+- `Ocr_Service/Note.md`
+- code hiện tại trong `Personal_Finance_Management`
 
-Solution hiện có 3 project chính:
+## 1. Tóm tắt sản phẩm
 
-- Personal_Finance_Management.Api
-- Personal_Finance_Management.Service
-- Personal_Finance_Management.Repository
+Tên dự án trong code là `Personal_Finance_Management`, tài liệu nghiệp vụ dùng tên `FinJar`. Đây là backend cho ứng dụng quản lý tài chính cá nhân.
 
-Dependency hiện tại:
+Sản phẩm giúp user:
 
-- Api tham chiếu Service và Repository
-- Service tham chiếu Repository
-- Repository là tầng dữ liệu độc lập (Entity + DbContext + Migration)
+- đăng ký, đăng nhập và quản lý hồ sơ cá nhân;
+- hoàn thành onboarding để hệ thống hiểu thu nhập, mục tiêu và thói quen chi tiêu;
+- tạo nguồn tiền thủ công như tiền mặt, tài khoản ngân hàng tự theo dõi hoặc ví điện tử;
+- chia ngân sách vào các hũ chi tiêu;
+- ghi nhận thu nhập, chi phí, giao dịch import/OCR;
+- xem dashboard cá nhân;
+- đặt hạn mức chi tiêu, cảnh báo, mục tiêu tiết kiệm, nhắc lịch thanh toán;
+- nhận thông báo cá nhân và broadcast từ admin.
 
-Ý nghĩa kiến trúc:
+Admin có thể:
 
-- Api chịu trách nhiệm HTTP layer, routing, middleware, bootstrap ứng dụng.
-- Service chịu trách nhiệm business logic, xử lý nghiệp vụ, tổ chức flow theo use case.
-- Repository chịu trách nhiệm persistence model với Entity Framework Core và PostgreSQL.
+- đăng nhập portal quản trị;
+- xem, tìm kiếm, khóa/mở khóa tài khoản user;
+- quản lý danh mục mặc định;
+- gửi broadcast notification;
+- xem dashboard vận hành;
+- xem audit log;
+- cấu hình AI settings.
+
+Quan trọng: FinJar là hệ thống non-custodial. `financial_accounts` chỉ là nguồn tiền user theo dõi trong app, không phải ví thật do FinJar giữ tiền và không thực hiện chuyển tiền thật với ngân hàng.
+
+## 2. Scope và thứ tự ưu tiên
+
+Scope MVP một tháng ưu tiên các luồng `core`:
 
-## 2) Mô Tả Chi Tiết Các Folder
+1. `P0 - Authentication & Admin Foundation`
+2. `P1 - Onboarding + Financial Setup`
+3. `P2 - Transaction Management Core`
+4. `P3 - Personal Dashboard`
+5. `P4 - Limits, Alerts, Goals`
+6. `P5 - Import Statement`
+7. `P6 - Admin User Management & System Notifications`
+8. `P7 - Chatbot API MVP` nếu còn capacity
 
-## 2.1) Gốc Solution: Personal_Finance_Management
+Các tính năng `scale` để sau khi core ổn định:
+
+- bank account sync;
+- upload receipt photo và OCR transaction draft;
+- AI spending advice;
+- suggested saving plan;
+- export transaction history;
+- admin analytics nâng cao.
+
+Các tính năng `optional` để phase sau:
+
+- shared jar;
+- AI chat hoàn chỉnh;
+- báo cáo/churn/retention nâng cao.
+
+## 3. Kiến trúc repo
+
+Root repo:
 
-- Personal_Finance_Management.sln
-  - Điểm vào ở cấp solution, gom 3 project Api/Service/Repository.
+- `Personal_Finance_Management/`: solution .NET backend chính.
+- `Ocr_Service/`: service OCR Python riêng, chạy HTTP API `/ocr`.
+- `docs/`: tài liệu sản phẩm, API contract, schema, user stories.
+- `Dockerfile`, `docker-compose.yml`, `render.yaml`: chạy/deploy API.
+- `.env.example`: biến môi trường mẫu.
 
-## 2.2) Project Api: Personal_Finance_Management.Api
+Solution .NET:
 
-- Controllers
-  - Nơi đặt API endpoints.
-  - Hiện tại mới có WeatherForecastController (controller mẫu từ template).
+- `Personal_Finance_Management.Api`: ASP.NET Core Web API, controllers, middleware, Swagger, JWT wiring, database migration wiring.
+- `Personal_Finance_Management.Service`: DTO request/response, orchestration nghiệp vụ, validation, JWT service, OCR client, import service.
+- `Personal_Finance_Management.Repository`: EF Core entities, `AppDbContext`, migrations, enum/constants.
 
-- Extensions
-  - Dùng để tách logic cấu hình service/pipeline khỏi Program.cs.
-  - Có sẵn JwtExtension và SwaggerExtension nhưng đang để trống.
+Dependency direction mong muốn:
+
+```text
+Api
+-> Service/Application
+-> Repository / AppDbContext
+-> PostgreSQL
+```
+
+Repository không nên chứa logic nghiệp vụ phức tạp như chia hũ, trừ balance, evaluate limit. Các rule đó đặt ở service layer.
+
+## 4. Stack kỹ thuật
+
+- .NET 8 / ASP.NET Core Web API.
+- EF Core 8 + Npgsql PostgreSQL.
+- `EFCore.NamingConventions` với `UseSnakeCaseNamingConvention()`.
+- JWT Bearer authentication.
+- BCrypt cho password hashing.
+- Swagger qua Swashbuckle.
+- Python OCR service ở `Ocr_Service`, mặc định port `9380`.
+- Docker multi-stage build cho API.
+- Render deployment qua `render.yaml`.
+
+Các command hay dùng:
+
+```powershell
+dotnet build Personal_Finance_Management/Personal_Finance_Management.sln
+dotnet run --project Personal_Finance_Management/Personal_Finance_Management.Api
+dotnet ef migrations add <Name> --project Personal_Finance_Management/Personal_Finance_Management.Repository --startup-project Personal_Finance_Management/Personal_Finance_Management.Api
+dotnet ef database update --project Personal_Finance_Management/Personal_Finance_Management.Repository --startup-project Personal_Finance_Management/Personal_Finance_Management.Api
+```
+
+Chạy OCR service:
+
+```powershell
+cd Ocr_Service
+pip install -r requirements.txt
+python ocr_api.py --host 0.0.0.0 --port 9380
+```
+
+## 5. Quy ước chung khi code
+
+- API contract không được xem là database schema. Request/response phục vụ use case FE, entity phục vụ persistence.
+- Không expose trực tiếp EF entity ra API response.
+- Write API nên trả response gọn: `id`, vài field FE cần cập nhật state, `message`.
+- Read API có thể trả projection/read model giàu thông tin để FE render.
+- Mọi giá trị tiền dùng `decimal` trong C# và `numeric(18,2)` trong DB.
+- Thời gian DB dùng `timestamptz`; C# ưu tiên `DateTimeOffset`.
+- DB dùng snake_case, C# dùng PascalCase.
+- JSON column trong MVP có thể map bằng `string?`; nếu cần query JSON sau này mới đổi `JsonDocument`/owned type.
+- Mọi API thao tác dữ liệu user phải check ownership bằng `UserId`.
+- Các luồng tài chính phải atomic trong database transaction.
+- Access token only: không có refresh token trong core contract.
+- Logout chủ yếu là FE xóa token local; BE có thể ghi audit log nếu cần.
+
+## 6. Auth và JWT
+
+Contract mục tiêu:
+
+- `POST /api/v1/auth/register`
+- `POST /api/v1/auth/login`
+- `POST /api/v1/auth/logout`
+- `POST /api/v1/admin/auth/login`
+
+Hệ thống dùng access token only:
+
+- không có `POST /api/v1/auth/refresh`;
+- login/register không trả `refreshToken`;
+- token user thường hết hạn theo `JwtOptions.ExpireMinutes`;
+- admin login theo docs dự kiến `expiresIn = 3600`, nhưng code hiện tại dùng cùng `JwtOptions`.
+
+JWT claims hiện tại trong code:
+
+- `sub`
+- `ClaimTypes.NameIdentifier`
+- custom `"id"`
+- `ClaimTypes.Name`
+- `"username"`
+- `ClaimTypes.Email`
+- `"firstName"`
+- `"lastName"`
+- `ClaimTypes.Role`
+
+Service hiện tại lấy user id từ claim `"id"`. Nếu đổi JWT claim, phải sửa các service đang đọc claim này.
+
+Role seed ổn định:
+
+- `00000000-0000-0000-0000-000000000001 = User`
+- `00000000-0000-0000-0000-000000000002 = Admin`
+
+## 7. Database model cốt lõi
+
+Schema mục tiêu gồm 18 entity chính:
+
+- `Role`
+- `Account`
+- `AuditLog`
+- `OnboardingProfile`
+- `JarSetup`
+- `FinancialAccount`
+- `Category`
+- `Jar`
+- `ImportJob`
+- `Transaction`
+- `SpendingLimit`
+- `Goal`
+- `GoalContribution`
+- `Reminder`
+- `Broadcast`
+- `Notification`
+- `ImportTransactionDraft`
+- `AiSetting`
+
+Không dùng các model cũ trong MVP:
+
+- `JarAllocation`
+- `JarAllocationItem`
+- `JarTransfer`
+
+Các field cũ không nên đưa lại:
+
+- `Account.HashPassword`; dùng `PasswordHash`.
+- `FinancialAccount.AvailableBalance`, `FinancialAccount.BalanceAsOf`.
+- `Jar.Percentage`; tỷ lệ hũ là rule trong service.
+- `Transaction.Amount`, `Transaction.JarId`; dùng `TransactionsAmount`, `FromJarId`, `ToJarId`.
+- `ImportTransactionDraft.SuggestedNote`, `SuggestedCategoryId`, `SuggestedJarId`; dùng `Edited*`.
+- `GoalContribution.SourceFinancialAccountId`.
+- `Reminder.NextDueDate`; tính trong service/job khi response.
 
-- Middlewares
-  - Nơi đặt custom middleware cross-cutting (ví dụ global exception handling).
-  - GlobalExceptionHandlerMiddleware đã tạo file nhưng chưa có implementation.
+## 8. Enum/value chuẩn
 
-- Properties
-  - Chứa cấu hình launch/debug (launchSettings.json).
+Dùng enum hoặc constants string, giá trị phải khớp schema:
 
-- appsettings.json, appsettings.Development.json
-  - Chứa cấu hình runtime: connection string, JWT options, logging.
+- `AccountStatus`: `Active`, `Banned`
+- `FinancialAccountType`: `Cash`, `Bank`, `EWallet`, `Other`
+- `ConnectionMode`: `Manual`, `LinkedApi`
+- `SyncStatus`: `NeverSynced`, `Synced`, `Syncing`, `Error`, `Disconnected`
+- `BudgetMethodType`: `SixJars`, `Rule503020`, `Custom`, `Undecided`
+- `JarStatus`: `Active`, `Paused`, `Archived`
+- `TransactionType`: `Income`, `Expense`
+- `TransactionSourceType`: `Manual`, `Imported`, `OCR`, `Jar`, `System`
+- `LimitPeriod`: `Daily`, `Monthly`
+- `GoalStatus`: `Active`, `Completed`, `Cancelled`
+- `ReminderFrequency`: `Daily`, `Weekly`, `Monthly`, `Quarterly`, `Yearly`
+- `ReminderStatus`: `Active`, `Paused`, `Completed`, `Cancelled`
+- `BroadcastStatus`: `Queued`, `Sent`, `Failed`, `Cancelled`
+- `NotificationType`: `SpendingAlert`, `GoalUpdate`, `Reminder`, `System`, `Broadcast`
+- `ImportJobStatus`: `Pending`, `Processing`, `AwaitingReview`, `Completed`, `Failed`
 
-- Program.cs
-  - Entry point chính để bootstrap DI container và request pipeline.
+## 9. Domain rules quan trọng
+
+### Account
+
+`Account` là root ownership của dữ liệu user/admin. Nó chứa login identity, role, status, profile fields và cờ onboarding.
+
+Các field chính:
 
-## 2.3) Project Service: Personal_Finance_Management.Service
+- `Username`, `Email`, `PasswordHash`
+- `FirstName`, `LastName`, `Phone`, `AvatarUrl`
+- `Status`, `StatusReason`
+- `PreferredCurrency`
+- `IsOnboardingCompleted`
+- `LastLoginAt`
 
-- Auth
-  - Chứa contract và xử lý nghiệp vụ auth theo use case.
-  - Bao gồm:
-    - IService: interface cho auth use case.
-    - Request: DTO input.
-    - Response: DTO output.
-    - Service: implementation auth service.
+User bị `Banned` phải bị chặn đăng nhập hoặc thao tác protected.
+
+### Onboarding
+
+Onboarding lưu câu trả lời ban đầu:
+
+- `MonthlyIncome`
+- `OccupationType`
+- `FinancialGoalTypes`
+- `BudgetMethodPreference`
+- `AgeRange`
+- `SpendingChallenges`
+- `RecommendedMethod`
+- `CompletedAt`
 
-- JwtService
-  - Chứa logic phát hành và validate JWT token.
-  - Bao gồm:
-    - IService: contract GenerateAccessToken, ValidateToken.
-    - Service: implementation thao tác JWT.
-    - JwtOption: class map cấu hình JwtOptions từ appsettings.
+Trong MVP, `FinancialGoalTypes` và `SpendingChallenges` lưu text, không cần JSON/list trong DB. Service hiện tại join list bằng dấu phẩy.
 
-- Class1.cs
-  - File scaffold mặc định, chưa có giá trị nghiệp vụ.
+Sau onboarding nên bootstrap:
 
-## 2.4) Project Repository: Personal_Finance_Management.Repository
+- default financial account kiểu `Cash`, `ConnectionMode = Manual`;
+- các category gợi ý;
+- các jar gợi ý;
+- set `Account.IsOnboardingCompleted = true`.
 
-- Abtraction
-  - BaseEntity<TKey>: base class chung cho entities (Id, IsDeleted).
-  - IAudictableEntity: hợp đồng audit field CreatedAt/UpdatedAt/ReadAt.
-  - Lưu ý chính tả folder và interface hiện tại là Abtraction / IAudictableEntity.
+### FinancialAccount
 
-- Entity
-  - Chứa các domain entity map vào database tables.
-  - Đây là trung tâm của domain model hiện tại.
+`FinancialAccount` là nguồn tiền user theo dõi. Nó bắt buộc cho transaction và import job.
 
-- Migrations
-  - Chứa migration sinh từ EF Core (Initial + ModelSnapshot).
-  - Dùng để đồng bộ schema PostgreSQL theo code-first.
+Các rule:
 
-- AppDbContext.cs
-  - Khai báo DbSet cho toàn bộ domain.
-  - Cấu hình quan hệ, kiểu dữ liệu, index, default value, delete behavior trong OnModelCreating.
+- manual account dùng `ConnectionMode = Manual`.
+- bank sync phase sau dùng `ConnectionMode = LinkedApi`.
+- nếu user xóa nguồn tiền đã có transaction/import, nên deactivate bằng `IsActive = false`, không hard delete.
+- nên đảm bảo mỗi user có một default account hợp lệ.
 
-- Class1.cs
-  - File scaffold mặc định, chưa dùng.
+### Category
 
-## 3) Domain Model Đang Có Trong Repository
+Category phân loại transaction:
 
-Hiện tại hệ thống đã dựng khá đầy đủ khung domain theo MVP tài chính cá nhân.
+- default category do admin quản lý có `IsDefault = true`, `OwnerUserId = null`;
+- custom category của user có `OwnerUserId = userId`;
+- soft delete bằng `IsActive = false` và/hoặc `DeletedAt`.
 
-## 3.1) Identity và Access
+### JarSetup và Jar
 
-- Role
-- Account
-- AuditLog
+`JarSetup` lưu phương pháp ngân sách của user: `SixJars`, `Rule503020`, `Custom`, `Undecided`.
 
-## 3.2) Onboarding và Thiết Lập Ban Đầu
+`Jar` giữ số dư hũ nội bộ:
 
-- OnboardingProfile
-- JarSetup
-- FinancialAccount
-- Category
+- `Balance`
+- `Currency`
+- `Color`, `Icon`
+- `IsDefault`
+- `Status`
 
-## 3.3) Quản Lý Hũ và Ngân Sách
+Không lưu percentage trong table `jars`. Tỷ lệ chia hũ là rule service theo `methodType`.
 
-- Jar
-- JarAllocation
-- JarAllocationItem
-- JarTransfer
+### Transaction
 
-## 3.4) Giao Dịch và Import Sao Kê
+Transaction là model trung tâm cho thu/chi và các operation liên quan hũ.
 
-- Transaction
-- ImportJob
-- ImportTransactionDraft
+Field chính:
 
-## 3.5) Mục Tiêu, Hạn Mức, Nhắc Nhở, Thông Báo
+- `FinancialAccountId`
+- `CategoryId`
+- `ImportJobId`
+- `Type`
+- `TransactionsAmount`
+- `TransactionDate`
+- `SourceType`
+- `FromJarId`
+- `ToJarId`
+- `JarBalanceAfterAllocation`
+- `RawPayloadJson`
+- `IsDeleted`, `DeletedAt`
 
-- SpendingLimit
-- Goal
-- GoalContribution
-- Reminder
-- Notification
+Quy tắc dấu tiền:
 
-## 3.6) Quản Trị Hệ Thống
+- `Type = Income` thì `TransactionsAmount > 0`.
+- `Type = Expense` thì `TransactionsAmount < 0`.
+- Không đảo dấu tùy tiện trong query/report.
 
-- Broadcast
-- AiSetting
+Quy tắc hũ:
 
-## 4) Mô Tả Luồng Đi (Request Flow + Data Flow)
+- expense thông thường có thể dùng `FromJarId` để trừ hũ;
+- income/allocation vào hũ dùng `ToJarId`;
+- transfer hũ dùng cả `FromJarId` và `ToJarId`;
+- `FromJarId` và `ToJarId` không được trùng nhau.
 
-## 4.1) Luồng Runtime Khi Khởi Động Ứng Dụng
+### Import
 
-Theo Program.cs hiện tại:
+`ImportJob` đại diện một lần upload/import sao kê và phải gắn với `FinancialAccountId`.
 
-1. Khởi tạo builder.
-2. Đăng ký Controllers, EndpointsApiExplorer, Swagger.
-3. Đăng ký AppDbContext với Npgsql qua connection string DefaultConnection.
-4. Đăng ký DI cho JwtService.IService theo lifetime Scoped.
-5. Build app.
-6. Nếu môi trường Development thì bật Swagger UI.
-7. Bật Authorization middleware.
-8. MapControllers và chạy app.
+`ImportTransactionDraft` là các dòng preview trước khi confirm:
 
-Ý nghĩa:
-
-- AppDbContext được tạo theo scope request.
-- Mỗi request sẽ dùng một DbContext scope riêng, phù hợp mô hình web API.
-
-## 4.2) Luồng Request Chuẩn (Mục Tiêu Kiến Trúc)
-
-Khi triển khai nghiệp vụ thật, luồng nên đi theo thứ tự:
-
-1. Controller nhận request DTO từ client.
-2. Controller gọi service interface tương ứng.
-3. Service xử lý business rule, validate nghiệp vụ.
-4. Service thao tác AppDbContext để đọc/ghi dữ liệu.
-5. SaveChanges trong cùng scope request (hoặc transaction khi cần atomic).
-6. Service trả response DTO cho controller.
-7. Controller trả HTTP response về client.
-
-## 4.3) Luồng Dữ Liệu Tài Chính Trọng Tâm (Theo Domain)
-
-- Luồng ghi giao dịch:
-  - Transaction bắt buộc gắn với User và FinancialAccount.
-  - Có thể gắn thêm Jar, Category, ImportJob (nullable).
-
-- Luồng import sao kê:
-  - ImportJob tạo phiên import.
-  - ImportTransactionDraft lưu các dòng parse tạm.
-  - Sau xác nhận sẽ tạo Transaction chính thức.
-
-- Luồng hũ ngân sách:
-  - JarAllocation là lần phân bổ tổng.
-  - JarAllocationItem là chi tiết phân bổ theo từng Jar.
-  - JarTransfer là điều chuyển ngân sách giữa 2 Jar.
-
-- Luồng mục tiêu tài chính:
-  - Goal là mục tiêu tổng.
-  - GoalContribution là từng lần đóng góp từ Jar hoặc FinancialAccount.
-
-## 4.4) Các Ràng Buộc Đáng Chú Ý Từ Migration
-
-- Unique:
-  - accounts.Username
-  - accounts.Email
-  - roles.Code
-  - onboarding_profiles.UserId (1-1)
-  - jar_setups.UserId (1-1)
-  - import_transaction_drafts (ImportJobId, RowIndex)
-
-- Index hiệu năng:
-  - transactions theo (UserId, TransactionDate)
-  - notifications theo (UserId, IsRead)
-
-- Delete behavior được cấu hình theo ngữ cảnh:
-  - Restrict: bảo toàn dữ liệu lịch sử/log hoặc tránh cascade không mong muốn.
-  - Cascade: xóa cha kéo theo con khi quan hệ ownership rõ ràng.
-  - SetNull: giữ bản ghi con nhưng bỏ liên kết khi cha bị xóa.
-
-## 5) Design Pattern Đang Áp Dụng (Trọng Tâm DI)
-
-## 5.1) Layered Architecture (Phân Tầng)
-
-- Presentation layer: Api
-- Application/Business layer: Service
-- Data access layer: Repository
-
-Lợi ích:
-
-- Dễ chia việc theo team.
-- Dễ thay đổi từng tầng mà ít ảnh hưởng tầng khác.
-- Dễ test theo scope từng tầng.
-
-## 5.2) Dependency Injection (DI)
-
-DI container mặc định của ASP.NET Core đang được dùng.
-
-Hiện có đăng ký:
-
-- AddDbContext<AppDbContext>(...): inject DbContext theo request scope.
-- AddScoped<JwtService.IService, JwtService.Service>(): inject JWT service qua interface.
-
-Ý nghĩa DI trong dự án này:
-
-- Controller không new trực tiếp service.
-- Service không new trực tiếp dependency hạ tầng.
-- Dễ mock khi viết unit test/integration test.
-
-## 5.3) Interface-based Service Pattern
-
-Trong Service đang dùng pattern interface + implementation:
-
-- Auth.IService -> Auth.Service
-- JwtService.IService -> JwtService.Service
-
-Mục đích:
-
-- Tách contract khỏi implementation.
-- Hỗ trợ test/mocking và mở rộng implementation theo môi trường.
-
-## 5.4) Options Pattern (Configuration Binding)
-
-JwtService.Service bind cấu hình JwtOptions từ appsettings.
-
-Ý nghĩa:
-
-- Tách cấu hình runtime khỏi code.
-- Dễ đổi theo môi trường Dev/Prod.
-
-## 5.5) Unit of Work Tự Nhiên Qua DbContext
-
-AppDbContext đóng vai trò điểm gom thay đổi dữ liệu trong một scope.
-Khi SaveChanges, EF Core thực hiện commit theo transaction nội bộ phù hợp.
-
-## 5.6) Extension Method Pattern (Đang Chuẩn Bị)
-
-Đã có folder Extensions để tách logic cấu hình như JWT/Swagger khỏi Program.cs.
-Hiện file extension chưa triển khai, nhưng hướng tổ chức đã đúng cho maintainability.
-
-## 5.7) Middleware Pattern (Đang Chuẩn Bị)
-
-Đã có chỗ cho GlobalExceptionHandlerMiddleware.
-Khi hoàn thiện, middleware này sẽ tập trung hóa xử lý lỗi và chuẩn hóa error response.
-
-## 6) Trạng Thái Hiện Tại Và Hướng Áp Dụng Khi Code Mới
-
-## 6.1) Trạng Thái Hiện Tại
-
-- Khung kiến trúc và schema đã khá đầy đủ.
-- Nhiều phần nghiệp vụ vẫn đang scaffold.
-- Controller thật cho domain chưa được tạo (hiện chủ yếu là WeatherForecast mẫu).
-- Extension/Middleware chưa được wiring vào pipeline.
-
-## 6.2) Quy Ước Nên Giữ Khi Mở Rộng
-
-Khi thêm một module mới, nên theo checklist:
-
-1. Tạo request/response DTO ở Service theo use case.
-2. Tạo service interface + implementation cho nghiệp vụ.
-3. Inject service vào controller qua constructor.
-4. Chỉ thao tác AppDbContext trong service, không để controller truy cập trực tiếp.
-5. Nếu có nhiều bước cập nhật số dư/hũ/giao dịch, dùng transaction để đảm bảo atomic.
-6. Đồng bộ migration mỗi khi thay đổi entity mapping.
-7. Chuẩn hóa lỗi qua middleware toàn cục (khi middleware hoàn thiện).
-
-## 7) Tóm Tắt Onboarding Trong 5 Phút
-
-- Đây là backend .NET 8 theo mô hình 3 tầng Api-Service-Repository.
-- Repository đang là phần mạnh nhất: domain entity + migration + quan hệ DB đã dựng chi tiết.
-- Service có khung Auth/JWT, DI cơ bản đã hoạt động.
-- Api mới ở mức nền, cần triển khai controller và wiring middleware/extensions.
-- Nếu follow đúng DI + phân tầng hiện tại, dự án sẽ mở rộng tính năng nhanh và sạch hơn.
+- `RowIndex`
+- `TransactionDate`
+- `Amount`
+- `Type`
+- `RawDescription`
+- `EditedNote`
+- `EditedCategoryId`
+- `EditedJarId`
+- `IsValid`
+- `ValidationError`
+- `NormalizedPayloadJson`
+
+Confirm import phải tạo batch `transactions`, cập nhật balance theo rule và cập nhật status/count của job trong cùng DB transaction.
+
+### Limits, Goals, Reminders
+
+`SpendingLimit` có thể target theo `JarId` hoặc `CategoryId`. Constraint hiện tại yêu cầu ít nhất một trong hai có giá trị. Nếu sản phẩm muốn chỉ một target duy nhất, cần đổi constraint thành XOR.
+
+`Goal` có:
+
+- `TargetAmount`
+- `SavedAmount`
+- `DueDate`
+- `Status`
+- optional `LinkedJarId`
+
+`GoalContribution` chỉ lưu optional `SourceJarId`. Nếu đóng góp đến từ nguồn tiền thật, nên tạo `Transaction` tương ứng thay vì lưu `SourceFinancialAccountId`.
+
+`Reminder` không lưu `NextDueDate` trong DB. Response tính `nextDueDate` từ `StartDate`, `Frequency`, `DayOfMonth`, `NotifyDaysBefore`.
+
+### Notification, Broadcast, AuditLog, AiSetting
+
+- `Notification`: inbox của user, có `Type`, `Title`, `Body`, `IsRead`, optional `BroadcastId`.
+- `Broadcast`: admin gửi thông báo hàng loạt, có `Status`, `TargetCount`, `DeliveredCount`.
+- `AuditLog`: append-only log cho thao tác nhạy cảm như admin login, ban/unban, category change, broadcast send, AI settings change.
+- `AiSetting`: cấu hình AI toàn hệ thống. Không bao giờ trả `ApiKeyEncrypted` ra API; chỉ trả masked key nếu cần.
+
+## 10. Ranh giới transaction bắt buộc
+
+Các use case sau phải chạy trong cùng database transaction:
+
+- hoàn thành onboarding và bootstrap financial account/category/jar;
+- tạo/cập nhật/xóa transaction;
+- allocate income vào jars;
+- transfer giữa jars;
+- đóng góp vào goal;
+- confirm import transaction drafts;
+- ban/unban user kèm audit log;
+- tạo broadcast kèm notification nếu dispatch đồng bộ.
+
+Tạo transaction nên làm theo thứ tự:
+
+1. Load financial account và check ownership.
+2. Validate category/jar nếu có.
+3. Tạo `Transaction`.
+4. Cập nhật `FinancialAccount.CurrentBalance`.
+5. Nếu có `FromJarId`, trừ `Jar.Balance`.
+6. Nếu có `ToJarId`, cộng `Jar.Balance`.
+7. Evaluate spending limits nếu là expense.
+8. Tạo notification nếu chạm ngưỡng.
+
+Allocate jars:
+
+1. Load financial account và active jars.
+2. Tính tiền cho từng hũ theo method.
+3. Cộng `Jar.Balance`.
+4. Tạo một `Transaction` source `Jar` cho từng hũ, set `ToJarId`, `TransactionsAmount`, `JarBalanceAfterAllocation`.
+
+Transfer jars:
+
+1. Load `fromJar`, `toJar`.
+2. Check ownership và balance.
+3. Trừ/cộng balance.
+4. Tạo `Transaction` source `Jar`, set `FromJarId`, `ToJarId`.
+
+## 11. API contract mục tiêu
+
+Base URL mục tiêu: `/api/v1`
+
+Error format mục tiêu:
+
+```json
+{
+  "success": false,
+  "error": "Mô tả lỗi ngắn gọn cho user",
+  "details": {
+    "field": "amount",
+    "code": "INSUFFICIENT_BALANCE"
+  },
+  "traceId": "guid"
+}
+```
+
+Pagination format:
+
+```json
+{
+  "data": [],
+  "pagination": {
+    "page": 1,
+    "pageSize": 20,
+    "totalCount": 0,
+    "totalPages": 0
+  }
+}
+```
+
+Nhóm endpoint mục tiêu:
+
+- Auth: register, login, logout, admin login.
+- User/profile: `GET/PATCH /api/v1/user/me`, `GET /api/v1/user/me/setup`.
+- Onboarding: `POST /api/v1/users/onboarding`.
+- Financial accounts: list/create/update/update balance/delete.
+- Categories: list/create/update/delete user categories; admin CRUD default categories.
+- Jars: list/setup/create/update/delete/allocate/transfer/transfer history.
+- Transactions: list/create/update/delete.
+- Imports: upload, status, preview, confirm.
+- Dashboard: user dashboard.
+- Limits: CRUD spending limits.
+- Notifications: list, mark read/unread.
+- Goals: CRUD, detail, contributions.
+- Reminders: CRUD.
+- Admin: users list/detail/status, broadcasts, dashboard, audit logs, AI settings.
+
+Admin dashboard response hiện tại trong contract phải có:
+
+- `statCards` đúng 4 phần tử theo thứ tự: `total_users`, `engagement`, `transactions`, `system_health`;
+- `transactionVolumeTrend` theo `timeframe = day|month|year`;
+- `topSpendingCategories` sorted desc, top N và phần `"Khác"`;
+- `retentionTrend` theo `D0`, `D7`, `D14`, `D21`, `D30`;
+- `recentUsers`, `recentTransactions`.
+
+## 12. Tình trạng code hiện tại
+
+Code hiện tại đã có foundation .NET, EF schema và một số API đầu tiên. Không được giả định toàn bộ contract trong `docs/apis.md` đã implement xong.
+
+Đã có:
+
+- ASP.NET Core API project.
+- EF Core `AppDbContext` với 18 DbSet theo schema mục tiêu.
+- Migrations hiện có: initial schema và thay đổi OCR config/global draft.
+- JWT authentication wiring.
+- Global exception middleware trả format gần giống contract cho `AppValidationException`.
+- Auth service: register/login user, BCrypt, JWT.
+- User service: get/update profile, view setup.
+- Onboarding service: lưu profile, bootstrap cash account, category, jar.
+- Import image + OCR client: upload file, gọi OCR service, lưu raw OCR JSON.
+- Health endpoints.
+- Docker/Render deployment config.
+
+Endpoint thực tế hiện tại:
+
+- `POST /api/v1/auth/register`
+- `POST /api/v1/auth/login`
+- `GET /health`
+- `GET /health/db/local`
+- `GET /health/db/render`
+- `GET /User/me`
+- `PATCH /User/me`
+- `GET /User/me/setup`
+- `POST /Onboarding`
+- `POST /api/v1/imports/image`
+
+Các điểm lệch giữa code hiện tại và contract docs:
+
+- `AuthController.Register` hiện trả `Ok` thay vì `201 Created`.
+- Register response hiện chỉ có `Id`, `Username`, `FirstName`, `LastName`, `Email`, `AccessToken`; chưa có wrapper `user`, `tokenType`, `expiresIn`, `role`, `isOnboardingCompleted`.
+- Login request trong code dùng `Email + Password`, trong docs ghi `username + password`.
+- Login chưa check `Account.Status = Banned` theo contract.
+- Chưa có `logout`.
+- Chưa có admin auth/login riêng.
+- `UserController` đang route `[Route("[controller]")]`, nghĩa là `/User/...`, chưa phải `/api/v1/user/...`.
+- `OnboardingController` đang route `/Onboarding` và thiếu `[Authorize]`, nhưng service lại đọc user id từ JWT claim. Nên align route/auth khi làm tiếp.
+- Import hiện tại là `POST /api/v1/imports/image`, không phải full statement import flow `/api/v1/imports`, status, preview, confirm.
+- Full CRUD financial accounts, categories, jars, transactions, dashboard, limits, notifications, goals, reminders, admin APIs chưa thấy implement trong service/controller hiện tại.
+
+Khi agent làm việc, phải phân biệt rõ:
+
+- `docs/apis.md` là contract mục tiêu.
+- `docs/backend_internal_model.md` và `docs/finjar_schema.sql` là định hướng persistence/model.
+- code hiện tại là trạng thái implement thực tế, có thể chưa khớp contract.
+
+## 13. OCR service
+
+OCR nằm ngoài .NET API ở `Ocr_Service`.
+
+Chạy:
+
+```powershell
+cd Ocr_Service
+pip install -r requirements.txt
+python ocr_api.py --host 0.0.0.0 --port 9380
+```
+
+Swagger OCR:
+
+```text
+http://127.0.0.1:9380/docs
+```
+
+Endpoint OCR:
+
+```http
+POST /ocr?layout=none|invoice|document
+Content-Type: multipart/form-data
+file=<image-or-pdf>
+```
+
+Response cơ bản:
+
+```json
+{
+  "text": "...",
+  "layout": "none",
+  "pages": [
+    {
+      "page": 1,
+      "text": "..."
+    }
+  ]
+}
+```
+
+`layout=invoice` trả thêm `invoice` với `sections`, `items`, `fields`, `boxes`.
+
+`layout=document` trả thêm `layout_regions`.
+
+Backend C# hiện tại chỉ cần:
+
+- upload file vào `Personal_Finance_Management.Service/import/Upload`;
+- gọi OCR service qua `Ocr:BaseUrl`;
+- lưu raw OCR JSON vào `Upload/OcrResponses`;
+- trả raw JSON và text cho FE;
+- để FE xử lý layout JSON chi tiết.
+
+## 14. Config và deploy
+
+Config chính:
+
+- `ConnectionStrings:DefaultConnection` dùng local/development.
+- `ConnectionStrings:RenderConnection` dùng production/Render.
+- `ApplyMigrations` bật thì API tự chạy EF migration lúc start.
+- `EnableSwagger` bật Swagger ngoài Development.
+- `JwtOptions:SecretKey`, `Issuer`, `Audience`, `ExpireMinutes`.
+- `Ocr:BaseUrl`, `Ocr:Layout`, `Ocr:TimeoutSeconds`.
+
+`Program.cs` chọn connection string:
+
+- Development: `DefaultConnection`
+- môi trường khác: `RenderConnection`
+
+Lưu ý bảo mật:
+
+- Không thêm secret thật vào tài liệu/context mới.
+- Nếu chỉnh config, ưu tiên `.env.example`, user secrets hoặc environment variables.
+- Nếu phát hiện secret đang nằm trong tracked file, không copy lại secret sang tài liệu mới; nên đề xuất xoay key nếu đây là repo dùng thật.
+
+## 15. Cách implement tiếp cho ít lỗi
+
+Khi thêm feature mới:
+
+1. Đọc endpoint trong `docs/apis.md`.
+2. Đối chiếu schema/entity trong `AppDbContext` và `docs/finjar_schema.sql`.
+3. Tạo/update DTO trong `Personal_Finance_Management.Service/<feature>/Request.cs` và `Response.cs`.
+4. Viết service orchestration trong `Service.cs`; validate ownership và business rules ở đây.
+5. Nếu thao tác tài chính, dùng EF database transaction.
+6. Controller chỉ nhận request, gọi service, trả response.
+7. Không trả EF entity trực tiếp.
+8. Build solution.
+9. Nếu đổi entity/schema, tạo migration và review migration.
+
+Thứ tự implement backend được khuyến nghị:
+
+1. Chuẩn hóa route hiện có về `/api/v1`.
+2. Hoàn thiện auth response, login bằng username/email theo quyết định sản phẩm, check banned, logout, admin login.
+3. Hoàn thiện financial accounts CRUD.
+4. Hoàn thiện categories CRUD user/admin.
+5. Hoàn thiện jars setup/list/CRUD/allocate/transfer.
+6. Hoàn thiện transactions CRUD và transaction-safe balance updates.
+7. Hoàn thiện dashboard user.
+8. Hoàn thiện limits/notifications/goals/reminders.
+9. Hoàn thiện import statement flow dựa trên `ImportJob` và `ImportTransactionDraft`.
+10. Hoàn thiện admin APIs.
+
+## 16. Những lỗi dễ gặp
+
+- Quên `UseSnakeCaseNamingConvention()` sẽ làm EF query sai tên bảng/cột.
+- Dùng `Amount` thay vì `TransactionsAmount`.
+- Lưu `Jar.Percentage` vào DB dù schema đã bỏ field này.
+- Lấy user id từ claim khác `"id"` trong khi service hiện tại đang đọc `"id"`.
+- Không check ownership `UserId` khi load financial account/category/jar/goal.
+- Hard delete financial account/category/transaction khi schema mong muốn deactivate/soft delete.
+- Đảo dấu amount trong nhiều layer. Quy ước duy nhất: Income dương, Expense âm.
+- Tạo transaction nhưng quên cập nhật `FinancialAccount.CurrentBalance` hoặc `Jar.Balance`.
+- Update transaction nhưng không đảo tác động balance cũ trước khi áp dụng giá trị mới.
+- Confirm import nhưng không chạy atomic transaction.
+- Trả `ApiKeyEncrypted` hoặc secret config ra API/log.
+- Nhầm endpoint contract với endpoint đã implement.
+- Thêm navigation collection quá nhiều làm entity phức tạp và query khó kiểm soát.
+
+## 17. Khi nào phải đọc lại docs gốc
+
+Đọc `AGENT.MD` trước. Chỉ đọc lại docs gốc khi:
+
+- cần chi tiết JSON request/response đầy đủ của một endpoint;
+- cần đối chiếu check constraint/index trong schema;
+- cần cập nhật AGENT.MD vì docs/code đã thay đổi;
+- cần hiểu user story/priority ở mức chi tiết hơn;
+- cần xử lý OCR layout chi tiết.
+
+File ưu tiên theo mục đích:
+
+- API contract: `docs/apis.md`
+- Internal model/schema rules: `docs/backend_internal_model.md`
+- SQL schema: `docs/finjar_schema.sql`
+- Product scope/user stories: `docs/user story.md`
+- OCR integration: `Ocr_Service/Note.md`
+- Code thật: `Personal_Finance_Management`
+
+## 18. Nguyên tắc trả lời/ghi chú cho agent sau này
+
+Khi làm task trong repo này:
+
+- Trả lời bằng tiếng Việt nếu user dùng tiếng Việt.
+- Nói rõ phần nào đã implement, phần nào mới là contract/kế hoạch.
+- Nếu route/response hiện tại lệch docs, nêu lệch đó trước khi sửa.
+- Ưu tiên sửa nhỏ, khớp pattern hiện tại.
+- Không tự refactor lớn nếu task chỉ yêu cầu một endpoint nhỏ.
+- Sau khi sửa code, chạy `dotnet build` nếu thay đổi C#.
+- Không revert thay đổi lạ trong worktree nếu không được yêu cầu.
