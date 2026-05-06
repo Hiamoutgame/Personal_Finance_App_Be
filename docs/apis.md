@@ -109,13 +109,10 @@ Danh sách dưới đây là các REST APIs chính cho MVP. Chi tiết request/r
 | Method | Endpoint | Mục đích |
 | --- | --- | --- |
 | GET | `/api/v1/jars` | Danh sách hũ |
-| POST | `/api/v1/jars/setup` | Khởi tạo bộ hũ ban đầu |
+| POST | `/api/v1/jars/setup` | Khởi tạo bộ hũ ban đầu, dùng chung với onboarding |
 | POST | `/api/v1/jars` | Tạo hũ mới |
 | PATCH | `/api/v1/jars/{id}` | Cập nhật hũ |
 | DELETE | `/api/v1/jars/{id}` | Xóa hũ |
-| POST | `/api/v1/jars/allocate` | Phân bổ tiền vào các hũ |
-| POST | `/api/v1/jars/transfer` | Chuyển tiền giữa các hũ |
-| GET | `/api/v1/jars/transfers` | Lịch sử chuyển tiền hũ |
 
 #### Transactions
 
@@ -403,7 +400,6 @@ Response `200 OK`
   "isOnboardingCompleted": true,
   "monthlyIncome": 15000000,
   "budgetMethod": "SixJars",
-  "financialAccountCount": 2,
   "defaultFinancialAccountId": "guid | null",
   "jarCount": 6,
   "financialAccountCount": 1,
@@ -431,8 +427,6 @@ Response `200 OK`
       "maskedAccountNumber": null,
       "currency": "VND",
       "currentBalance": 3000000,
-      "availableBalance": null,
-      "balanceAsOf": "ISO8601 | null",
       "syncStatus": "NeverSynced",
       "isDefault": true,
       "isActive": true
@@ -723,7 +717,7 @@ Response `200 OK`
 ### `POST /api/v1/jars/setup`
 
 - **Auth**: Bearer
-- **Mục đích**: tạo bộ hũ ban đầu sau onboarding, chưa bắt buộc phân bổ số dư ngay
+- **Mục đích**: khởi tạo bộ hũ ban đầu, dùng chung với onboarding. Nếu user chỉ muốn tạo thêm một hũ riêng lẻ sau đó thì dùng `POST /api/v1/jars`.
 
 Request
 
@@ -751,9 +745,10 @@ Response `201 Created`
 
 **Notes**
 
-- `409 Conflict` nếu user đã setup jars trước đó
-- tỷ lệ chia hũ là rule ứng dụng theo `methodType`, không persist trong bảng `jars`
-- số dư gốc nằm ở `financial_accounts`; nếu user muốn phân bổ tiền vào hũ sau setup thì gọi `POST /api/v1/jars/allocate`
+- `409 Conflict` nếu user đã setup jars trước đó.
+- API này chỉ tạo `jar_setups` và các `jars` ban đầu; không còn API phân bổ/chuyển hũ riêng.
+- Tỷ lệ chia hũ là rule ứng dụng theo `methodType`, không persist trong bảng `jars`.
+- Số dư gốc vẫn nằm ở `financial_accounts`. Các thay đổi tiền/hũ phát sinh sau này đi qua `transactions`.
 
 ### `POST /api/v1/jars`
 
@@ -815,98 +810,6 @@ Response `200 OK`
 ```json
 {
   "message": "Jar deleted"
-}
-```
-
-### `POST /api/v1/jars/allocate`
-
-- **Auth**: Bearer
-- **Mục đích**: phân bổ ngân sách từ một nguồn tiền đang theo dõi vào các hũ theo tỷ lệ hiện tại
-
-Request
-
-```json
-{
-  "financialAccountId": "guid",
-  "amount": 15000000,
-  "note": "Lương tháng 4"
-}
-```
-
-Response `200 OK`
-
-```json
-{
-  "transactionIds": ["guid"],
-  "financialAccountId": "guid",
-  "totalAllocated": 15000000,
-  "affectedJarCount": 6
-}
-```
-
-**Notes**
-
-- Scope MVP không còn `jar_allocations`; backend ghi nhận phân bổ bằng `transactions.source_type = 'Jar'`, `to_jar_id` và `jar_balance_after_allocation`.
-- Field `financialAccountId` map vào `transactions.financial_account_id`; FinJar không rút/chuyển tiền thật khỏi ngân hàng.
-
-### `POST /api/v1/jars/transfer`
-
-- **Auth**: Bearer
-- **Mục đích**: chuyển ngân sách nội bộ giữa các hũ
-
-Request
-
-```json
-{
-  "fromJarId": "guid",
-  "toJarId": "guid",
-  "amount": 500000,
-  "note": "Bù ngân sách ăn uống"
-}
-```
-
-Response `200 OK`
-
-```json
-{
-  "transactionId": "guid",
-  "amount": 500000,
-  "fromJarId": "guid",
-  "toJarId": "guid"
-}
-```
-
-### `GET /api/v1/jars/transfers`
-
-- Auth: Bearer
-
-Query Params
-
-- `page=1`
-- `pageSize=20`
-- `fromDate=2026-04-01`
-- `toDate=2026-04-30`
-
-Response `200 OK`
-
-```json
-{
-  "data": [
-    {
-      "id": "guid",
-      "amount": 500000,
-      "fromJarName": "Savings",
-      "toJarName": "Necessities",
-      "note": "Bù ngân sách ăn uống",
-      "date": "ISO8601"
-    }
-  ],
-  "pagination": {
-    "page": 1,
-    "pageSize": 20,
-    "totalCount": 1,
-    "totalPages": 1
-  }
 }
 ```
 
@@ -1148,6 +1051,12 @@ Response `200 OK`
   "failedCount": 0
 }
 ```
+
+**Notes**
+
+- Nếu dòng draft là `Expense`, `editedJarId` trong preview map vào `transactions.from_jar_id`.
+- Nếu dòng draft là `Income`, `editedJarId` trong preview map vào `transactions.to_jar_id`.
+- `fromJarId` và `toJarId` trong request confirm cho phép FE override mapping mặc định khi cần.
 
 ## P3 - Personal Dashboard
 
@@ -1906,6 +1815,7 @@ Response `200 OK`
       "title": "Bảo trì hệ thống",
       "targetAudience": "All",
       "targetCount": 1482,
+      "deliveredCount": 1482,
       "status": "Sent",
       "sentAt": "ISO8601"
     }
@@ -1922,7 +1832,7 @@ Response `200 OK`
 Notes
 
 - Danh sách nên sắp xếp broadcast mới nhất trước.
-- `deliveredCount` có thể bổ sung vào response nếu màn admin cần theo dõi tỷ lệ gửi thành công.
+- `deliveredCount` là số notification đã tạo/gửi thành công cho broadcast.
 
 ### `GET /api/v1/admin/dashboard`
 
@@ -1966,7 +1876,7 @@ Response `200 OK`
     {
       "type": "transactions",
       "label": "Tổng giá trị giao dịch",
-      "totalTransactionValue": 100000000, // SUM(amount) với transaction status hợp lệ trong kỳ của timeframe
+      "totalTransactionValue": 100000000, // SUM(ABS(transactions_amount)) với transaction hợp lệ trong kỳ của timeframe
       "totalTransactions": 200, // COUNT(*) transaction trong kỳ của timeframe
     },
     {
@@ -1988,7 +1898,7 @@ Response `200 OK`
     { "label": "CN", "amount": 16000000, "count": 32 },
   ],
   "topSpendingCategories": [
-    { "label": "Ăn uống", "value": 32000000 }, // SUM(amount) của category
+    { "label": "Ăn uống", "value": 32000000 }, // SUM(ABS(transactions_amount)) của expense theo category
     { "label": "Mua sắm", "value": 24000000 }, // tính theo công thức mô tả bên dưới
     { "label": "Di chuyển", "value": 18000000 },
     { "label": "Giải trí", "value": 14000000 },
@@ -2065,7 +1975,7 @@ Ghi chú:
   - `month`: 12 điểm gần nhất, `label` = `T1..T12` (hoặc `YYYY-MM`), mỗi điểm trả cả `amount` và `count` theo tháng.
   - `year`: 5 điểm gần nhất, `label` = `YYYY`, mỗi điểm trả cả `amount` và `count` theo năm.
 - `topSpendingCategories`:
-  - Công thức: `value = SUM(amount)` theo từng category.
+  - Công thức: `value = SUM(ABS(transactions_amount))` theo từng category với `type = Expense`.
   - Sắp xếp giảm dần theo `value`, trả top N (khuyến nghị N=4), phần còn lại gộp thành `"Khác"`.
   - FE tính tỷ trọng hiển thị theo công thức: `value / SUM(value của tất cả category) * 100`.
 - `retentionTrend`:
@@ -2203,7 +2113,7 @@ Nguyên tắc áp dụng:
 
 - Không expose entity DB trực tiếp.
 - Mapping DTO theo nguyên tắc: write gọn, read đủ thông tin cho UI.
-- Xử lý atomic cho allocate/transfer/transaction/contribution.
+- Xử lý atomic cho transaction/import/contribution và các thao tác cập nhật số dư liên quan.
 
 ## 8. Tổng kết
 
