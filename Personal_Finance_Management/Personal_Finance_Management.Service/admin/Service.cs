@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Personal_Finance_Management.Repository;
 using Personal_Finance_Management.Repository.Entity;
 using Personal_Finance_Management.Repository.Enum;
+using Personal_Finance_Management.Service.baseServices;
 using Personal_Finance_Management.Service.Validations;
 
 namespace Personal_Finance_Management.Service.Admin;
@@ -158,7 +159,7 @@ public class Service : IService
         };
     }
 
-    public async Task<Response.AdminAuditLogsResponse> GetAuditLogs(Request.AdminAuditLogsRequest request)
+    public async Task<Page<Response.AdminAuditLogItem>> GetAuditLogs(Request.AdminAuditLogsRequest request)
     {
         await _validationServices.ValidateAdminAuditLogsRequest(request);
 
@@ -209,12 +210,12 @@ public class Service : IService
             })
             .ToListAsync();
 
-        return new Response.AdminAuditLogsResponse
+        return new Page<Response.AdminAuditLogItem>
         {
-            Data = items,
-            Pagination = new Response.Pagination
+            Items = items,
+            Pagination = new PaginationMetadata
             {
-                Page = request.Page,
+                PageIndex = request.Page,
                 PageSize = request.PageSize,
                 TotalCount = totalCount
             }

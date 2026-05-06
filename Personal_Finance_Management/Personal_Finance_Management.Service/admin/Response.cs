@@ -68,12 +68,6 @@ public class Response
         public DateTimeOffset TransactionDate { get; set; }
     }
 
-    public class AdminAuditLogsResponse
-    {
-        public List<AdminAuditLogItem> Data { get; set; } = [];
-        public Pagination Pagination { get; set; } = new();
-    }
-
     public class AdminAuditLogItem
     {
         public Guid Id { get; set; }
@@ -82,13 +76,5 @@ public class Response
         public string EntityType { get; set; } = null!;
         public string Description { get; set; } = null!;
         public DateTimeOffset CreatedAt { get; set; }
-    }
-
-    public class Pagination
-    {
-        public int Page { get; set; } = 1;
-        public int PageSize { get; set; } = 20;
-        public int TotalCount { get; set; }
-        public int TotalPages => (int)Math.Ceiling(TotalCount / (double)PageSize);
     }
 }
