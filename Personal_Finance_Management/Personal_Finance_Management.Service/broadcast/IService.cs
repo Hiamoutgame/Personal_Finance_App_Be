@@ -5,8 +5,8 @@ using System.Threading.Tasks;
 
 namespace Personal_Finance_Management.Service.broadcast
 {
-    public class IService
+    public interface IService
     {
-        
+        public Task<Response.BroadcastsResponse> CreateBroadcast(Request.BroadcastsRequest request);
     }
 }

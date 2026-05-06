@@ -4,6 +4,7 @@ using Personal_Finance_Management.Api.Extensions;
 using Personal_Finance_Management.Api.Middlewares;
 using Personal_Finance_Management.Repository;
 using authService = Personal_Finance_Management.Service.Auth;
+using BroadcastService = Personal_Finance_Management.Service.broadcast;
 using CategoryService = Personal_Finance_Management.Service.category;
 using ImportService = Personal_Finance_Management.Service.import;
 using jwtService = Personal_Finance_Management.Service.JwtService;
@@ -32,6 +33,7 @@ builder.Services.AddDbContext<AppDbContext>(options =>
         .UseSnakeCaseNamingConvention()
 );
 builder.Services.AddJwtServices(builder.Configuration);
+builder.Services.AddAuthorizationPolicies();
 
 builder.Services.AddScoped<authService.IService, authService.Service>();
 builder.Services.AddScoped<jwtService.IService, jwtService.Service>();
@@ -39,6 +41,7 @@ builder.Services.AddScoped<validationService.IServices, validationService.Valida
 builder.Services.AddScoped<OnboardingService.IService, OnboardingService.Service>();
 builder.Services.AddScoped<UserService.IService, UserService.Service>();
 builder.Services.AddScoped<CategoryService.IService, CategoryService.Service>();
+builder.Services.AddScoped<BroadcastService.IService, BroadcastService.Service>();
 builder.Services.AddHttpClient<OcrService.IService, OcrService.Service>(client =>
 {
     var timeoutSeconds = builder.Configuration.GetValue<int?>("Ocr:TimeoutSeconds") ?? 120;

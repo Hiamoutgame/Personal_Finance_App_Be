@@ -1,12 +1,13 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Personal_Finance_Management.Api.Extensions;
 using CategoryService = Personal_Finance_Management.Service.category;
 
 namespace Personal_Finance_Management.Api.Controllers
 {
     [ApiController]
     [Route("api/v1/categories")]
-    [Authorize]
+    [Authorize(Policy = AuthorizationExtension.Policies.User)]
     public class CategoryController : ControllerBase
     {
         private readonly CategoryService.IService _categoryService;
