@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Personal_Finance_Management.Api.Extensions;
 using Personal_Finance_Management.Api.Middlewares;
 using Personal_Finance_Management.Repository;
+using AdminService = Personal_Finance_Management.Service.Admin;
 using authService = Personal_Finance_Management.Service.Auth;
 using BroadcastService = Personal_Finance_Management.Service.broadcast;
 using CategoryService = Personal_Finance_Management.Service.category;
@@ -43,6 +44,7 @@ builder.Services.AddScoped<OnboardingService.IService, OnboardingService.Service
 builder.Services.AddScoped<UserService.IService, UserService.Service>();
 builder.Services.AddScoped<CategoryService.IService, CategoryService.Service>();
 builder.Services.AddScoped<BroadcastService.IService, BroadcastService.Service>();
+builder.Services.AddScoped<AdminService.IService, AdminService.Service>();
 builder.Services.AddHttpClient<OcrService.IService, OcrService.Service>(client =>
 {
     var timeoutSeconds = builder.Configuration.GetValue<int?>("Ocr:TimeoutSeconds") ?? 120;
