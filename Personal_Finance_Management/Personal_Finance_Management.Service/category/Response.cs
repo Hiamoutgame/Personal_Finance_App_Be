@@ -16,6 +16,11 @@ namespace Personal_Finance_Management.Service.category
             public string? Color { get; set; }
         }
 
+        public class AdminCategoriesResponse
+        {
+            public List<AdminCategoryResponse> Data { get; set; } = [];
+        }
+
         public class AdminCategoryResponse
         {
             public Guid Id { get; set; }
