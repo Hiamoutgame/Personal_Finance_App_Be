@@ -138,6 +138,37 @@ namespace Personal_Finance_Management.Service.category
             };
         }
 
+        public async Task<Response.AdminCategoriesResponse> GetAdminCategories(bool? isActive)
+        {
+            var query = _appDbContext.Categories
+                .AsNoTracking()
+                .Where(c => c.IsDefault && c.OwnerUserId == null);
+
+            if (isActive.HasValue)
+            {
+                query = query.Where(c => c.IsActive == isActive.Value);
+            }
+
+            var categories = await query
+                .OrderBy(c => c.DisplayOrder)
+                .ThenBy(c => c.Name)
+                .Select(c => new Response.AdminCategoryResponse
+                {
+                    Id = c.Id,
+                    Name = c.Name,
+                    Icon = c.Icon,
+                    Color = c.Color,
+                    Order = c.DisplayOrder,
+                    IsActive = c.IsActive
+                })
+                .ToListAsync();
+
+            return new Response.AdminCategoriesResponse
+            {
+                Data = categories
+            };
+        }
+
         public async Task<Response.AdminCategoryResponse> CreateAdminCategory(
             Request.CreateAdminCategoryRequest request)
         {

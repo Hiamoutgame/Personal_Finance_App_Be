@@ -16,6 +16,13 @@ namespace Personal_Finance_Management.Api.Controllers
             _categoryService = categoryService;
         }
 
+        [HttpGet]
+        public async Task<IActionResult> GetCategories([FromQuery] bool? isActive)
+        {
+            var result = await _categoryService.GetAdminCategories(isActive);
+            return Ok(result);
+        }
+
         [HttpPost]
         public async Task<IActionResult> CreateCategory(
             [FromBody] CategoryService.Request.CreateAdminCategoryRequest request)

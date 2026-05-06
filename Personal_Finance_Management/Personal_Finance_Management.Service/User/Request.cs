@@ -4,9 +4,18 @@ public class Request
 {
     public class UpdateUserRequest
     {
-        public string? firstName { get; set; }
-        public string? lastName { get; set; }
-        public string? phone { get; set; }
-        public string? avatarUrl { get; set; }
+        public string? FirstName { get; set; }
+        public string? LastName { get; set; }
+        public string? Phone { get; set; }
+        public string? AvatarUrl { get; set; }
+    }
+    public class UserIdRequest
+    {
+        public Guid UserId { get; set; }
+    }
+    public class UserStatusRequest
+    {
+        public Guid UserId { get; set; }
+
     }
 }

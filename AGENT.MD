@@ -332,7 +332,7 @@ Quy tắc hũ:
 
 - expense thông thường có thể dùng `FromJarId` để trừ hũ;
 - income/allocation vào hũ dùng `ToJarId`;
-- transfer hũ dùng cả `FromJarId` và `ToJarId`;
+- nếu cần biểu diễn chuyển hũ trong lịch sử giao dịch thì dùng cả `FromJarId` và `ToJarId` trong `transactions`, không có API transfer hũ riêng trong contract hiện tại;
 - `FromJarId` và `ToJarId` không được trùng nhau.
 
 ### Import
@@ -384,8 +384,6 @@ Các use case sau phải chạy trong cùng database transaction:
 
 - hoàn thành onboarding và bootstrap financial account/category/jar;
 - tạo/cập nhật/xóa transaction;
-- allocate income vào jars;
-- transfer giữa jars;
 - đóng góp vào goal;
 - confirm import transaction drafts;
 - ban/unban user kèm audit log;
@@ -402,19 +400,7 @@ Tạo transaction nên làm theo thứ tự:
 7. Evaluate spending limits nếu là expense.
 8. Tạo notification nếu chạm ngưỡng.
 
-Allocate jars:
-
-1. Load financial account và active jars.
-2. Tính tiền cho từng hũ theo method.
-3. Cộng `Jar.Balance`.
-4. Tạo một `Transaction` source `Jar` cho từng hũ, set `ToJarId`, `TransactionsAmount`, `JarBalanceAfterAllocation`.
-
-Transfer jars:
-
-1. Load `fromJar`, `toJar`.
-2. Check ownership và balance.
-3. Trừ/cộng balance.
-4. Tạo `Transaction` source `Jar`, set `FromJarId`, `ToJarId`.
+Jar setup hiện tại chỉ khởi tạo `jar_setups` và các `jars` ban đầu, thường dùng chung với onboarding. Không còn contract riêng cho phân bổ hũ, chuyển hũ hoặc lịch sử chuyển hũ; các thay đổi tiền/hũ phát sinh sau setup đi qua transaction flow.
 
 ## 11. API contract mục tiêu
 
@@ -455,7 +441,7 @@ Nhóm endpoint mục tiêu:
 - Onboarding: `POST /api/v1/users/onboarding`.
 - Financial accounts: list/create/update/update balance/delete.
 - Categories: list/create/update/delete user categories; admin CRUD default categories.
-- Jars: list/setup/create/update/delete/allocate/transfer/transfer history.
+- Jars: list/setup/create/update/delete.
 - Transactions: list/create/update/delete.
 - Imports: upload, status, preview, confirm.
 - Dashboard: user dashboard.
@@ -618,7 +604,7 @@ Thứ tự implement backend được khuyến nghị:
 2. Hoàn thiện auth response, login bằng username/email theo quyết định sản phẩm, check banned, logout, admin login.
 3. Hoàn thiện financial accounts CRUD.
 4. Hoàn thiện categories CRUD user/admin.
-5. Hoàn thiện jars setup/list/CRUD/allocate/transfer.
+5. Hoàn thiện jars setup/list/CRUD.
 6. Hoàn thiện transactions CRUD và transaction-safe balance updates.
 7. Hoàn thiện dashboard user.
 8. Hoàn thiện limits/notifications/goals/reminders.
