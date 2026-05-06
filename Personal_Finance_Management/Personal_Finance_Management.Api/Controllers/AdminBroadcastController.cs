@@ -23,7 +23,15 @@ namespace Personal_Finance_Management.Api.Controllers
         public async Task<IActionResult> CreateBroadcast([FromBody] Request.BroadcastsRequest request)
         {
             // Implementation for creating a broadcast
-            return Ok();
+            var result = await _broadcastService.CreateBroadcast(request);
+            return Ok(result);
+        }
+        [HttpGet]
+        public async Task<IActionResult> GetBroadcasts([FromQuery] int pageIndex = 1, [FromQuery] int pageSize = 10, [FromQuery] string status = "Queued")
+        {
+            // Implementation for retrieving broadcasts
+            var result = await _broadcastService.GetBroadcasts(pageIndex, pageSize, status);
+            return Ok(result);
         }
     }
 }

@@ -13,6 +13,7 @@ using OnboardingService = Personal_Finance_Management.Service.Onboarding;
 using UserService = Personal_Finance_Management.Service.User;
 using validationService = Personal_Finance_Management.Service.Validations;
 
+
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
