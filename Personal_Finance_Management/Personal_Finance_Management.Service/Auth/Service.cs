@@ -11,7 +11,7 @@ namespace Personal_Finance_Management.Service.Auth;
 
 public class Service : IService
 {
-    private static readonly Guid DefaultRoleId = Guid.Parse("11111111-1111-1111-1111-111111111111");
+    private static readonly Guid DefaultRoleId = Guid.Parse("00000000-0000-0000-0000-000000000001");
     private const string DefaultRoleCode = "User";
 
     private readonly AppDbContext _dbContext;
@@ -34,24 +34,23 @@ public class Service : IService
 
         var username = request.Username.Trim();
         var email = request.Email.Trim().ToLowerInvariant();
-        var fullName = string.IsNullOrWhiteSpace(request.FullName)
-            ? username
-            : request.FullName.Trim();
+        var firstName = request.FirstName.Trim();
+        var lastName = request.LastName.Trim();
 
         var now = DateTimeOffset.UtcNow;
         var role = await EnsureUserRole(now);
-        var (firstName, lastName) = SplitFullName(fullName);
 
         var user = new Account
         {
             Id = Guid.NewGuid(),
             Username = username,
             Email = email,
-            HashPassword = BCrypt.Net.BCrypt.HashPassword(request.Password, 12),
+            PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password, 12),
             FirstName = firstName,
             LastName = lastName,
             RoleId = role.Id,
-            CreatedAt = now
+            CreatedAt = now,
+            UpdatedAt = now
         };
 
         _dbContext.Accounts.Add(user);
@@ -65,7 +64,8 @@ public class Service : IService
             new Claim(ClaimTypes.Name, user.Username),
             new Claim("username", user.Username),
             new Claim(ClaimTypes.Email, user.Email),
-            new Claim("fullName", fullName),
+            new Claim("firstName", user.FirstName),
+            new Claim("lastName", user.LastName),
             new Claim(ClaimTypes.Role, role.Code)
         });
 
@@ -73,7 +73,8 @@ public class Service : IService
         {
             Id = user.Id,
             Username = user.Username,
-            FullName = fullName,
+            FirstName = user.FirstName,
+            LastName = user.LastName,
             Email = user.Email,
             AccessToken = token
         };
@@ -91,29 +92,13 @@ public class Service : IService
         {
             Id = DefaultRoleId,
             Code = DefaultRoleCode,
-            Name = AccountRole.User,
+            Name = DefaultRoleCode,
             Description = "Default application user",
             CreatedAt = now
         };
 
         _dbContext.Roles.Add(role);
         return role;
-    }
-
-    private static (string FirstName, string LastName) SplitFullName(string fullName)
-    {
-        var normalizedFullName = string.Join(' ', fullName.Split(' ', StringSplitOptions.RemoveEmptyEntries));
-        var firstSpaceIndex = normalizedFullName.IndexOf(' ');
-
-        if (firstSpaceIndex < 0)
-        {
-            return (normalizedFullName, string.Empty);
-        }
-
-        return (
-            normalizedFullName[..firstSpaceIndex],
-            normalizedFullName[(firstSpaceIndex + 1)..]
-        );
     }
 
     public async Task<Response.LoginResponse> Login(Request.LoginRequest request)
@@ -123,7 +108,7 @@ public class Service : IService
             .Include(u => u.Role)
             .FirstOrDefaultAsync(u => u.Email == email);
 
-        if (user is null || !BCrypt.Net.BCrypt.Verify(request.Password, user.HashPassword))
+        if (user is null || !BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
         {
             throw new Exception("Invalid email or password.");
         }
@@ -136,7 +121,8 @@ public class Service : IService
             new Claim(ClaimTypes.Name, user.Username),
             new Claim("username", user.Username),
             new Claim(ClaimTypes.Email, user.Email),
-            new Claim("fullName", $"{user.FirstName} {user.LastName}"),
+            new Claim("firstName", user.FirstName),
+            new Claim("lastName", user.LastName),
             new Claim(ClaimTypes.Role, user.Role.Code)
         });
 
@@ -144,7 +130,8 @@ public class Service : IService
         {
             Id = user.Id,
             Username = user.Username,
-            FullName = $"{user.FirstName} {user.LastName}",
+            FirstName = user.FirstName,
+            LastName = user.LastName,
             Email = user.Email,
             AccessToken = token
         });

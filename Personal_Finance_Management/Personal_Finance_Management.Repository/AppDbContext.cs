@@ -1,15 +1,15 @@
 using Microsoft.EntityFrameworkCore;
 using Personal_Finance_Management.Repository.Entity;
-using Personal_Finance_Management.Repository.Enum;
 
 namespace Personal_Finance_Management.Repository;
 
-
 public class AppDbContext : DbContext
 {
-    public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
+    public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
+    {
+    }
 
-    // DbSets (21 bảng)
+    // DbSets (18 bảng)
     public DbSet<Role> Roles { get; set; }
     public DbSet<Account> Accounts { get; set; }
     public DbSet<AuditLog> AuditLogs { get; set; }
@@ -18,9 +18,6 @@ public class AppDbContext : DbContext
     public DbSet<FinancialAccount> FinancialAccounts { get; set; }
     public DbSet<Category> Categories { get; set; }
     public DbSet<Jar> Jars { get; set; }
-    public DbSet<JarAllocation> JarAllocations { get; set; }
-    public DbSet<JarAllocationItem> JarAllocationItems { get; set; }
-    public DbSet<JarTransfer> JarTransfers { get; set; }
     public DbSet<ImportJob> ImportJobs { get; set; }
     public DbSet<Transaction> Transactions { get; set; }
     public DbSet<SpendingLimit> SpendingLimits { get; set; }
@@ -35,7 +32,7 @@ public class AppDbContext : DbContext
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
-        // ── 1. roles ──────────────────────────────────────────────
+
         modelBuilder.Entity<Role>(builder =>
         {
             builder.ToTable("roles");
@@ -49,15 +46,15 @@ public class AppDbContext : DbContext
 
             builder.Property(r => r.Name)
                 .IsRequired()
-                .HasConversion<string>()
                 .HasMaxLength(50);
 
             builder.Property(r => r.Description)
                 .HasColumnType("text");
 
+            builder.Property(r => r.CreatedAt)
+                .HasDefaultValueSql("NOW()");
         });
 
-        // ── 2. accounts ───────────────────────────────────────────
         modelBuilder.Entity<Account>(builder =>
         {
             builder.ToTable("accounts");
@@ -67,58 +64,71 @@ public class AppDbContext : DbContext
                 .HasMaxLength(50);
 
             builder.HasIndex(a => a.Username)
-                        .IsUnique();
+                .IsUnique();
 
             builder.Property(a => a.Email)
-                        .IsRequired()
-                        .HasMaxLength(255);
+                .IsRequired()
+                .HasMaxLength(255);
 
             builder.HasIndex(a => a.Email)
-                        .IsUnique();
+                .IsUnique();
 
-            builder.Property(a => a.HashPassword)
-                        .IsRequired()
-                        .HasColumnType("text");
+            builder.Property(a => a.PasswordHash)
+                .IsRequired()
+                .HasColumnType("text");
 
             builder.Property(a => a.FirstName)
-                        .IsRequired()
-                        .HasMaxLength(150);
+                .IsRequired()
+                .HasMaxLength(150);
 
             builder.Property(a => a.LastName)
-                        .IsRequired()
-                        .HasMaxLength(150);
+                .IsRequired()
+                .HasMaxLength(150);
 
             builder.Property(a => a.Phone)
-                        .HasMaxLength(20);
+                .HasMaxLength(20);
 
             builder.Property(a => a.AvatarUrl)
-                        .HasColumnType("text");
+                .HasColumnType("text");
 
             builder.Property(a => a.Status)
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasDefaultValue("Active");
+                .IsRequired()
+                .HasMaxLength(20)
+                .HasDefaultValue("Active");
+
+            builder.Property(a => a.StatusReason)
+                .HasColumnType("text");
 
             builder.Property(a => a.PreferredCurrency)
-                        .IsRequired()
-                        .HasMaxLength(3)
-                        .HasDefaultValue("VND");
+                .IsRequired()
+                .HasColumnType("char(3)")
+                .HasDefaultValue("VND");
 
             builder.Property(a => a.IsOnboardingCompleted)
-                        .HasDefaultValue(false);
+                .HasDefaultValue(false);
 
-            // N-1: Account → Role
+            builder.Property(a => a.CreatedAt)
+                .HasDefaultValueSql("NOW()");
+
+            builder.Property(a => a.UpdatedAt)
+                .HasDefaultValueSql("NOW()");
+
+            builder.HasIndex(a => new { a.RoleId, a.Status })
+                .HasDatabaseName("ix_accounts_role_status");
+
+            builder.HasIndex(a => a.LastLoginAt)
+                .HasDatabaseName("ix_accounts_last_login_at");
+
+            builder.ToTable(t => t.HasCheckConstraint(
+                "chk_accounts_status",
+                "\"status\" IN ('Active','Banned')"));
+
             builder.HasOne(a => a.Role)
-                        .WithMany(r => r.Accounts)
-                        .HasForeignKey(a => a.RoleId)
-                        .OnDelete(DeleteBehavior.Restrict);
-            // Restrict: không xoá Role khi còn Account tham chiếu
-
-
-
+                .WithMany(r => r.Accounts)
+                .HasForeignKey(a => a.RoleId)
+                .OnDelete(DeleteBehavior.Restrict);
         });
 
-        // ── 3. audit_logs ─────────────────────────────────────────
         modelBuilder.Entity<AuditLog>(builder =>
         {
             builder.ToTable("audit_logs");
@@ -128,52 +138,86 @@ public class AppDbContext : DbContext
                 .HasMaxLength(50);
 
             builder.Property(a => a.EntityType)
-                            .IsRequired()
-                            .HasMaxLength(50);
+                .IsRequired()
+                .HasMaxLength(50);
 
             builder.Property(a => a.Description)
-                            .IsRequired()
-                            .HasColumnType("text");
+                .IsRequired()
+                .HasColumnType("text");
 
             builder.Property(a => a.MetadataJson)
-                            .HasColumnType("json");
+                .HasColumnType("json");
 
             builder.Property(a => a.IpAddress)
-                            .HasMaxLength(45);
+                .HasMaxLength(45);
 
+            builder.Property(a => a.CreatedAt)
+                .HasDefaultValueSql("NOW()");
+
+            builder.HasIndex(a => new { a.ActorAccountId, a.CreatedAt })
+                .HasDatabaseName("ix_audit_logs_actor_created_at");
 
             builder.HasOne(a => a.Account)
-                            .WithMany(acc => acc.AuditLogs)
-                            .HasForeignKey(a => a.ActorAccountId)
-                            .OnDelete(DeleteBehavior.Restrict);
-            // Restrict: giữ log lại dù account bị xoá/banned
+                .WithMany(acc => acc.AuditLogs)
+                .HasForeignKey(a => a.ActorAccountId)
+                .OnDelete(DeleteBehavior.Restrict);
         });
 
-        // ── 4. onboarding_profiles ────────────────────────────────
         modelBuilder.Entity<OnboardingProfile>(builder =>
         {
             builder.ToTable("onboarding_profiles");
+
+            builder.Property(o => o.MonthlyIncome)
+                .HasColumnType("numeric(18,2)");
+
+            builder.Property(o => o.OccupationType)
+                .HasMaxLength(50);
+
+            builder.Property(o => o.FinancialGoalTypes)
+                .HasColumnType("text");
 
             builder.Property(o => o.BudgetMethodPreference)
                 .IsRequired()
                 .HasMaxLength(30)
                 .HasDefaultValue("Undecided");
 
-            builder.Property(o => o.OccupationType)
-                .HasMaxLength(50);
-
             builder.Property(o => o.AgeRange)
                 .HasMaxLength(30);
 
-            // 1-1: OnboardingProfile giữ FK UserId → Account
+            builder.Property(o => o.SpendingChallenges)
+                .HasColumnType("text");
+
+            builder.Property(o => o.RecommendedMethod)
+                .HasMaxLength(30);
+
+            builder.Property(o => o.CreatedAt)
+                .HasDefaultValueSql("NOW()");
+
+            builder.Property(o => o.UpdatedAt)
+                .HasDefaultValueSql("NOW()");
+
+            builder.HasIndex(o => o.UserId)
+                .IsUnique();
+
+            builder.ToTable(t =>
+            {
+                t.HasCheckConstraint(
+                    "chk_onboarding_profiles_monthly_income",
+                    "\"monthly_income\" IS NULL OR \"monthly_income\" >= 0");
+                t.HasCheckConstraint(
+                    "chk_onboarding_profiles_budget_method_preference",
+                    "\"budget_method_preference\" IN ('SixJars','Rule503020','Custom','Undecided')");
+                t.HasCheckConstraint(
+                    "chk_onboarding_profiles_recommended_method",
+                    "\"recommended_method\" IS NULL OR \"recommended_method\" IN ('SixJars','Rule503020','Custom','Undecided')");
+            });
+
             builder.HasOne(o => o.User)
                 .WithOne(a => a.OnboardingProfile)
                 .HasForeignKey<OnboardingProfile>(o => o.UserId)
-                .OnDelete(DeleteBehavior.Cascade);
-            // Cascade: xoá Account → xoá OnboardingProfile theo
+                .OnDelete(DeleteBehavior.Restrict);
         });
 
-        // ── 5. jar_setups ─────────────────────────────────────────
         modelBuilder.Entity<JarSetup>(builder =>
         {
             builder.ToTable("jar_setups");
@@ -182,16 +226,25 @@ public class AppDbContext : DbContext
                 .IsRequired()
                 .HasMaxLength(30);
 
+            builder.Property(j => j.CreatedAt)
+                .HasDefaultValueSql("NOW()");
+
+            builder.Property(j => j.UpdatedAt)
+                .HasDefaultValueSql("NOW()");
+
+            builder.HasIndex(j => j.UserId)
+                .IsUnique();
+
+            builder.ToTable(t => t.HasCheckConstraint(
+                "chk_jar_setups_method_type",
+                "\"method_type\" IN ('SixJars','Rule503020','Custom','Undecided')"));
 
             builder.HasOne(j => j.User)
                 .WithOne(a => a.JarSetup)
                 .HasForeignKey<JarSetup>(j => j.UserId)
-                .OnDelete(DeleteBehavior.Cascade);
-
-
+                .OnDelete(DeleteBehavior.Restrict);
         });
 
-        // ── 6. financial_accounts ─────────────────────────────────
         modelBuilder.Entity<FinancialAccount>(builder =>
         {
             builder.ToTable("financial_accounts");
@@ -218,15 +271,12 @@ public class AppDbContext : DbContext
 
             builder.Property(f => f.Currency)
                 .IsRequired()
-                .HasMaxLength(3)
+                .HasColumnType("char(3)")
                 .HasDefaultValue("VND");
 
             builder.Property(f => f.CurrentBalance)
-                .HasColumnType("decimal(18,2)")
+                .HasColumnType("numeric(18,2)")
                 .HasDefaultValue(0m);
-
-            builder.Property(f => f.AvailableBalance)
-                .HasColumnType("decimal(18,2)");
 
             builder.Property(f => f.SyncStatus)
                 .IsRequired()
@@ -236,14 +286,40 @@ public class AppDbContext : DbContext
             builder.Property(f => f.IsDefault).HasDefaultValue(false);
             builder.Property(f => f.IsActive).HasDefaultValue(true);
 
-            // N-1: FinancialAccount → Account
+            builder.Property(f => f.CreatedAt)
+                .HasDefaultValueSql("NOW()");
+
+            builder.Property(f => f.UpdatedAt)
+                .HasDefaultValueSql("NOW()");
+
+            builder.HasIndex(f => f.UserId)
+                .HasDatabaseName("ix_financial_accounts_user_id");
+
+            builder.HasIndex(f => new { f.UserId, f.IsDefault })
+                .HasDatabaseName("ix_financial_accounts_user_default");
+
+            builder.HasIndex(f => f.SyncStatus)
+                .HasDatabaseName("ix_financial_accounts_sync_status");
+
+            builder.ToTable(t =>
+            {
+                t.HasCheckConstraint(
+                    "chk_financial_accounts_account_type",
+                    "\"account_type\" IN ('Cash','Bank','EWallet','Other')");
+                t.HasCheckConstraint(
+                    "chk_financial_accounts_connection_mode",
+                    "\"connection_mode\" IN ('Manual','LinkedApi')");
+                t.HasCheckConstraint(
+                    "chk_financial_accounts_sync_status",
+                    "\"sync_status\" IN ('NeverSynced','Synced','Syncing','Error','Disconnected')");
+            });
+
             builder.HasOne(f => f.User)
                 .WithMany(a => a.FinancialAccounts)
                 .HasForeignKey(f => f.UserId)
-                .OnDelete(DeleteBehavior.Cascade);
+                .OnDelete(DeleteBehavior.Restrict);
         });
 
-        // ── 7. categories ─────────────────────────────────────────
         modelBuilder.Entity<Category>(builder =>
         {
             builder.ToTable("categories");
@@ -258,15 +334,24 @@ public class AppDbContext : DbContext
             builder.Property(c => c.DisplayOrder).HasDefaultValue(0);
             builder.Property(c => c.IsActive).HasDefaultValue(true);
 
-            // N-1 (optional): Category → Account (owner, nullable)
+            builder.Property(c => c.CreatedAt)
+                .HasDefaultValueSql("NOW()");
+
+            builder.Property(c => c.UpdatedAt)
+                .HasDefaultValueSql("NOW()");
+
+            builder.HasIndex(c => new { c.OwnerUserId, c.IsActive })
+                .HasDatabaseName("ix_categories_owner_active");
+
+            builder.HasIndex(c => new { c.IsDefault, c.IsActive })
+                .HasDatabaseName("ix_categories_default_active");
+
             builder.HasOne(c => c.OwnerUser)
                 .WithMany()
                 .HasForeignKey(c => c.OwnerUserId)
-                .OnDelete(DeleteBehavior.SetNull);
-            // SetNull: xoá Account → category hệ thống vẫn giữ (OwnerUserId = null)
+                .OnDelete(DeleteBehavior.Restrict);
         });
 
-        // ── 8. jars ───────────────────────────────────────────────
         modelBuilder.Entity<Jar>(builder =>
         {
             builder.ToTable("jars");
@@ -275,16 +360,13 @@ public class AppDbContext : DbContext
                 .IsRequired()
                 .HasMaxLength(100);
 
-            builder.Property(j => j.Percentage)
-                .HasColumnType("decimal(5,2)");
-
             builder.Property(j => j.Balance)
-                .HasColumnType("decimal(18,2)")
+                .HasColumnType("numeric(18,2)")
                 .HasDefaultValue(0m);
 
             builder.Property(j => j.Currency)
                 .IsRequired()
-                .HasMaxLength(3)
+                .HasColumnType("char(3)")
                 .HasDefaultValue("VND");
 
             builder.Property(j => j.Color).HasMaxLength(20);
@@ -296,112 +378,33 @@ public class AppDbContext : DbContext
                 .HasMaxLength(20)
                 .HasDefaultValue("Active");
 
-            // N-1: Jar → Account
+            builder.Property(j => j.CreatedAt)
+                .HasDefaultValueSql("NOW()");
+
+            builder.Property(j => j.UpdatedAt)
+                .HasDefaultValueSql("NOW()");
+
+            builder.HasIndex(j => j.UserId)
+                .HasDatabaseName("ix_jars_user_id");
+
+            builder.HasIndex(j => new { j.UserId, j.Status })
+                .HasDatabaseName("ix_jars_user_status");
+
+            builder.ToTable(t => t.HasCheckConstraint(
+                "chk_jars_status",
+                "\"status\" IN ('Active','Paused','Archived')"));
+
             builder.HasOne(j => j.User)
                 .WithMany()
                 .HasForeignKey(j => j.UserId)
-                .OnDelete(DeleteBehavior.Cascade);
+                .OnDelete(DeleteBehavior.Restrict);
 
-            // N-1 (optional): Jar → JarSetup
             builder.HasOne(j => j.JarSetup)
                 .WithMany(js => js.Jars)
                 .HasForeignKey(j => j.JarSetupId)
-                .OnDelete(DeleteBehavior.SetNull);
-            // SetNull: xoá JarSetup → Jar vẫn tồn tại, JarSetupId = null
-        });
-
-
-
-        // ── 9. jar_allocations ────────────────────────────────────
-        modelBuilder.Entity<JarAllocation>(builder =>
-        {
-            builder.ToTable("jar_allocations");
-
-            builder.Property(j => j.TotalAmount)
-                .IsRequired()
-                .HasColumnType("decimal(18,2)");
-
-            builder.Property(j => j.Note)
-                .HasColumnType("text");
-
-            // N-1: JarAllocation → Account
-            builder.HasOne(j => j.User)
-                .WithMany()
-                .HasForeignKey(j => j.UserId)
-                .OnDelete(DeleteBehavior.Restrict);
-
-            // N-1 (optional): JarAllocation → FinancialAccount
-            builder.HasOne(j => j.SourceFinancialAccount)
-                .WithMany()
-                .HasForeignKey(j => j.SourceFinancialAccountId)
-                .OnDelete(DeleteBehavior.SetNull);
-
-            // 1-N: JarAllocation → N JarAllocationItem
-            // (config ở block JarAllocationItem)
-        });
-
-        // ── 10. jar_allocation_items ──────────────────────────────
-        modelBuilder.Entity<JarAllocationItem>(builder =>
-        {
-            builder.ToTable("jar_allocation_items");
-
-            builder.Property(j => j.Amount)
-                .IsRequired()
-                .HasColumnType("decimal(18,2)");
-
-            builder.Property(j => j.BalanceAfterAllocation)
-                .IsRequired()
-                .HasColumnType("decimal(18,2)");
-
-            // N-1: JarAllocationItem → JarAllocation
-            builder.HasOne(j => j.Allocation)
-                .WithMany(a => a.Items)
-                .HasForeignKey(j => j.AllocationId)
-                .OnDelete(DeleteBehavior.Cascade);
-            // Cascade: xoá JarAllocation → xoá tất cả items theo
-
-            // N-1: JarAllocationItem → Jar
-            builder.HasOne(j => j.Jar)
-                .WithMany()
-                .HasForeignKey(j => j.JarId)
-                .OnDelete(DeleteBehavior.Restrict);
-            // Restrict: không xoá Jar khi còn item tham chiếu
-        });
-
-        // ── 11. jar_transfers ─────────────────────────────────────
-        modelBuilder.Entity<JarTransfer>(builder =>
-        {
-            builder.ToTable("jar_transfers");
-
-            builder.Property(j => j.Amount)
-                .IsRequired()
-                .HasColumnType("decimal(18,2)");
-
-            builder.Property(j => j.Note)
-                .HasColumnType("text");
-
-            // N-1: JarTransfer → Account
-            builder.HasOne(j => j.User)
-                .WithMany()
-                .HasForeignKey(j => j.UserId)
-                .OnDelete(DeleteBehavior.Restrict);
-
-            // N-1: JarTransfer → Jar (from)
-            // Hai FK đến cùng bảng Jars → phải dùng HasForeignKey chỉ rõ từng FK
-            // và tắt Cascade để tránh "multiple cascade paths"
-            builder.HasOne(j => j.FromJar)
-                .WithMany()
-                .HasForeignKey(j => j.FromJarId)
-                .OnDelete(DeleteBehavior.Restrict);
-
-            // N-1: JarTransfer → Jar (to)
-            builder.HasOne(j => j.ToJar)
-                .WithMany()
-                .HasForeignKey(j => j.ToJarId)
                 .OnDelete(DeleteBehavior.Restrict);
         });
 
-        // ── 12. import_jobs ───────────────────────────────────────
         modelBuilder.Entity<ImportJob>(builder =>
         {
             builder.ToTable("import_jobs");
@@ -422,24 +425,44 @@ public class AppDbContext : DbContext
             builder.Property(i => i.Progress).HasDefaultValue(0);
             builder.Property(i => i.ParsedCount).HasDefaultValue(0);
             builder.Property(i => i.FailedCount).HasDefaultValue(0);
+            builder.Property(i => i.ErrorMessage).HasColumnType("text");
 
-            // N-1: ImportJob → Account
+            builder.Property(i => i.UploadedAt)
+                .HasDefaultValueSql("NOW()");
+
+            builder.Property(i => i.UpdatedAt)
+                .HasDefaultValueSql("NOW()");
+
+            builder.HasIndex(i => new { i.UserId, i.UploadedAt })
+                .HasDatabaseName("ix_import_jobs_user_uploaded_at");
+
+            builder.HasIndex(i => new { i.FinancialAccountId, i.UploadedAt })
+                .HasDatabaseName("ix_import_jobs_account_uploaded_at");
+
+            builder.ToTable(t =>
+            {
+                t.HasCheckConstraint(
+                    "chk_import_jobs_status",
+                    "\"status\" IN ('Pending','Processing','AwaitingReview','Completed','Failed')");
+                t.HasCheckConstraint(
+                    "chk_import_jobs_progress",
+                    "\"progress\" BETWEEN 0 AND 100");
+                t.HasCheckConstraint(
+                    "chk_import_jobs_counts",
+                    "\"parsed_count\" >= 0 AND \"failed_count\" >= 0 AND (\"estimated_rows\" IS NULL OR \"estimated_rows\" >= 0)");
+            });
+
             builder.HasOne(i => i.User)
                 .WithMany()
                 .HasForeignKey(i => i.UserId)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            // N-1: ImportJob → FinancialAccount
             builder.HasOne(i => i.FinancialAccount)
                 .WithMany()
                 .HasForeignKey(i => i.FinancialAccountId)
                 .OnDelete(DeleteBehavior.Restrict);
-
-            // 1-N: ImportJob → N ImportTransactionDraft
-            // (config ở block ImportTransactionDraft)
         });
 
-        // ── 13. transactions ──────────────────────────────────────
         modelBuilder.Entity<Transaction>(builder =>
         {
             builder.ToTable("transactions");
@@ -448,14 +471,15 @@ public class AppDbContext : DbContext
                 .IsRequired()
                 .HasMaxLength(20);
 
-            builder.Property(t => t.Amount)
+            builder.Property(t => t.TransactionsAmount)
                 .IsRequired()
-                .HasColumnType("decimal(18,2)");
+                .HasColumnType("numeric(18,2)");
 
             builder.Property(t => t.Note).HasColumnType("text");
             builder.Property(t => t.RawDescription).HasColumnType("text");
             builder.Property(t => t.RawPayloadJson).HasColumnType("json");
             builder.Property(t => t.ExternalTransactionId).HasMaxLength(150);
+            builder.Property(t => t.JarBalanceAfterAllocation).HasColumnType("numeric(18,2)");
 
             builder.Property(t => t.SourceType)
                 .IsRequired()
@@ -464,82 +488,139 @@ public class AppDbContext : DbContext
 
             builder.Property(t => t.IsDeleted).HasDefaultValue(false);
 
-            // Index thường dùng để query theo user + date
-            builder.HasIndex(t => new { t.UserId, t.TransactionDate });
+            builder.Property(t => t.CreatedAt)
+                .HasDefaultValueSql("NOW()");
 
-            // N-1: Transaction → Account
+            builder.Property(t => t.UpdatedAt)
+                .HasDefaultValueSql("NOW()");
+
+            builder.HasIndex(t => new { t.UserId, t.TransactionDate })
+                .HasDatabaseName("ix_transactions_user_date")
+                .HasFilter("\"is_deleted\" = FALSE");
+
+            builder.HasIndex(t => new { t.FinancialAccountId, t.TransactionDate })
+                .HasDatabaseName("ix_transactions_account_date")
+                .HasFilter("\"is_deleted\" = FALSE");
+
+            builder.HasIndex(t => new { t.UserId, t.CategoryId, t.TransactionDate })
+                .HasDatabaseName("ix_transactions_user_category_date")
+                .HasFilter("\"is_deleted\" = FALSE");
+
+            builder.HasIndex(t => t.ImportJobId)
+                .HasDatabaseName("ix_transactions_import_job_id");
+
+            builder.HasIndex(t => t.FromJarId)
+                .HasDatabaseName("ix_transactions_from_jar_id");
+
+            builder.HasIndex(t => t.ToJarId)
+                .HasDatabaseName("ix_transactions_to_jar_id");
+
+            builder.ToTable(t =>
+            {
+                t.HasCheckConstraint(
+                    "chk_transactions_type",
+                    "\"type\" IN ('Income','Expense')");
+                t.HasCheckConstraint(
+                    "chk_transactions_source_type",
+                    "\"source_type\" IN ('Manual','Imported','OCR','Jar','System')");
+                t.HasCheckConstraint(
+                    "chk_transactions_amount_by_type",
+                    "(\"type\" = 'Income' AND \"transactions_amount\" > 0) OR (\"type\" = 'Expense' AND \"transactions_amount\" < 0)");
+                t.HasCheckConstraint(
+                    "chk_transactions_jar_direction",
+                    "\"from_jar_id\" IS NULL OR \"to_jar_id\" IS NULL OR \"from_jar_id\" <> \"to_jar_id\"");
+            });
+
             builder.HasOne(t => t.User)
                 .WithMany()
                 .HasForeignKey(t => t.UserId)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            // N-1: Transaction → FinancialAccount
             builder.HasOne(t => t.FinancialAccount)
                 .WithMany()
                 .HasForeignKey(t => t.FinancialAccountId)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            // N-1 (optional): Transaction → Jar
-            builder.HasOne(t => t.Jar)
+            builder.HasOne(t => t.FromJar)
                 .WithMany()
-                .HasForeignKey(t => t.JarId)
-                .OnDelete(DeleteBehavior.SetNull);
+                .HasForeignKey(t => t.FromJarId)
+                .OnDelete(DeleteBehavior.Restrict);
 
-            // N-1 (optional): Transaction → Category
+            builder.HasOne(t => t.ToJar)
+                .WithMany()
+                .HasForeignKey(t => t.ToJarId)
+                .OnDelete(DeleteBehavior.Restrict);
+
             builder.HasOne(t => t.Category)
                 .WithMany()
                 .HasForeignKey(t => t.CategoryId)
-                .OnDelete(DeleteBehavior.SetNull);
+                .OnDelete(DeleteBehavior.Restrict);
 
-            // N-1 (optional): Transaction → ImportJob
             builder.HasOne(t => t.ImportJob)
                 .WithMany()
                 .HasForeignKey(t => t.ImportJobId)
-                .OnDelete(DeleteBehavior.SetNull);
+                .OnDelete(DeleteBehavior.Restrict);
         });
 
-
-
-        // ── 14. spending_limits ───────────────────────────────────
         modelBuilder.Entity<SpendingLimit>(builder =>
         {
             builder.ToTable("spending_limits");
 
             builder.Property(s => s.LimitAmount)
                 .IsRequired()
-                .HasColumnType("decimal(18,2)");
+                .HasColumnType("numeric(18,2)");
 
             builder.Property(s => s.AlertAtPercentage)
                 .IsRequired()
-                .HasColumnType("decimal(5,2)");
+                .HasColumnType("numeric(5,2)");
 
             builder.Property(s => s.Period)
                 .IsRequired()
-                .HasMaxLength(20)
-                .HasDefaultValue("Monthly");
+                .HasMaxLength(20);
 
             builder.Property(s => s.IsActive).HasDefaultValue(true);
 
-            // N-1: SpendingLimit → Account
+            builder.Property(s => s.CreatedAt)
+                .HasDefaultValueSql("NOW()");
+
+            builder.Property(s => s.UpdatedAt)
+                .HasDefaultValueSql("NOW()");
+
+            builder.HasIndex(s => new { s.UserId, s.IsActive })
+                .HasDatabaseName("ix_spending_limits_user_active");
+
+            builder.ToTable(t =>
+            {
+                t.HasCheckConstraint(
+                    "chk_spending_limits_amount",
+                    "\"limit_amount\" > 0");
+                t.HasCheckConstraint(
+                    "chk_spending_limits_period",
+                    "\"period\" IN ('Daily','Monthly')");
+                t.HasCheckConstraint(
+                    "chk_spending_limits_alert_percentage",
+                    "\"alert_at_percentage\" > 0 AND \"alert_at_percentage\" <= 100");
+                t.HasCheckConstraint(
+                    "chk_spending_limits_target",
+                    "\"jar_id\" IS NOT NULL OR \"category_id\" IS NOT NULL");
+            });
+
             builder.HasOne(s => s.User)
                 .WithMany()
                 .HasForeignKey(s => s.UserId)
-                .OnDelete(DeleteBehavior.Cascade);
+                .OnDelete(DeleteBehavior.Restrict);
 
-            // N-1 (optional): SpendingLimit → Jar
             builder.HasOne(s => s.Jar)
                 .WithMany()
                 .HasForeignKey(s => s.JarId)
-                .OnDelete(DeleteBehavior.SetNull);
+                .OnDelete(DeleteBehavior.Restrict);
 
-            // N-1 (optional): SpendingLimit → Category
             builder.HasOne(s => s.Category)
                 .WithMany()
                 .HasForeignKey(s => s.CategoryId)
-                .OnDelete(DeleteBehavior.SetNull);
+                .OnDelete(DeleteBehavior.Restrict);
         });
 
-        // ── 15. goals ─────────────────────────────────────────────
         modelBuilder.Entity<Goal>(builder =>
         {
             builder.ToTable("goals");
@@ -550,11 +631,14 @@ public class AppDbContext : DbContext
 
             builder.Property(g => g.TargetAmount)
                 .IsRequired()
-                .HasColumnType("decimal(18,2)");
+                .HasColumnType("numeric(18,2)");
 
             builder.Property(g => g.SavedAmount)
-                .HasColumnType("decimal(18,2)")
+                .HasColumnType("numeric(18,2)")
                 .HasDefaultValue(0m);
+
+            builder.Property(g => g.DueDate)
+                .HasColumnType("date");
 
             builder.Property(g => g.Status)
                 .IsRequired()
@@ -563,59 +647,78 @@ public class AppDbContext : DbContext
 
             builder.Property(g => g.Note).HasColumnType("text");
 
-            // N-1: Goal → Account
+            builder.Property(g => g.CreatedAt)
+                .HasDefaultValueSql("NOW()");
+
+            builder.Property(g => g.UpdatedAt)
+                .HasDefaultValueSql("NOW()");
+
+            builder.HasIndex(g => new { g.UserId, g.Status })
+                .HasDatabaseName("ix_goals_user_status");
+
+            builder.HasIndex(g => g.LinkedJarId)
+                .HasDatabaseName("ix_goals_linked_jar_id");
+
+            builder.ToTable(t =>
+            {
+                t.HasCheckConstraint(
+                    "chk_goals_amounts",
+                    "\"target_amount\" > 0 AND \"saved_amount\" >= 0");
+                t.HasCheckConstraint(
+                    "chk_goals_status",
+                    "\"status\" IN ('Active','Completed','Cancelled')");
+            });
+
             builder.HasOne(g => g.User)
                 .WithMany()
                 .HasForeignKey(g => g.UserId)
-                .OnDelete(DeleteBehavior.Cascade);
+                .OnDelete(DeleteBehavior.Restrict);
 
-            // N-1 (optional): Goal → Jar
             builder.HasOne(g => g.LinkedJar)
                 .WithMany()
                 .HasForeignKey(g => g.LinkedJarId)
-                .OnDelete(DeleteBehavior.SetNull);
-
-            // 1-N: Goal → N GoalContribution
-            // (config ở block GoalContribution)
+                .OnDelete(DeleteBehavior.Restrict);
         });
 
-        // ── 16. goal_contributions ────────────────────────────────
         modelBuilder.Entity<GoalContribution>(builder =>
         {
             builder.ToTable("goal_contributions");
 
             builder.Property(g => g.Amount)
                 .IsRequired()
-                .HasColumnType("decimal(18,2)");
+                .HasColumnType("numeric(18,2)");
 
             builder.Property(g => g.Note).HasColumnType("text");
 
-            // N-1: GoalContribution → Goal
+            builder.Property(g => g.CreatedAt)
+                .HasDefaultValueSql("NOW()");
+
+            builder.HasIndex(g => new { g.GoalId, g.CreatedAt })
+                .HasDatabaseName("ix_goal_contributions_goal_created_at");
+
+            builder.HasIndex(g => new { g.UserId, g.CreatedAt })
+                .HasDatabaseName("ix_goal_contributions_user_created_at");
+
+            builder.ToTable(t => t.HasCheckConstraint(
+                "chk_goal_contributions_amount",
+                "\"amount\" > 0"));
+
             builder.HasOne(g => g.Goal)
                 .WithMany(goal => goal.Contributions)
                 .HasForeignKey(g => g.GoalId)
-                .OnDelete(DeleteBehavior.Cascade);
+                .OnDelete(DeleteBehavior.Restrict);
 
-            // N-1: GoalContribution → Account
             builder.HasOne(g => g.User)
                 .WithMany()
                 .HasForeignKey(g => g.UserId)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            // N-1 (optional): GoalContribution → Jar
             builder.HasOne(g => g.SourceJar)
                 .WithMany()
                 .HasForeignKey(g => g.SourceJarId)
-                .OnDelete(DeleteBehavior.SetNull);
-
-            // N-1 (optional): GoalContribution → FinancialAccount
-            builder.HasOne(g => g.SourceFinancialAccount)
-                .WithMany()
-                .HasForeignKey(g => g.SourceFinancialAccountId)
-                .OnDelete(DeleteBehavior.SetNull);
+                .OnDelete(DeleteBehavior.Restrict);
         });
 
-        // ── 17. reminders ─────────────────────────────────────────
         modelBuilder.Entity<Reminder>(builder =>
         {
             builder.ToTable("reminders");
@@ -624,12 +727,18 @@ public class AppDbContext : DbContext
                 .IsRequired()
                 .HasMaxLength(150);
 
-            builder.Property(r => r.Amount).HasColumnType("decimal(18,2)");
+            builder.Property(r => r.Amount)
+                .HasColumnType("numeric(18,2)");
 
             builder.Property(r => r.Frequency)
-                .IsRequired()
-                .HasMaxLength(20)
-                .HasDefaultValue("Monthly");
+                .HasMaxLength(20);
+
+            builder.Property(r => r.DayOfMonth)
+                .HasColumnType("smallint");
+
+            builder.Property(r => r.StartDate)
+                .HasColumnType("date")
+                .HasDefaultValueSql("CURRENT_DATE");
 
             builder.Property(r => r.Status)
                 .IsRequired()
@@ -637,24 +746,50 @@ public class AppDbContext : DbContext
                 .HasDefaultValue("Active");
 
             builder.Property(r => r.NotifyDaysBefore)
+                .HasColumnType("smallint")
                 .HasDefaultValue((short)1);
 
             builder.Property(r => r.Note).HasColumnType("text");
 
-            // N-1: Reminder → Account
+            builder.Property(r => r.CreatedAt)
+                .HasDefaultValueSql("NOW()");
+
+            builder.Property(r => r.UpdatedAt)
+                .HasDefaultValueSql("NOW()");
+
+            builder.HasIndex(r => new { r.UserId, r.Status })
+                .HasDatabaseName("ix_reminders_user_status");
+
+            builder.ToTable(t =>
+            {
+                t.HasCheckConstraint(
+                    "chk_reminders_amount",
+                    "\"amount\" IS NULL OR \"amount\" >= 0");
+                t.HasCheckConstraint(
+                    "chk_reminders_frequency",
+                    "\"frequency\" IS NULL OR \"frequency\" IN ('Daily','Weekly','Monthly','Quarterly','Yearly')");
+                t.HasCheckConstraint(
+                    "chk_reminders_day_of_month",
+                    "\"day_of_month\" IS NULL OR \"day_of_month\" BETWEEN 1 AND 31");
+                t.HasCheckConstraint(
+                    "chk_reminders_status",
+                    "\"status\" IN ('Active','Paused','Completed','Cancelled')");
+                t.HasCheckConstraint(
+                    "chk_reminders_notify_days_before",
+                    "\"notify_days_before\" IS NULL OR \"notify_days_before\" >= 0");
+            });
+
             builder.HasOne(r => r.User)
                 .WithMany()
                 .HasForeignKey(r => r.UserId)
-                .OnDelete(DeleteBehavior.Cascade);
+                .OnDelete(DeleteBehavior.Restrict);
 
-            // N-1 (optional): Reminder → Category
             builder.HasOne(r => r.Category)
                 .WithMany()
                 .HasForeignKey(r => r.CategoryId)
-                .OnDelete(DeleteBehavior.SetNull);
+                .OnDelete(DeleteBehavior.Restrict);
         });
 
-        // ── 18. broadcasts ────────────────────────────────────────
         modelBuilder.Entity<Broadcast>(builder =>
         {
             builder.ToTable("broadcasts");
@@ -680,17 +815,31 @@ public class AppDbContext : DbContext
             builder.Property(b => b.TargetCount).HasDefaultValue(0);
             builder.Property(b => b.DeliveredCount).HasDefaultValue(0);
 
-            // N-1: Broadcast → Account (admin)
-            builder.HasOne(b => b.CreatByAdmin)
+            builder.Property(b => b.CreatedAt)
+                .HasDefaultValueSql("NOW()");
+
+            builder.Property(b => b.UpdatedAt)
+                .HasDefaultValueSql("NOW()");
+
+            builder.HasIndex(b => new { b.Status, b.ScheduledAt })
+                .HasDatabaseName("ix_broadcasts_status_scheduled_at");
+
+            builder.ToTable(t =>
+            {
+                t.HasCheckConstraint(
+                    "chk_broadcasts_status",
+                    "\"status\" IN ('Queued','Sent','Failed','Cancelled')");
+                t.HasCheckConstraint(
+                    "chk_broadcasts_counts",
+                    "\"target_count\" >= 0 AND \"delivered_count\" >= 0 AND \"delivered_count\" <= \"target_count\"");
+            });
+
+            builder.HasOne(b => b.CreatedByAdmin)
                 .WithMany()
                 .HasForeignKey(b => b.CreatedByAdminId)
                 .OnDelete(DeleteBehavior.Restrict);
-
-            // 1-N: Broadcast → N Notification
-            // (config ở block Notification)
         });
 
-        // ── 19. notifications ─────────────────────────────────────
         modelBuilder.Entity<Notification>(builder =>
         {
             builder.ToTable("notifications");
@@ -710,63 +859,84 @@ public class AppDbContext : DbContext
             builder.Property(n => n.MetadataJson).HasColumnType("json");
             builder.Property(n => n.IsRead).HasDefaultValue(false);
 
-            // Index để query nhanh thông báo chưa đọc của 1 user
-            builder.HasIndex(n => new { n.UserId, n.IsRead });
+            builder.Property(n => n.CreatedAt)
+                .HasDefaultValueSql("NOW()");
 
-            // N-1: Notification → Account
+            builder.HasIndex(n => new { n.UserId, n.CreatedAt })
+                .HasDatabaseName("ix_notifications_user_created_at");
+
+            builder.HasIndex(n => new { n.UserId, n.IsRead })
+                .HasDatabaseName("ix_notifications_user_unread")
+                .HasFilter("\"is_read\" = FALSE");
+
+            builder.ToTable(t => t.HasCheckConstraint(
+                "chk_notifications_type",
+                "\"type\" IN ('SpendingAlert','GoalUpdate','Reminder','System','Broadcast')"));
+
             builder.HasOne(n => n.User)
                 .WithMany()
                 .HasForeignKey(n => n.UserId)
-                .OnDelete(DeleteBehavior.Cascade);
+                .OnDelete(DeleteBehavior.Restrict);
 
-            // N-1 (optional): Notification → Broadcast
             builder.HasOne(n => n.Broadcast)
                 .WithMany(b => b.Notifications)
                 .HasForeignKey(n => n.BroadcastId)
-                .OnDelete(DeleteBehavior.SetNull);
+                .OnDelete(DeleteBehavior.Restrict);
         });
 
-
-        // ── 20. import_transaction_drafts ─────────────────────────
         modelBuilder.Entity<ImportTransactionDraft>(builder =>
         {
             builder.ToTable("import_transaction_drafts");
 
-            builder.Property(d => d.Amount).HasColumnType("decimal(18,2)");
+            builder.Property(d => d.Amount).HasColumnType("numeric(18,2)");
             builder.Property(d => d.Type).HasMaxLength(20);
             builder.Property(d => d.RawDescription).HasColumnType("text");
-            builder.Property(d => d.SuggestedNote).HasColumnType("text");
+            builder.Property(d => d.EditedNote).HasColumnType("text");
             builder.Property(d => d.ValidationError).HasColumnType("text");
-            builder.Property(d => d.NormalizedPayloadJson).HasColumnType("json");
+            builder.Property(d => d.NormalizedPayloadJson).HasColumnType("jsonb");
             builder.Property(d => d.IsValid).HasDefaultValue(true);
+            builder.Property(d => d.ImportJobId).IsRequired(false);
 
-            // Unique constraint: (import_job_id, row_index) — theo DBML
+            builder.Property(d => d.CreatedAt)
+                .HasDefaultValueSql("NOW()");
+
+            builder.Property(d => d.UpdatedAt)
+                .HasDefaultValueSql("NOW()");
+
             builder.HasIndex(d => new { d.ImportJobId, d.RowIndex })
-                .IsUnique();
+                .IsUnique()
+                .HasDatabaseName("uq_import_transaction_drafts_job_row");
 
-            // N-1: ImportTransactionDraft → ImportJob
+            builder.HasIndex(d => d.ImportJobId)
+                .HasDatabaseName("ix_import_transaction_drafts_import_job_id");
+
+            builder.ToTable(t =>
+            {
+                t.HasCheckConstraint(
+                    "chk_import_transaction_drafts_row_index",
+                    "(\"import_job_id\" IS NOT NULL AND \"row_index\" >= 0) OR (\"import_job_id\" IS NULL AND \"row_index\" < 0)");
+                t.HasCheckConstraint(
+                    "chk_import_transaction_drafts_type",
+                    "\"type\" IS NULL OR \"type\" IN ('Income','Expense')");
+            });
+
             builder.HasOne(d => d.ImportJob)
                 .WithMany(j => j.Drafts)
                 .HasForeignKey(d => d.ImportJobId)
-                .OnDelete(DeleteBehavior.Cascade);
-            // Cascade: xoá ImportJob → xoá tất cả Drafts theo
+                .OnDelete(DeleteBehavior.Restrict)
+                .IsRequired(false);
 
-            // N-1 (optional): ImportTransactionDraft → Category (suggested)
-            builder.HasOne(d => d.SuggestedCategory)
+            builder.HasOne(d => d.EditedCategory)
                 .WithMany()
-                .HasForeignKey(d => d.SuggestedCategoryId)
-                .OnDelete(DeleteBehavior.SetNull);
+                .HasForeignKey(d => d.EditedCategoryId)
+                .OnDelete(DeleteBehavior.Restrict);
 
-            // N-1 (optional): ImportTransactionDraft → Jar (suggested)
-            builder.HasOne(d => d.SuggestedJar)
+            builder.HasOne(d => d.EditedJar)
                 .WithMany()
-                .HasForeignKey(d => d.SuggestedJarId)
-                .OnDelete(DeleteBehavior.SetNull);
+                .HasForeignKey(d => d.EditedJarId)
+                .OnDelete(DeleteBehavior.Restrict);
         });
 
-
-
-        // ── 21. ai_settings ───────────────────────────────────────
         modelBuilder.Entity<AiSetting>(builder =>
         {
             builder.ToTable("ai_settings");
@@ -781,7 +951,7 @@ public class AppDbContext : DbContext
 
             builder.Property(a => a.Temperature)
                 .IsRequired()
-                .HasColumnType("decimal(3,2)")
+                .HasColumnType("numeric(3,2)")
                 .HasDefaultValue(0.7m);
 
             builder.Property(a => a.MaxTokens)
@@ -791,11 +961,23 @@ public class AppDbContext : DbContext
             builder.Property(a => a.ApiKeyEncrypted).HasColumnType("text");
             builder.Property(a => a.IsEnabled).HasDefaultValue(true);
 
-            // N-1 (optional): AiSetting → Account (admin)
+            builder.Property(a => a.UpdatedAt)
+                .HasDefaultValueSql("NOW()");
+
+            builder.ToTable(t =>
+            {
+                t.HasCheckConstraint(
+                    "chk_ai_settings_temperature",
+                    "\"temperature\" >= 0 AND \"temperature\" <= 2");
+                t.HasCheckConstraint(
+                    "chk_ai_settings_max_tokens",
+                    "\"max_tokens\" > 0");
+            });
+
             builder.HasOne(a => a.UpdatedByAdmin)
                 .WithMany()
                 .HasForeignKey(a => a.UpdatedByAdminId)
-                .OnDelete(DeleteBehavior.SetNull);
+                .OnDelete(DeleteBehavior.Restrict);
         });
     }
 }

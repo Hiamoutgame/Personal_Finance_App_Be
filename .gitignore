@@ -52,3 +52,15 @@ CodeCoverage/
 *.VisualState.xml
 TestResult.xml
 nunit-*.xml
+
+/.vscode
+
+# Local environment files
+.env
+.env.*
+!.env.example
+
+note/
+Ocr_Service/.venv
+__pycache__
+log

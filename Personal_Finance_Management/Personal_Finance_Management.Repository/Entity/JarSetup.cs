@@ -8,14 +8,10 @@ public class JarSetup : BaseEntity, IAudictableEntity
     //cho user thích costume cái jar của họ 
     
     public string MethodType { get; set; } = null!;
-    
-    //Nối với Account
     public Guid UserId { get; set; }
-    public Account User { get; set; }
-    //Nối với Jar
+    public Account User { get; set; } = null!;
     public ICollection<Jar> Jars { get; set; } = new List<Jar>();
-    
+
     public DateTimeOffset CreatedAt { get; set; }
-    public DateTimeOffset? UpdatedAt { get; set; }
-    public DateTimeOffset? ReadAt { get; set; }
+    public DateTimeOffset UpdatedAt { get; set; }
 }

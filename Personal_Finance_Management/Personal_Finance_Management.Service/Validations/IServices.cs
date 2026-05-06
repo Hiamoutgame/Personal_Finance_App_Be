@@ -6,4 +6,5 @@ public interface IServices
 {
     Task<T> ValidateFormRequest<T>(T request);
     Task ValidateRegisterRequest(AuthRequest.RegisterRequest request);
+    Task ValidateImportImageRequest(import.Request.ImportData request);
 }

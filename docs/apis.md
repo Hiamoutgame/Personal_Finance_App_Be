@@ -46,7 +46,7 @@ Nguồn đồng bộ:
 
 - Public: không cần token.
 - Bearer: user access token.
-- Admin: access token role `Admin` hoặc `SuperAdmin`.
+- Admin: access token role `Admin`.
 
 ### 3.3. Money và thời gian
 
@@ -81,6 +81,117 @@ Nguồn đồng bộ:
 }
 ```
 
+### 3.6. REST API tổng hợp
+
+Danh sách dưới đây là các REST APIs chính cho MVP. Chi tiết request/response nằm ở từng contract phía dưới.
+
+#### Financial Accounts
+
+| Method | Endpoint | Mục đích |
+| --- | --- | --- |
+| GET | `/api/v1/financial-accounts` | Danh sách nguồn tiền |
+| POST | `/api/v1/financial-accounts` | Tạo nguồn tiền |
+| PATCH | `/api/v1/financial-accounts/{id}` | Sửa thông tin nguồn tiền |
+| PATCH | `/api/v1/financial-accounts/{id}/balance` | Điều chỉnh số dư |
+| DELETE | `/api/v1/financial-accounts/{id}` | Xóa/ngưng theo dõi nguồn tiền |
+
+#### Categories
+
+| Method | Endpoint | Mục đích |
+| --- | --- | --- |
+| GET | `/api/v1/categories` | Danh sách danh mục |
+| POST | `/api/v1/categories` | Tạo danh mục mới |
+| PATCH | `/api/v1/categories/{id}` | Cập nhật danh mục |
+| DELETE | `/api/v1/categories/{id}` | Xóa danh mục |
+
+#### Jars
+
+| Method | Endpoint | Mục đích |
+| --- | --- | --- |
+| GET | `/api/v1/jars` | Danh sách hũ |
+| POST | `/api/v1/jars/setup` | Khởi tạo bộ hũ ban đầu, dùng chung với onboarding |
+| POST | `/api/v1/jars` | Tạo hũ mới |
+| PATCH | `/api/v1/jars/{id}` | Cập nhật hũ |
+| DELETE | `/api/v1/jars/{id}` | Xóa hũ |
+
+#### Transactions
+
+| Method | Endpoint | Mục đích |
+| --- | --- | --- |
+| GET | `/api/v1/transactions` | Danh sách giao dịch |
+| POST | `/api/v1/transactions` | Tạo giao dịch |
+| PATCH | `/api/v1/transactions/{id}` | Cập nhật giao dịch |
+| DELETE | `/api/v1/transactions/{id}` | Xóa giao dịch |
+
+#### Imports
+
+| Method | Endpoint | Mục đích |
+| --- | --- | --- |
+| POST | `/api/v1/imports` | Tải file sao kê lên |
+| GET | `/api/v1/imports/{id}` | Lấy trạng thái file nhập |
+| GET | `/api/v1/imports/{id}/preview` | Xem trước dữ liệu sao kê |
+| POST | `/api/v1/imports/{id}/confirm` | Xác nhận lưu dữ liệu sao kê |
+
+#### Dashboard & Reporting
+
+| Method | Endpoint | Mục đích |
+| --- | --- | --- |
+| GET | `/api/v1/dashboard` | Lấy dữ liệu tổng quan cho trang chủ |
+
+#### Limits
+
+| Method | Endpoint | Mục đích |
+| --- | --- | --- |
+| GET | `/api/v1/limits` | Danh sách hạn mức |
+| POST | `/api/v1/limits` | Tạo hạn mức |
+| PATCH | `/api/v1/limits/{id}` | Cập nhật hạn mức |
+| DELETE | `/api/v1/limits/{id}` | Xóa hạn mức |
+
+#### Notifications
+
+| Method | Endpoint | Mục đích |
+| --- | --- | --- |
+| GET | `/api/v1/notifications` | Danh sách thông báo |
+| PATCH | `/api/v1/notifications/status` | Đánh dấu đã đọc thông báo |
+
+#### Goals
+
+| Method | Endpoint | Mục đích |
+| --- | --- | --- |
+| GET | `/api/v1/goals` | Danh sách mục tiêu |
+| GET | `/api/v1/goals/{id}` | Chi tiết mục tiêu |
+| POST | `/api/v1/goals` | Tạo mục tiêu mới |
+| PATCH | `/api/v1/goals/{id}` | Cập nhật mục tiêu |
+| DELETE | `/api/v1/goals/{id}` | Xóa mục tiêu |
+| POST | `/api/v1/goals/{id}/contributions` | Thêm tiền đóng góp vào mục tiêu |
+
+#### Reminders
+
+| Method | Endpoint | Mục đích |
+| --- | --- | --- |
+| GET | `/api/v1/reminders` | Danh sách nhắc nhở |
+| POST | `/api/v1/reminders` | Tạo nhắc nhở |
+| PATCH | `/api/v1/reminders/{id}` | Cập nhật nhắc nhở |
+| DELETE | `/api/v1/reminders/{id}` | Xóa nhắc nhở |
+
+#### Admin / Backoffice
+
+| Method | Endpoint | Mục đích |
+| --- | --- | --- |
+| GET | `/api/v1/admin/users` | Danh sách người dùng |
+| GET | `/api/v1/admin/users/{id}` | Chi tiết người dùng |
+| PATCH | `/api/v1/admin/users/{id}/status` | Cập nhật trạng thái người dùng |
+| GET | `/api/v1/admin/categories` | Lấy danh mục mặc định |
+| POST | `/api/v1/admin/categories` | Tạo danh mục mặc định |
+| PATCH | `/api/v1/admin/categories/{id}` | Sửa danh mục mặc định |
+| DELETE | `/api/v1/admin/categories/{id}` | Xóa danh mục mặc định |
+| POST | `/api/v1/admin/broadcasts` | Gửi thông báo hệ thống |
+| GET | `/api/v1/admin/broadcasts` | Lịch sử gửi thông báo hệ thống |
+| GET | `/api/v1/admin/dashboard` | Thống kê cho admin |
+| GET | `/api/v1/admin/audit-logs` | Nhật ký hệ thống |
+| GET | `/api/v1/admin/ai-settings` | Cấu hình AI/LLM |
+| PATCH | `/api/v1/admin/ai-settings` | Cập nhật cấu hình AI/LLM |
+
 ## 4. Khi nào giữ field thời gian trong response
 
 Không phải tất cả field thời gian đều vô ích. Các field dưới đây được giữ vì có giá trị UI rõ ràng:
@@ -109,7 +220,8 @@ Request
   "username": "string",
   "email": "string",
   "password": "string",
-  "fullName": "string"
+  "firstName": "string",
+  "lastName": "string"
 }
 ```
 
@@ -117,10 +229,19 @@ Response `201 Created`
 
 ```json
 {
-  "id": "guid",
-  "username": "string",
-  "fullName": "string",
-  "email": "string"
+  "accessToken": "string",
+  "tokenType": "Bearer",
+  "expiresIn": 900,
+  "user": {
+    "id": "guid",
+    "username": "string",
+    "firstName": "string",
+    "lastName": "string",
+    "email": "string",
+    "phone": "string | null",
+    "role": "User | Admin",
+    "isOnboardingCompleted": false
+  }
 }
 ```
 
@@ -128,6 +249,7 @@ Notes
 
 - `409 Conflict` nếu username hoặc email đã tồn tại.
 - Password hash dùng BCrypt.
+- Register thành công trả token ngay để FE auto-login vào app
 
 ### `POST /api/v1/auth/login`
 
@@ -152,8 +274,10 @@ Response `200 OK`
   "user": {
     "id": "guid",
     "username": "string",
-    "fullName": "string",
+    "firstName": "string",
+    "lastName": "string",
     "email": "string",
+    "phone": "string | null",
     "role": "User | Admin",
     "isOnboardingCompleted": false
   }
@@ -206,7 +330,7 @@ Response `200 OK`
   "admin": {
     "id": "guid",
     "username": "string",
-    "role": "Admin | SuperAdmin"
+    "role": "Admin"
   }
 }
 ```
@@ -218,7 +342,7 @@ Response `200 OK`
 
 ## P1 — Onboarding, Profile, Financial Accounts, Category
 
-### `GET /api/v1/users/me`
+### `GET /api/v1/user/me`
 
 - Auth: Bearer
 
@@ -228,7 +352,8 @@ Response `200 OK`
 {
   "id": "guid",
   "username": "string",
-  "fullName": "string",
+  "firstName": "string",
+  "lastName": "string",
   "email": "string",
   "phone": "string | null",
   "avatarUrl": "string | null",
@@ -237,7 +362,7 @@ Response `200 OK`
 }
 ```
 
-### `PATCH /api/v1/users/me`
+### `PATCH /api/v1/user/me`
 
 - Auth: Bearer
 
@@ -245,7 +370,8 @@ Request
 
 ```json
 {
-  "fullName": "string",
+  "firstName": "string",
+  "lastName": "string",
   "phone": "string | null",
   "avatarUrl": "string | null"
 }
@@ -256,13 +382,14 @@ Response `200 OK`
 ```json
 {
   "id": "guid",
-  "fullName": "string",
+  "firstName": "string",
+  "lastName": "string",
   "phone": "string | null",
   "avatarUrl": "string | null"
 }
 ```
 
-### `GET /api/v1/users/me/setup`
+### `GET /api/v1/user/me/setup`
 
 - Auth: Bearer
 
@@ -273,7 +400,6 @@ Response `200 OK`
   "isOnboardingCompleted": true,
   "monthlyIncome": 15000000,
   "budgetMethod": "SixJars",
-  "financialAccountCount": 2,
   "defaultFinancialAccountId": "guid | null",
   "jarCount": 6,
   "financialAccountCount": 1,
@@ -301,8 +427,6 @@ Response `200 OK`
       "maskedAccountNumber": null,
       "currency": "VND",
       "currentBalance": 3000000,
-      "availableBalance": null,
-      "balanceAsOf": "ISO8601 | null",
       "syncStatus": "NeverSynced",
       "isDefault": true,
       "isActive": true
@@ -358,8 +482,8 @@ Response `200 OK`
 ```json
 {
   "name": "Tiền mặt chính",
-  "currentBalance": 3500000,
-  "isDefault": true
+  "isDefault": true,
+  "isActive": true
 }
 ```
 
@@ -369,16 +493,44 @@ Response `200 OK`
 {
   "id": "guid",
   "name": "Tiền mặt chính",
-  "currentBalance": 3500000,
   "isDefault": true,
-  "updatedAt": "ISO8601"
+  "isActive": true
 }
 ```
 
 **Notes**
 
 - Chỉ cho user cập nhật nguồn tiền thuộc sở hữu của chính họ.
+- Điều chỉnh số dư dùng endpoint riêng `PATCH /api/v1/financial-accounts/{id}/balance`.
 - Với `connectionMode = LinkedApi`, backend có thể giới hạn field được sửa thủ công để tránh lệch dữ liệu sync.
+
+### `PATCH /api/v1/financial-accounts/{id}/balance`
+
+- **Auth**: Bearer
+- **Mục đích**: điều chỉnh số dư thủ công của nguồn tiền user đang theo dõi
+
+**Request**
+
+```json
+{
+  "newBalance": 6500000,
+  "note": "Điều chỉnh số dư đầu kỳ"
+}
+```
+
+**Response `200 OK`**
+
+```json
+{
+  "id": "guid",
+  "currentBalance": 6500000
+}
+```
+
+**Notes**
+
+- Chỉ cho phép điều chỉnh nguồn tiền thuộc sở hữu của chính user.
+- Backend có thể tạo audit/transaction điều chỉnh số dư nội bộ nếu cần truy vết.
 
 ### `DELETE /api/v1/financial-accounts/{id}`
 
@@ -433,127 +585,17 @@ Response `200 OK`
   "recommendedJars": [
     {
       "name": "Necessities",
-      "percentage": 55
+      "recommendedRatio": 55
     },
     {
       "name": "Savings",
-      "percentage": 10
+      "recommendedRatio": 10
     }
   ],
   "defaultFinancialAccount": {
     "name": "Tiền mặt",
     "accountType": "Cash"
   }
-}
-```
-
-### `GET /api/v1/financial-accounts`
-
-- Auth: Bearer
-
-Response `200 OK`
-
-```json
-{
-  "data": [
-    {
-      "id": "guid",
-      "name": "Tiền mặt",
-      "accountType": "Cash",
-      "connectionMode": "Manual",
-      "currentBalance": 5000000,
-      "isDefault": true,
-      "isActive": true
-    }
-  ]
-}
-```
-
-### `POST /api/v1/financial-accounts`
-
-- Auth: Bearer
-
-Request
-
-```json
-{
-  "name": "Tiền mặt",
-  "accountType": "Cash",
-  "initialBalance": 5000000,
-  "isDefault": true
-}
-```
-
-Response `201 Created`
-
-```json
-{
-  "id": "guid",
-  "name": "Tiền mặt",
-  "accountType": "Cash",
-  "connectionMode": "Manual",
-  "currentBalance": 5000000,
-  "isDefault": true,
-  "isActive": true
-}
-```
-
-### `PATCH /api/v1/financial-accounts/{id}`
-
-- Auth: Bearer
-
-Request
-
-```json
-{
-  "name": "Tiền mặt gia đình",
-  "isDefault": true,
-  "isActive": true
-}
-```
-
-Response `200 OK`
-
-```json
-{
-  "id": "guid",
-  "name": "Tiền mặt gia đình",
-  "isDefault": true,
-  "isActive": true
-}
-```
-
-### `PATCH /api/v1/financial-accounts/{id}/balance`
-
-- Auth: Bearer
-
-Request
-
-```json
-{
-  "newBalance": 6500000,
-  "note": "Điều chỉnh số dư đầu kỳ"
-}
-```
-
-Response `200 OK`
-
-```json
-{
-  "id": "guid",
-  "currentBalance": 6500000
-}
-```
-
-### `DELETE /api/v1/financial-accounts/{id}`
-
-- Auth: Bearer
-
-Response `200 OK`
-
-```json
-{
-  "message": "Financial account deleted"
 }
 ```
 
@@ -663,7 +705,6 @@ Response `200 OK`
     {
       "id": "guid",
       "name": "Necessities",
-      "percentage": 55,
       "balance": 8250000,
       "color": "#4CAF50",
       "icon": "home",
@@ -676,15 +717,13 @@ Response `200 OK`
 ### `POST /api/v1/jars/setup`
 
 - **Auth**: Bearer
-- **Mục đích**: tạo bộ hũ ban đầu sau onboarding, chưa bắt buộc phân bổ số dư ngay
+- **Mục đích**: khởi tạo bộ hũ ban đầu, dùng chung với onboarding. Nếu user chỉ muốn tạo thêm một hũ riêng lẻ sau đó thì dùng `POST /api/v1/jars`.
 
 Request
 
 ```json
 {
   "methodType": "SixJars",
-  "initialBalance": 15000000,
-  "sourceFinancialAccountId": "guid | null",
   "customJars": []
 }
 ```
@@ -698,7 +737,6 @@ Response `201 Created`
     {
       "id": "guid",
       "name": "Necessities",
-      "percentage": 55,
       "balance": 0
     }
   ]
@@ -707,9 +745,10 @@ Response `201 Created`
 
 **Notes**
 
-- `409 Conflict` nếu user đã setup jars trước đó
-- nếu `methodType = Custom` thì tổng `percentage` của `customJars` phải bằng `100`
-- số dư gốc nằm ở `financial_accounts`; nếu user muốn phân bổ tiền vào hũ sau setup thì gọi `POST /api/v1/jars/allocate`
+- `409 Conflict` nếu user đã setup jars trước đó.
+- API này chỉ tạo `jar_setups` và các `jars` ban đầu; không còn API phân bổ/chuyển hũ riêng.
+- Tỷ lệ chia hũ là rule ứng dụng theo `methodType`, không persist trong bảng `jars`.
+- Số dư gốc vẫn nằm ở `financial_accounts`. Các thay đổi tiền/hũ phát sinh sau này đi qua `transactions`.
 
 ### `POST /api/v1/jars`
 
@@ -720,7 +759,6 @@ Request
 ```json
 {
   "name": "Du lịch",
-  "percentage": 10,
   "color": "#2A9D8F",
   "icon": "plane"
 }
@@ -732,7 +770,6 @@ Response `201 Created`
 {
   "id": "guid",
   "name": "Du lịch",
-  "percentage": 10,
   "balance": 0,
   "status": "Active"
 }
@@ -747,7 +784,6 @@ Request
 ```json
 {
   "name": "Du lịch hè",
-  "percentage": 12,
   "color": "#2A9D8F",
   "icon": "plane"
 }
@@ -759,7 +795,6 @@ Response `200 OK`
 {
   "id": "guid",
   "name": "Du lịch hè",
-  "percentage": 12,
   "color": "#2A9D8F",
   "icon": "plane",
   "status": "Active"
@@ -778,100 +813,6 @@ Response `200 OK`
 }
 ```
 
-### `POST /api/v1/jars/allocate`
-
-- **Auth**: Bearer
-- **Mục đích**: phân bổ ngân sách từ một nguồn tiền đang theo dõi vào các hũ theo tỷ lệ hiện tại
-
-Request
-
-```json
-{
-  "sourceFinancialAccountId": "guid | null",
-  "amount": 15000000,
-  "sourceFinancialAccountId": "guid | null",
-  "note": "Lương tháng 4"
-}
-```
-
-Response `200 OK`
-
-```json
-{
-  "allocationId": "guid",
-  "sourceFinancialAccountId": "guid | null",
-  "totalAllocated": 15000000,
-  "affectedJarCount": 6
-}
-```
-
-**Notes**
-
-- `sourceFinancialAccountId` map vào `jar_allocations.source_financial_account_id`.
-- Field này chỉ giúp biết khoản phân bổ được quy chiếu từ nguồn tiền nào; FinJar không rút/chuyển tiền thật khỏi ngân hàng.
-- Nếu không gửi `sourceFinancialAccountId`, backend có thể dùng nguồn mặc định hoặc chỉ ghi nhận allocation không gắn nguồn cụ thể tùy rule nội bộ.
-
-### `POST /api/v1/jars/transfer`
-
-- **Auth**: Bearer
-- **Mục đích**: chuyển ngân sách nội bộ giữa các hũ
-
-Request
-
-```json
-{
-  "fromJarId": "guid",
-  "toJarId": "guid",
-  "amount": 500000,
-  "note": "Bù ngân sách ăn uống"
-}
-```
-
-Response `200 OK`
-
-```json
-{
-  "transferId": "guid",
-  "amount": 500000,
-  "fromJarId": "guid",
-  "toJarId": "guid"
-}
-```
-
-### `GET /api/v1/jars/transfers`
-
-- Auth: Bearer
-
-Query Params
-
-- `page=1`
-- `pageSize=20`
-- `fromDate=2026-04-01`
-- `toDate=2026-04-30`
-
-Response `200 OK`
-
-```json
-{
-  "data": [
-    {
-      "id": "guid",
-      "amount": 500000,
-      "fromJarName": "Savings",
-      "toJarName": "Necessities",
-      "note": "Bù ngân sách ăn uống",
-      "date": "ISO8601"
-    }
-  ],
-  "pagination": {
-    "page": 1,
-    "pageSize": 20,
-    "totalCount": 1,
-    "totalPages": 1
-  }
-}
-```
-
 ### `GET /api/v1/transactions`
 
 - Auth: Bearer
@@ -882,7 +823,7 @@ Query Params
 - `pageSize=20`
 - `financialAccountId=guid`
 - `type=Income|Expense`
-- `jarId=guid`
+- `jarId=guid` (filter theo `from_jar_id` hoặc `to_jar_id`)
 - `categoryId=guid`
 - `fromDate=2026-04-01`
 - `toDate=2026-04-30`
@@ -898,7 +839,7 @@ Response `200 OK`
     {
       "id": "guid",
       "type": "Expense",
-      "amount": 55000,
+      "transactionsAmount": -55000,
       "note": "Cà phê sáng",
       "date": "ISO8601",
       "financialAccount": {
@@ -934,9 +875,10 @@ Request
 {
   "financialAccountId": "guid",
   "type": "Expense",
-  "amount": 55000,
+  "transactionsAmount": -55000,
   "categoryId": "guid",
-  "jarId": "guid",
+  "fromJarId": "guid | null",
+  "toJarId": "guid | null",
   "note": "Cà phê sáng",
   "date": "ISO8601"
 }
@@ -949,7 +891,7 @@ Response `201 Created`
   "id": "guid",
   "financialAccountId": "guid",
   "type": "Expense",
-  "amount": 55000,
+  "transactionsAmount": -55000,
   "date": "ISO8601"
 }
 ```
@@ -963,9 +905,10 @@ Request
 ```json
 {
   "financialAccountId": "guid",
-  "amount": 60000,
+  "transactionsAmount": -60000,
   "categoryId": "guid",
-  "jarId": "guid",
+  "fromJarId": "guid | null",
+  "toJarId": "guid | null",
   "note": "Cà phê sáng + bánh",
   "date": "ISO8601"
 }
@@ -977,7 +920,7 @@ Response `200 OK`
 {
   "id": "guid",
   "type": "Expense",
-  "amount": 60000,
+  "transactionsAmount": -60000,
   "date": "ISO8601"
 }
 ```
@@ -985,6 +928,8 @@ Response `200 OK`
 **Notes**
 
 - Nếu đổi `financialAccountId`, backend phải đảo tác động số dư ở nguồn cũ và áp dụng lại ở nguồn mới trong cùng transaction.
+- `transactionsAmount` map trực tiếp vào `transactions.transactions_amount`: Income dương, Expense âm.
+- `fromJarId` / `toJarId` map vào `transactions.from_jar_id` / `transactions.to_jar_id`.
 
 ### `DELETE /api/v1/transactions/{id}`
 
@@ -1066,9 +1011,9 @@ Response `200 OK`
       "amount": 55000,
       "type": "Expense",
       "rawDescription": "HIGHLANDS COFFEE 04/04",
-      "suggestedNote": "Highlands Coffee",
-      "suggestedCategoryId": "guid",
-      "suggestedJarId": "guid",
+      "editedNote": "Highlands Coffee",
+      "editedCategoryId": "guid",
+      "editedJarId": "guid",
       "isValid": true,
       "validationError": null
     }
@@ -1089,7 +1034,8 @@ Request
       "rowIndex": 1,
       "include": true,
       "categoryId": "guid",
-      "jarId": "guid",
+      "fromJarId": "guid | null",
+      "toJarId": "guid | null",
       "note": "Highlands Coffee"
     }
   ]
@@ -1105,6 +1051,12 @@ Response `200 OK`
   "failedCount": 0
 }
 ```
+
+**Notes**
+
+- Nếu dòng draft là `Expense`, `editedJarId` trong preview map vào `transactions.from_jar_id`.
+- Nếu dòng draft là `Income`, `editedJarId` trong preview map vào `transactions.to_jar_id`.
+- `fromJarId` và `toJarId` trong request confirm cho phép FE override mapping mặc định khi cần.
 
 ## P3 - Personal Dashboard
 
@@ -1159,7 +1111,7 @@ Response `200 OK`
     {
       "id": "guid",
       "type": "Expense",
-      "amount": 55000,
+      "transactionsAmount": -55000,
       "note": "Cà phê sáng",
       "date": "ISO8601"
     }
@@ -1455,7 +1407,6 @@ Request
 {
   "amount": 1000000,
   "sourceJarId": "guid | null",
-  "sourceFinancialAccountId": "guid | null",
   "note": "Tiết kiệm tuần này"
 }
 ```
@@ -1475,8 +1426,8 @@ Response `200 OK`
 
 **Notes**
 
-- Chỉ gửi một trong hai field: `sourceJarId` hoặc `sourceFinancialAccountId`.
-- `sourceFinancialAccountId` map vào `goal_contributions.source_financial_account_id`.
+- Scope MVP chỉ lưu `sourceJarId` trong `goal_contributions`.
+- Nếu khoản đóng góp đến từ nguồn tiền thật, backend nên tạo `transactions` tương ứng thay vì lưu nguồn tài khoản tài chính trong `goal_contributions`.
 - Đây là ghi nhận/phân loại nguồn đóng góp trong app, không phải lệnh chuyển tiền thật vào goal.
 
 ### `GET /api/v1/reminders`
@@ -1575,6 +1526,30 @@ Response `200 OK`
 
 ## P6 - Admin User Management & System Notifications
 
+Phạm vi P6 chuẩn hóa theo danh sách API admin hiện tại:
+
+| Method | Endpoint | Mục đích |
+| --- | --- | --- |
+| GET | `/api/v1/admin/users` | Xem, tìm kiếm, phân trang danh sách user |
+| GET | `/api/v1/admin/users/{id}` | Xem chi tiết một user |
+| PATCH | `/api/v1/admin/users/{id}/status` | Khóa hoặc mở khóa tài khoản user |
+| GET | `/api/v1/admin/categories` | Xem danh mục mặc định toàn hệ thống |
+| POST | `/api/v1/admin/categories` | Tạo danh mục mặc định |
+| PATCH | `/api/v1/admin/categories/{id}` | Cập nhật danh mục mặc định |
+| DELETE | `/api/v1/admin/categories/{id}` | Xóa mềm danh mục mặc định |
+| POST | `/api/v1/admin/broadcasts` | Tạo broadcast notification |
+| GET | `/api/v1/admin/broadcasts` | Xem lịch sử broadcast notification |
+| GET | `/api/v1/admin/dashboard` | Lấy dữ liệu dashboard vận hành |
+| GET | `/api/v1/admin/audit-logs` | Xem audit log thao tác admin |
+| GET | `/api/v1/admin/ai-settings` | Xem cấu hình AI hiện tại |
+| PATCH | `/api/v1/admin/ai-settings` | Cập nhật cấu hình AI |
+
+Rules chung:
+
+- Auth: tất cả endpoint trong P6 yêu cầu access token role `Admin`.
+- Các thao tác nhạy cảm phải ghi `audit_logs`: đổi trạng thái user, CRUD danh mục mặc định, tạo broadcast, cập nhật AI settings.
+- Không endpoint nào trong P6 trả secret thô. Riêng AI settings chỉ được trả `apiKeyMasked`, không trả `apiKeyEncrypted` hoặc API key đầy đủ.
+
 ### `GET /api/v1/admin/users`
 
 - Auth: Admin
@@ -1596,7 +1571,8 @@ Response `200 OK`
     {
       "id": "guid",
       "username": "string",
-      "fullName": "string",
+      "firstName": "string",
+      "lastName": "string",
       "email": "string",
       "status": "Active",
       "isOnboardingCompleted": true,
@@ -1624,7 +1600,8 @@ Response `200 OK`
 {
   "id": "guid",
   "username": "string",
-  "fullName": "string",
+  "firstName": "string",
+  "lastName": "string",
   "email": "string",
   "status": "Active",
   "isOnboardingCompleted": true,
@@ -1663,9 +1640,19 @@ Response `200 OK`
 }
 ```
 
+Notes
+
+- `status` chỉ nhận `Active | Banned`.
+- Khi chuyển sang `Banned`, backend nên chặn user đó đăng nhập hoặc gọi protected user APIs.
+- Backend ghi audit log với `actionType = BanUser` hoặc `UnbanUser`, `entityType = User`.
+
 ### `GET /api/v1/admin/categories`
 
 - Auth: Admin
+
+Query Params
+
+- `isActive=true|false` optional, nếu không truyền thì trả cả active và inactive tùy nhu cầu màn admin.
 
 Response `200 OK`
 
@@ -1683,6 +1670,11 @@ Response `200 OK`
   ]
 }
 ```
+
+Notes
+
+- API này chỉ quản lý default categories: `isDefault = true`, `ownerUserId = null`.
+- Response nên sắp xếp tăng dần theo `order`.
 
 ### `POST /api/v1/admin/categories`
 
@@ -1711,6 +1703,11 @@ Response `201 Created`
   "isActive": true
 }
 ```
+
+Notes
+
+- Backend set `isDefault = true`, `ownerUserId = null`.
+- Nên ghi audit log với `actionType = CategoryChange`, `entityType = Category`.
 
 ### `PATCH /api/v1/admin/categories/{id}`
 
@@ -1741,6 +1738,12 @@ Response `200 OK`
 }
 ```
 
+Notes
+
+- Chỉ cho phép sửa default category.
+- Nếu category không phải default category hoặc đã thuộc user cụ thể, trả `404 Not Found` hoặc `403 Forbidden` theo policy backend.
+- Nên ghi audit log với `actionType = CategoryChange`, `entityType = Category`.
+
 ### `DELETE /api/v1/admin/categories/{id}`
 
 - Auth: Admin
@@ -1752,6 +1755,12 @@ Response `200 OK`
   "message": "Category deleted"
 }
 ```
+
+Notes
+
+- Nên xóa mềm bằng `isActive = false` và/hoặc `deletedAt`, không hard delete nếu đã có transaction liên quan.
+- Chỉ cho phép xóa default category.
+- Nên ghi audit log với `actionType = CategoryChange`, `entityType = Category`.
 
 ### `POST /api/v1/admin/broadcasts`
 
@@ -1779,6 +1788,13 @@ Response `202 Accepted`
 }
 ```
 
+Notes
+
+- `targetAudience` MVP dùng `All`.
+- Nếu `scheduledAt = null`, backend có thể đưa broadcast vào queue gửi ngay.
+- Khi dispatch đồng bộ, tạo `notifications` cho user trong cùng transaction với broadcast nếu có thể.
+- Nên ghi audit log với `actionType = BroadcastSend`, `entityType = Broadcast`.
+
 ### `GET /api/v1/admin/broadcasts`
 
 - Auth: Admin
@@ -1799,6 +1815,7 @@ Response `200 OK`
       "title": "Bảo trì hệ thống",
       "targetAudience": "All",
       "targetCount": 1482,
+      "deliveredCount": 1482,
       "status": "Sent",
       "sentAt": "ISO8601"
     }
@@ -1812,38 +1829,167 @@ Response `200 OK`
 }
 ```
 
+Notes
+
+- Danh sách nên sắp xếp broadcast mới nhất trước.
+- `deliveredCount` là số notification đã tạo/gửi thành công cho broadcast.
+
 ### `GET /api/v1/admin/dashboard`
 
 - Auth: Admin
 
 Query Params
 
-- `from=2026-04-01`
-- `to=2026-04-30`
+- `timeframe` (optional, enum: `day | month | year`, default: `day`)
+
+Request Rules
+
+- Nếu không truyền `timeframe`, backend tự dùng `day`.
+- Nếu `timeframe` không thuộc enum hợp lệ, trả `400 Bad Request`.
+- Endpoint không nhận request body.
+
+Example Request
+
+```http
+GET /api/v1/admin/dashboard?timeframe=day
+Authorization: Bearer <admin_access_token>
+```
 
 Response `200 OK`
 
-```json
+```jsonc
 {
-  "totalUsers": 1482,
-  "newUsers": 134,
-  "activeUsers": 892,
-  "totalTransactions": 28400,
-  "totalTransactionVolume": 4200000000,
-  "bannedUsers": 12,
-  "recentActivities": [
+  "statCards": [
     {
-      "type": "BroadcastSent",
-      "label": "Gửi broadcast bảo trì hệ thống",
-      "occurredAt": "ISO8601"
-    }
+      "type": "total_users",
+      "label": "Tổng người dùng",
+      "value": 1357,
+      "deltaPercent": 12, // ((currentTotalUsers - previousTotalUsers) / previousTotalUsers) * 100
+    },
+    {
+      "type": "engagement",
+      "label": "Tương tác (DAU/MAU)",
+      "dau": 892, // distinct users active trong ngày cuối kỳ (hoặc ngày được chọn)
+      "mau": 1234, // distinct users active trong 30 ngày gần nhất
+      "stickinessPercent": 72, // (dau / mau) * 100
+    },
+    {
+      "type": "transactions",
+      "label": "Tổng giá trị giao dịch",
+      "totalTransactionValue": 100000000, // SUM(ABS(transactions_amount)) với transaction hợp lệ trong kỳ của timeframe
+      "totalTransactions": 200, // COUNT(*) transaction trong kỳ của timeframe
+    },
+    {
+      "type": "system_health",
+      "label": "Sức khỏe hệ thống",
+      "errorRatePercent": 0.02, // (failed_sync_or_ocr_jobs / total_sync_or_ocr_jobs) * 100
+      "status": "Good",
+      "bannedUsers": 12,
+    },
   ],
-  "period": {
-    "from": "ISO8601",
-    "to": "ISO8601"
-  }
+  "transactionVolumeTrend": [
+    //bảng xu hướng thể hiện tổng giá trị giao dịch + số lượng giao dịch theo param day | month | year
+    { "label": "T2", "amount": 14000000, "count": 28 },
+    { "label": "T3", "amount": 12000000, "count": 24 },
+    { "label": "T4", "amount": 16000000, "count": 32 },
+    { "label": "T5", "amount": 13000000, "count": 26 },
+    { "label": "T6", "amount": 17000000, "count": 34 },
+    { "label": "T7", "amount": 12000000, "count": 24 },
+    { "label": "CN", "amount": 16000000, "count": 32 },
+  ],
+  "topSpendingCategories": [
+    { "label": "Ăn uống", "value": 32000000 }, // SUM(ABS(transactions_amount)) của expense theo category
+    { "label": "Mua sắm", "value": 24000000 }, // tính theo công thức mô tả bên dưới
+    { "label": "Di chuyển", "value": 18000000 },
+    { "label": "Giải trí", "value": 14000000 },
+    { "label": "Khác", "value": 12000000 }, // Tổng phần còn lại ngoài top category
+  ],
+  "retentionTrend": [
+    {
+      "periodLabel": "D0", // mốc ngày kể từ thời điểm onboarding của cohort
+      "cohortA": 100, // Nhóm Q1/2026: D0 luôn = 100%
+      "cohortB": 100, // Nhóm Q2/2025: D0 luôn = 100%
+      "cohortC": 100, // Nhóm Q3/2025: D0 luôn = 100%
+      "cohortD": 100, // Nhóm Q4/2025: D0 luôn = 100%
+    },
+    {
+      "periodLabel": "D7",
+      "cohortA": 76, // (activeUsersInCohortAtDay7 / totalUsersInCohort) * 100
+      "cohortB": 72, // (activeUsersInCohortAtDay7 / totalUsersInCohort) * 100
+      "cohortC": 68, // (activeUsersInCohortAtDay7 / totalUsersInCohort) * 100
+      "cohortD": 64, // (activeUsersInCohortAtDay7 / totalUsersInCohort) * 100
+    },
+    {
+      "periodLabel": "D14",
+      "cohortA": 66, // (activeUsersInCohortAtDay14 / totalUsersInCohort) * 100
+      "cohortB": 61, // (activeUsersInCohortAtDay14 / totalUsersInCohort) * 100
+      "cohortC": 57, // (activeUsersInCohortAtDay14 / totalUsersInCohort) * 100
+      "cohortD": 53, // (activeUsersInCohortAtDay14 / totalUsersInCohort) * 100
+    },
+    {
+      "periodLabel": "D21",
+      "cohortA": 59, // (activeUsersInCohortAtDay21 / totalUsersInCohort) * 100
+      "cohortB": 55, // (activeUsersInCohortAtDay21 / totalUsersInCohort) * 100
+      "cohortC": 51, // (activeUsersInCohortAtDay21 / totalUsersInCohort) * 100
+      "cohortD": 47, // (activeUsersInCohortAtDay21 / totalUsersInCohort) * 100
+    },
+    {
+      "periodLabel": "D30",
+      "cohortA": 52, // (activeUsersInCohortAtDay30 / totalUsersInCohort) * 100
+      "cohortB": 48, // (activeUsersInCohortAtDay30 / totalUsersInCohort) * 100
+      "cohortC": 44, // (activeUsersInCohortAtDay30 / totalUsersInCohort) * 100
+      "cohortD": 40, // (activeUsersInCohortAtDay30 / totalUsersInCohort) * 100
+    },
+  ],
+  "recentUsers": [
+    //danh sách 10 user mới nhất nhm reverse
+    {
+      "id": "guid",
+      "fullName": "Nguyen Van Anh",
+      "email": "anh@finjar.app",
+      "status": "Active",
+      "createdAt": "ISO8601",
+    },
+  ],
+  "recentTransactions": [
+    //danh sách 10 transaction mới nhất nhm reverse
+    {
+      "id": "guid",
+      "type": "Expense",
+      "amount": 120000,
+      "note": "Ăn trưa",
+      "transactionDate": "ISO8601",
+    },
+  ],
 }
 ```
+
+Ghi chú:
+
+- API này là nguồn dữ liệu duy nhất cho trang Admin Dashboard FE hiện tại.
+- `statCards` giữ dạng array, mỗi phần tử phải có `type` để FE map icon/format ổn định.
+- `statCards` ở phiên bản hiện tại phải trả đúng 4 phần tử theo thứ tự:
+  `total_users`, `engagement`, `transactions`, `system_health`.
+- `transactionVolumeTrend` phải trả về theo đúng `timeframe`:
+  - `day`: 7 điểm gần nhất, `label` = `T2..CN` (hoặc format ngày ngắn), mỗi điểm trả cả `amount` và `count` theo ngày.
+  - `month`: 12 điểm gần nhất, `label` = `T1..T12` (hoặc `YYYY-MM`), mỗi điểm trả cả `amount` và `count` theo tháng.
+  - `year`: 5 điểm gần nhất, `label` = `YYYY`, mỗi điểm trả cả `amount` và `count` theo năm.
+- `topSpendingCategories`:
+  - Công thức: `value = SUM(ABS(transactions_amount))` theo từng category với `type = Expense`.
+  - Sắp xếp giảm dần theo `value`, trả top N (khuyến nghị N=4), phần còn lại gộp thành `"Khác"`.
+  - FE tính tỷ trọng hiển thị theo công thức: `value / SUM(value của tất cả category) * 100`.
+- `retentionTrend`:
+  - `periodLabel` là số ngày kể từ mốc onboarding của cohort: `D0`, `D7`, `D14`, `D21`, `D30`.
+  - `cohortA..D` là tỷ lệ % user còn active tại mốc đó, giá trị kỳ vọng trong khoảng `0..100`.
+  - Công thức tại mốc `Dx`:
+    `retentionPercent = (activeUsersInCohortAtDayX / totalUsersInCohortAtD0) * 100`. (này xem từ audit tìm lastLogin)
+  - Định nghĩa cohort (phiên bản hiện tại):
+    - `cohortA`: user hoàn tất onboarding trong Q1/2026
+    - `cohortB`: user hoàn tất onboarding trong Q2/2025
+    - `cohortC`: user hoàn tất onboarding trong Q3/2025
+    - `cohortD`: user hoàn tất onboarding trong Q4/2025
+  - Quy tắc làm tròn: làm tròn số nguyên gần nhất.
+  - Quy tắc dữ liệu: nên đảm bảo xu hướng không tăng bất thường trong cùng cohort (`D0 >= D7 >= D14 >= D21 >= D30`).
 
 ### `GET /api/v1/admin/audit-logs`
 
@@ -1852,7 +1998,7 @@ Response `200 OK`
 Query Params
 
 - `adminId=guid`
-- `actionType=Login|BanUser|CategoryChange|BroadcastSend`
+- `actionType=Login|BanUser|UnbanUser|CategoryChange|BroadcastSend|AiSettingChange`
 - `entityType=User|Category|Broadcast|AiSetting`
 - `fromDate=2026-04-01`
 - `toDate=2026-04-30`
@@ -1882,6 +2028,12 @@ Response `200 OK`
 }
 ```
 
+Notes
+
+- Audit log là append-only, không có API sửa/xóa trong MVP.
+- Query theo `adminId` map với `audit_logs.actor_account_id`.
+- Response không cần trả `metadataJson` mặc định; chỉ bổ sung khi màn điều tra chi tiết cần.
+
 ### `GET /api/v1/admin/ai-settings`
 
 - Auth: Admin
@@ -1898,6 +2050,11 @@ Response `200 OK`
   "apiKeyMasked": "sk-...xxxx"
 }
 ```
+
+Notes
+
+- Không trả `apiKey` hoặc `apiKeyEncrypted`.
+- Nếu chưa có cấu hình trong DB, backend có thể trả default config an toàn với `isEnabled = false`.
 
 ### `PATCH /api/v1/admin/ai-settings`
 
@@ -1925,6 +2082,12 @@ Response `200 OK`
 }
 ```
 
+Notes
+
+- Nếu `apiKey = null`, giữ nguyên API key đang lưu.
+- Nếu `apiKey` có giá trị, backend phải mã hóa trước khi lưu vào `apiKeyEncrypted`.
+- Nên ghi audit log với `actionType = AiSettingChange`, `entityType = AiSetting`.
+
 ## 6. Field response đã cắt giảm so với bản cũ
 
 Đã cắt bỏ khỏi nhiều write responses:
@@ -1950,7 +2113,7 @@ Nguyên tắc áp dụng:
 
 - Không expose entity DB trực tiếp.
 - Mapping DTO theo nguyên tắc: write gọn, read đủ thông tin cho UI.
-- Xử lý atomic cho allocate/transfer/transaction/contribution.
+- Xử lý atomic cho transaction/import/contribution và các thao tác cập nhật số dư liên quan.
 
 ## 8. Tổng kết
 

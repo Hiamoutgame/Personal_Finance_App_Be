@@ -4,28 +4,25 @@ namespace Personal_Finance_Management.Repository.Entity;
 
 public class Broadcast : BaseEntity, IAudictableEntity
 {
-    //Ko biết chức năng của bảng này
-    //Gửi thông báo cho toàn user  hệ thống 
-    public string Title { get; set; }
-    public string Body { get; set; }
-    public string TargetAudience { get; set; }
-    public string Status { get; set; } // có những trạng thái gì có thể xảy ra
-    //Pending - Sending - Done - Cancled - Fail
-    
+    // thông báo gửi đến toàn user hệ thống
+    public string Title { get; set; } = null!;
+    public string Body { get; set; } = null!;
+    public string TargetAudience { get; set; } = "All";
+    public string Status { get; set; } = "Queued";
+
     public DateTimeOffset? ScheduledAt { get; set; }
     public DateTimeOffset? SentAt { get; set; }
-    
-    public int TargetCount { get; set; }
-    public int DeliveredCount { get; set; }
+
+    public int TargetCount { get; set; } = 0;
+    public int DeliveredCount { get; set; } = 0;
 
     // Nối với Account
     public Guid CreatedByAdminId { get; set; }
-    public Account CreatByAdmin { get; set; } = null!;
-    
+    public Account CreatedByAdmin { get; set; } = null!;
+
     //Nối với Notification
     public ICollection<Notification> Notifications { get; set; } = new List<Notification>();
-    
+
     public DateTimeOffset CreatedAt { get; set; }
-    public DateTimeOffset? UpdatedAt { get; set; }
-    public DateTimeOffset? ReadAt { get; set; }
+    public DateTimeOffset UpdatedAt { get; set; }
 }

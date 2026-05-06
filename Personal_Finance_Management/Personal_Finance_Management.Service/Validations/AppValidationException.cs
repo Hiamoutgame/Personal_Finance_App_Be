@@ -25,4 +25,9 @@ public class AppValidationException : Exception
     {
         return new AppValidationException(message, 409, new { field, code });
     }
+
+    public static AppValidationException NotFound(string message, string field, string code)
+    {
+        return new AppValidationException(message, 404, new { field, code });
+    }
 }

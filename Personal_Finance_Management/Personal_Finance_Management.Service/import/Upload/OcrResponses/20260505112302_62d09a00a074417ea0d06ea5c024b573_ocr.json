@@ -1,0 +1,2708 @@
+{
+  "text": "Halaidsaigon\n31 Dong Du, Ben Thanh Ward, Dist 1991\nTel. 08 3824 6823\nPHIẾU TÍNH TIÊN\nIDO450-21/10/2018-20:07 - Thu ngân\nBàn 14\n5.00\n(3)\n19 Cơm chiên cá mặn (Fried\n1.00\n119,000\nrice with salted fish)\n2 ) Bún thêm (Extra noodle)\n1.00\n10,000\n3\nBB) Soda chanh( Lemon Soda)\n1.00\n40,000\n4 ) Lessi Tắc (Kumquatlessi)\n1.00\n45,000\n5 ) Táo ép (Apple jucie yoody.vm.00\n45,000\nTổng cộng\n259,000\nTHUẾ VAT (10.00%)\n25,900\nPhụ phí\n14,245\nThanh toán\n299,145\nKhách đưa\n299,145\nNợ lại\nO\nCám ơn quý khách la\nIn lúc: 20:27:45 - 21/10/2018\nLong Nguyễn\nFoodym",
+  "layout": "invoice",
+  "pages": [
+    {
+      "page": 1,
+      "text": "Halaidsaigon\n31 Dong Du, Ben Thanh Ward, Dist 1991\nTel. 08 3824 6823\nPHIẾU TÍNH TIÊN\nIDO450-21/10/2018-20:07 - Thu ngân\nBàn 14\n5.00\n(3)\n19 Cơm chiên cá mặn (Fried\n1.00\n119,000\nrice with salted fish)\n2 ) Bún thêm (Extra noodle)\n1.00\n10,000\n3\nBB) Soda chanh( Lemon Soda)\n1.00\n40,000\n4 ) Lessi Tắc (Kumquatlessi)\n1.00\n45,000\n5 ) Táo ép (Apple jucie yoody.vm.00\n45,000\nTổng cộng\n259,000\nTHUẾ VAT (10.00%)\n25,900\nPhụ phí\n14,245\nThanh toán\n299,145\nKhách đưa\n299,145\nNợ lại\nO\nCám ơn quý khách la\nIn lúc: 20:27:45 - 21/10/2018\nLong Nguyễn\nFoodym",
+      "invoice": {
+        "layout_config": {
+          "type": "invoice",
+          "sections": {
+            "header": {
+              "description": "Store/vendor, title, address, contact, invoice metadata."
+            },
+            "items": {
+              "description": "Purchased goods/services, quantities, unit prices, and line totals."
+            },
+            "totals": {
+              "description": "Subtotal, tax, fees, total, payment, and remaining amount.",
+              "keywords": [
+                "tong",
+                "tong cong",
+                "thanh toan",
+                "khach dua",
+                "no lai",
+                "tien nuoc",
+                "thue",
+                "vat",
+                "gtgt",
+                "phi",
+                "phu phi",
+                "tieu thu"
+              ]
+            },
+            "footer": {
+              "description": "Cashier/staff, thanks text, print time, website, and hotline.",
+              "keywords": [
+                "cam on",
+                "nhan vien",
+                "dien thoai",
+                "ngay gui",
+                "in luc",
+                "hotline",
+                "www"
+              ]
+            }
+          },
+          "item_header_keywords": [
+            "description",
+            "dien giai",
+            "ten hang",
+            "mat hang",
+            "don gia",
+            "so luong",
+            "qty"
+          ]
+        },
+        "image": {
+          "width": 800,
+          "height": 1066
+        },
+        "text": "Halaidsaigon\n31 Dong Du, Ben Thanh Ward, Dist 1991\nTel. 08 3824 6823\nPHIẾU TÍNH TIÊN\nIDO450-21/10/2018-20:07 - Thu ngân\nBàn 14\n5.00\n(3)\n19 Cơm chiên cá mặn (Fried\n1.00\n119,000\nrice with salted fish)\n2 ) Bún thêm (Extra noodle)\n1.00\n10,000\n3\nBB) Soda chanh( Lemon Soda)\n1.00\n40,000\n4 ) Lessi Tắc (Kumquatlessi)\n1.00\n45,000\n5 ) Táo ép (Apple jucie yoody.vm.00\n45,000\nTổng cộng\n259,000\nTHUẾ VAT (10.00%)\n25,900\nPhụ phí\n14,245\nThanh toán\n299,145\nKhách đưa\n299,145\nNợ lại\nO\nCám ơn quý khách la\nIn lúc: 20:27:45 - 21/10/2018\nLong Nguyễn\nFoodym",
+        "fields": {
+          "dates": [
+            "21/10/2018",
+            "21/10/2018"
+          ],
+          "phones": [
+            "0838246823"
+          ],
+          "total_amount": {
+            "value": 299145,
+            "raw": "299,145",
+            "line": "Thanh toán 299,145",
+            "bbox": [
+              128.0,
+              705.0,
+              676.0,
+              744.0
+            ]
+          },
+          "tax": [
+            {
+              "value": 25900,
+              "raw": "25,900",
+              "line": "THUẾ VAT (10.00%) 25,900",
+              "bbox": [
+                128.0,
+                606.0,
+                676.0,
+                650.0
+              ]
+            }
+          ],
+          "fee": [
+            {
+              "value": 14245,
+              "raw": "14,245",
+              "line": "Phụ phí 14,245",
+              "bbox": [
+                125.0,
+                653.0,
+                675.0,
+                697.0
+              ]
+            }
+          ]
+        },
+        "sections": {
+          "header": {
+            "text": "Halaidsaigon\n31 Dong Du, Ben Thanh Ward, Dist 1991\nTel. 08 3824 6823\nPHIẾU TÍNH TIÊN\nIDO450-21/10/2018-20:07 - Thu ngân\nBàn 14 5.00 (3)",
+            "bbox": [
+              59.0,
+              50.0,
+              626.0,
+              341.0
+            ],
+            "lines": [
+              {
+                "index": 0,
+                "text": "Halaidsaigon",
+                "bbox": [
+                  265.0,
+                  50.0,
+                  472.0,
+                  77.0
+                ],
+                "boxes": [
+                  {
+                    "text": "Halaidsaigon",
+                    "bbox": [
+                      265.0,
+                      50.0,
+                      472.0,
+                      77.0
+                    ],
+                    "type": "ocr",
+                    "score": 1
+                  }
+                ]
+              },
+              {
+                "index": 1,
+                "text": "31 Dong Du, Ben Thanh Ward, Dist 1991",
+                "bbox": [
+                  192.0,
+                  104.0,
+                  542.0,
+                  130.0
+                ],
+                "boxes": [
+                  {
+                    "text": "31 Dong Du, Ben Thanh Ward, Dist 1991",
+                    "bbox": [
+                      192.0,
+                      104.0,
+                      542.0,
+                      130.0
+                    ],
+                    "type": "ocr",
+                    "score": 1
+                  }
+                ]
+              },
+              {
+                "index": 2,
+                "text": "Tel. 08 3824 6823",
+                "bbox": [
+                  281.0,
+                  153.0,
+                  452.0,
+                  177.0
+                ],
+                "boxes": [
+                  {
+                    "text": "Tel. 08 3824 6823",
+                    "bbox": [
+                      281.0,
+                      153.0,
+                      452.0,
+                      177.0
+                    ],
+                    "type": "ocr",
+                    "score": 1
+                  }
+                ]
+              },
+              {
+                "index": 3,
+                "text": "PHIẾU TÍNH TIÊN",
+                "bbox": [
+                  220.0,
+                  204.0,
+                  515.0,
+                  239.0
+                ],
+                "boxes": [
+                  {
+                    "text": "PHIẾU TÍNH TIÊN",
+                    "bbox": [
+                      220.0,
+                      204.0,
+                      515.0,
+                      239.0
+                    ],
+                    "type": "ocr",
+                    "score": 1
+                  }
+                ]
+              },
+              {
+                "index": 4,
+                "text": "IDO450-21/10/2018-20:07 - Thu ngân",
+                "bbox": [
+                  59.0,
+                  269.0,
+                  486.0,
+                  295.0
+                ],
+                "boxes": [
+                  {
+                    "text": "IDO450-21/10/2018-20:07 - Thu ngân",
+                    "bbox": [
+                      59.0,
+                      269.0,
+                      486.0,
+                      295.0
+                    ],
+                    "type": "ocr",
+                    "score": 1
+                  }
+                ]
+              },
+              {
+                "index": 5,
+                "text": "Bàn 14 5.00 (3)",
+                "bbox": [
+                  60.0,
+                  306.0,
+                  626.0,
+                  341.0
+                ],
+                "boxes": [
+                  {
+                    "text": "Bàn 14",
+                    "bbox": [
+                      60.0,
+                      306.0,
+                      140.0,
+                      331.0
+                    ],
+                    "type": "ocr",
+                    "score": 1
+                  },
+                  {
+                    "text": "5.00",
+                    "bbox": [
+                      469.0,
+                      311.0,
+                      522.0,
+                      336.0
+                    ],
+                    "type": "ocr",
+                    "score": 1
+                  },
+                  {
+                    "text": "(3)",
+                    "bbox": [
+                      572.0,
+                      311.0,
+                      626.0,
+                      341.0
+                    ],
+                    "type": "ocr",
+                    "score": 1
+                  }
+                ]
+              }
+            ]
+          },
+          "items": {
+            "text": "19 Cơm chiên cá mặn (Fried 1.00 119,000\nrice with salted fish)\n2 ) Bún thêm (Extra noodle) 1.00 10,000\n3 BB) Soda chanh( Lemon Soda) 1.00 40,000\n4 ) Lessi Tắc (Kumquatlessi) 1.00 45,000\n5 ) Táo ép (Apple jucie yoody.vm.00 45,000",
+            "bbox": [
+              64.0,
+              360.0,
+              678.0,
+              553.0
+            ],
+            "lines": [
+              {
+                "index": 6,
+                "text": "19 Cơm chiên cá mặn (Fried 1.00 119,000",
+                "bbox": [
+                  70.0,
+                  360.0,
+                  678.0,
+                  392.0
+                ],
+                "boxes": [
+                  {
+                    "text": "19 Cơm chiên cá mặn (Fried",
+                    "bbox": [
+                      70.0,
+                      360.0,
+                      385.0,
+                      385.0
+                    ],
+                    "type": "ocr",
+                    "score": 1
+                  },
+                  {
+                    "text": "1.00",
+                    "bbox": [
+                      469.0,
+                      363.0,
+                      523.0,
+                      392.0
+                    ],
+                    "type": "ocr",
+                    "score": 1
+                  },
+                  {
+                    "text": "119,000",
+                    "bbox": [
+                      586.0,
+                      364.0,
+                      678.0,
+                      392.0
+                    ],
+                    "type": "ocr",
+                    "score": 1
+                  }
+                ]
+              },
+              {
+                "index": 7,
+                "text": "rice with salted fish)",
+                "bbox": [
+                  112.0,
+                  391.0,
+                  324.0,
+                  414.0
+                ],
+                "boxes": [
+                  {
+                    "text": "rice with salted fish)",
+                    "bbox": [
+                      112.0,
+                      391.0,
+                      324.0,
+                      414.0
+                    ],
+                    "type": "ocr",
+                    "score": 1
+                  }
+                ]
+              },
+              {
+                "index": 8,
+                "text": "2 ) Bún thêm (Extra noodle) 1.00 10,000",
+                "bbox": [
+                  66.0,
+                  416.0,
+                  677.0,
+                  450.0
+                ],
+                "boxes": [
+                  {
+                    "text": "2 ) Bún thêm (Extra noodle)",
+                    "bbox": [
+                      66.0,
+                      416.0,
+                      372.0,
+                      443.0
+                    ],
+                    "type": "ocr",
+                    "score": 1
+                  },
+                  {
+                    "text": "1.00",
+                    "bbox": [
+                      469.0,
+                      420.0,
+                      523.0,
+                      449.0
+                    ],
+                    "type": "ocr",
+                    "score": 1
+                  },
+                  {
+                    "text": "10,000",
+                    "bbox": [
+                      599.0,
+                      422.0,
+                      677.0,
+                      450.0
+                    ],
+                    "type": "ocr",
+                    "score": 1
+                  }
+                ]
+              },
+              {
+                "index": 9,
+                "text": "3 BB) Soda chanh( Lemon Soda) 1.00 40,000",
+                "bbox": [
+                  72.0,
+                  450.0,
+                  677.0,
+                  485.0
+                ],
+                "boxes": [
+                  {
+                    "text": "3",
+                    "bbox": [
+                      72.0,
+                      453.0,
+                      86.0,
+                      469.0
+                    ],
+                    "type": "ocr",
+                    "score": 1
+                  },
+                  {
+                    "text": "BB) Soda chanh( Lemon Soda)",
+                    "bbox": [
+                      75.0,
+                      450.0,
+                      400.0,
+                      476.0
+                    ],
+                    "type": "ocr",
+                    "score": 1
+                  },
+                  {
+                    "text": "1.00",
+                    "bbox": [
+                      469.0,
+                      454.0,
+                      522.0,
+                      483.0
+                    ],
+                    "type": "ocr",
+                    "score": 1
+                  },
+                  {
+                    "text": "40,000",
+                    "bbox": [
+                      597.0,
+                      457.0,
+                      677.0,
+                      485.0
+                    ],
+                    "type": "ocr",
+                    "score": 1
+                  }
+                ]
+              },
+              {
+                "index": 10,
+                "text": "4 ) Lessi Tắc (Kumquatlessi) 1.00 45,000",
+                "bbox": [
+                  66.0,
+                  484.0,
+                  677.0,
+                  519.0
+                ],
+                "boxes": [
+                  {
+                    "text": "4 ) Lessi Tắc (Kumquatlessi)",
+                    "bbox": [
+                      66.0,
+                      484.0,
+                      391.0,
+                      511.0
+                    ],
+                    "type": "ocr",
+                    "score": 1
+                  },
+                  {
+                    "text": "1.00",
+                    "bbox": [
+                      469.0,
+                      489.0,
+                      522.0,
+                      517.0
+                    ],
+                    "type": "ocr",
+                    "score": 1
+                  },
+                  {
+                    "text": "45,000",
+                    "bbox": [
+                      597.0,
+                      491.0,
+                      677.0,
+                      519.0
+                    ],
+                    "type": "ocr",
+                    "score": 1
+                  }
+                ]
+              },
+              {
+                "index": 11,
+                "text": "5 ) Táo ép (Apple jucie yoody.vm.00 45,000",
+                "bbox": [
+                  64.0,
+                  515.0,
+                  677.0,
+                  553.0
+                ],
+                "boxes": [
+                  {
+                    "text": "5 ) Táo ép (Apple jucie yoody.vm.00",
+                    "bbox": [
+                      64.0,
+                      515.0,
+                      524.0,
+                      553.0
+                    ],
+                    "type": "ocr",
+                    "score": 1
+                  },
+                  {
+                    "text": "45,000",
+                    "bbox": [
+                      597.0,
+                      525.0,
+                      677.0,
+                      553.0
+                    ],
+                    "type": "ocr",
+                    "score": 1
+                  }
+                ]
+              }
+            ]
+          },
+          "totals": {
+            "text": "Tổng cộng 259,000\nTHUẾ VAT (10.00%) 25,900\nPhụ phí 14,245\nThanh toán 299,145\nKhách đưa 299,145\nNợ lại O",
+            "bbox": [
+              125.0,
+              564.0,
+              677.0,
+              827.0
+            ],
+            "lines": [
+              {
+                "index": 12,
+                "text": "Tổng cộng 259,000",
+                "bbox": [
+                  126.0,
+                  564.0,
+                  677.0,
+                  606.0
+                ],
+                "boxes": [
+                  {
+                    "text": "Tổng cộng",
+                    "bbox": [
+                      126.0,
+                      564.0,
+                      265.0,
+                      598.0
+                    ],
+                    "type": "ocr",
+                    "score": 1
+                  },
+                  {
+                    "text": "259,000",
+                    "bbox": [
+                      561.0,
+                      575.0,
+                      677.0,
+                      606.0
+                    ],
+                    "type": "ocr",
+                    "score": 1
+                  }
+                ]
+              },
+              {
+                "index": 13,
+                "text": "THUẾ VAT (10.00%) 25,900",
+                "bbox": [
+                  128.0,
+                  606.0,
+                  676.0,
+                  650.0
+                ],
+                "boxes": [
+                  {
+                    "text": "THUẾ VAT (10.00%)",
+                    "bbox": [
+                      128.0,
+                      606.0,
+                      350.0,
+                      634.0
+                    ],
+                    "type": "ocr",
+                    "score": 1
+                  },
+                  {
+                    "text": "25,900",
+                    "bbox": [
+                      577.0,
+                      617.0,
+                      676.0,
+                      650.0
+                    ],
+                    "type": "ocr",
+                    "score": 1
+                  }
+                ]
+              },
+              {
+                "index": 14,
+                "text": "Phụ phí 14,245",
+                "bbox": [
+                  125.0,
+                  653.0,
+                  675.0,
+                  697.0
+                ],
+                "boxes": [
+                  {
+                    "text": "Phụ phí",
+                    "bbox": [
+                      125.0,
+                      653.0,
+                      211.0,
+                      685.0
+                    ],
+                    "type": "ocr",
+                    "score": 1
+                  },
+                  {
+                    "text": "14,245",
+                    "bbox": [
+                      576.0,
+                      665.0,
+                      675.0,
+                      697.0
+                    ],
+                    "type": "ocr",
+                    "score": 1
+                  }
+                ]
+              },
+              {
+                "index": 15,
+                "text": "Thanh toán 299,145",
+                "bbox": [
+                  128.0,
+                  705.0,
+                  676.0,
+                  744.0
+                ],
+                "boxes": [
+                  {
+                    "text": "Thanh toán",
+                    "bbox": [
+                      128.0,
+                      705.0,
+                      270.0,
+                      733.0
+                    ],
+                    "type": "ocr",
+                    "score": 1
+                  },
+                  {
+                    "text": "299,145",
+                    "bbox": [
+                      560.0,
+                      711.0,
+                      676.0,
+                      744.0
+                    ],
+                    "type": "ocr",
+                    "score": 1
+                  }
+                ]
+              },
+              {
+                "index": 16,
+                "text": "Khách đưa 299,145",
+                "bbox": [
+                  129.0,
+                  750.0,
+                  676.0,
+                  790.0
+                ],
+                "boxes": [
+                  {
+                    "text": "Khách đưa",
+                    "bbox": [
+                      129.0,
+                      750.0,
+                      267.0,
+                      778.0
+                    ],
+                    "type": "ocr",
+                    "score": 1
+                  },
+                  {
+                    "text": "299,145",
+                    "bbox": [
+                      560.0,
+                      759.0,
+                      676.0,
+                      790.0
+                    ],
+                    "type": "ocr",
+                    "score": 1
+                  }
+                ]
+              },
+              {
+                "index": 17,
+                "text": "Nợ lại O",
+                "bbox": [
+                  127.0,
+                  795.0,
+                  670.0,
+                  827.0
+                ],
+                "boxes": [
+                  {
+                    "text": "Nợ lại",
+                    "bbox": [
+                      127.0,
+                      795.0,
+                      208.0,
+                      827.0
+                    ],
+                    "type": "ocr",
+                    "score": 1
+                  },
+                  {
+                    "text": "O",
+                    "bbox": [
+                      656.0,
+                      814.0,
+                      670.0,
+                      827.0
+                    ],
+                    "type": "ocr",
+                    "score": 1
+                  }
+                ]
+              }
+            ]
+          },
+          "footer": {
+            "text": "Cám ơn quý khách la\nIn lúc: 20:27:45 - 21/10/2018\nFoodym Long Nguyễn",
+            "bbox": [
+              236.0,
+              894.0,
+              781.0,
+              1053.0
+            ],
+            "lines": [
+              {
+                "index": 18,
+                "text": "Cám ơn quý khách la",
+                "bbox": [
+                  236.0,
+                  894.0,
+                  490.0,
+                  924.0
+                ],
+                "boxes": [
+                  {
+                    "text": "Cám ơn quý khách la",
+                    "bbox": [
+                      236.0,
+                      894.0,
+                      490.0,
+                      924.0
+                    ],
+                    "type": "ocr",
+                    "score": 1
+                  }
+                ]
+              },
+              {
+                "index": 19,
+                "text": "In lúc: 20:27:45 - 21/10/2018",
+                "bbox": [
+                  245.0,
+                  937.0,
+                  477.0,
+                  960.0
+                ],
+                "boxes": [
+                  {
+                    "text": "In lúc: 20:27:45 - 21/10/2018",
+                    "bbox": [
+                      245.0,
+                      937.0,
+                      477.0,
+                      960.0
+                    ],
+                    "type": "ocr",
+                    "score": 1
+                  }
+                ]
+              },
+              {
+                "index": 20,
+                "text": "Foodym Long Nguyễn",
+                "bbox": [
+                  681.0,
+                  1013.0,
+                  781.0,
+                  1053.0
+                ],
+                "boxes": [
+                  {
+                    "text": "Foodym",
+                    "bbox": [
+                      681.0,
+                      1029.0,
+                      744.0,
+                      1053.0
+                    ],
+                    "type": "ocr",
+                    "score": 1
+                  },
+                  {
+                    "text": "Long Nguyễn",
+                    "bbox": [
+                      684.0,
+                      1013.0,
+                      781.0,
+                      1033.0
+                    ],
+                    "type": "ocr",
+                    "score": 1
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        "items": [
+          {
+            "name": "Cơm chiên cá mặn (Fried 1.00",
+            "quantity": null,
+            "unit_price": null,
+            "line_total": 119000,
+            "raw_text": "19 Cơm chiên cá mặn (Fried 1.00 119,000",
+            "bbox": [
+              70.0,
+              360.0,
+              678.0,
+              392.0
+            ]
+          },
+          {
+            "name": "rice with salted fish) 2 ) Bún thêm (Extra noodle) 1.00",
+            "quantity": null,
+            "unit_price": null,
+            "line_total": 10000,
+            "raw_text": "2 ) Bún thêm (Extra noodle) 1.00 10,000",
+            "bbox": [
+              66.0,
+              416.0,
+              677.0,
+              450.0
+            ]
+          },
+          {
+            "name": "BB) Soda chanh( Lemon Soda) 1.00",
+            "quantity": null,
+            "unit_price": null,
+            "line_total": 40000,
+            "raw_text": "3 BB) Soda chanh( Lemon Soda) 1.00 40,000",
+            "bbox": [
+              72.0,
+              450.0,
+              677.0,
+              485.0
+            ]
+          },
+          {
+            "name": "Lessi Tắc (Kumquatlessi) 1.00",
+            "quantity": null,
+            "unit_price": null,
+            "line_total": 45000,
+            "raw_text": "4 ) Lessi Tắc (Kumquatlessi) 1.00 45,000",
+            "bbox": [
+              66.0,
+              484.0,
+              677.0,
+              519.0
+            ]
+          },
+          {
+            "name": "Táo ép (Apple jucie yoody.vm.00",
+            "quantity": null,
+            "unit_price": null,
+            "line_total": 45000,
+            "raw_text": "5 ) Táo ép (Apple jucie yoody.vm.00 45,000",
+            "bbox": [
+              64.0,
+              515.0,
+              677.0,
+              553.0
+            ]
+          }
+        ],
+        "boxes": [
+          {
+            "text": "Halaidsaigon",
+            "bbox": [
+              265.0,
+              50.0,
+              472.0,
+              77.0
+            ],
+            "type": "ocr",
+            "score": 1
+          },
+          {
+            "text": "31 Dong Du, Ben Thanh Ward, Dist 1991",
+            "bbox": [
+              192.0,
+              104.0,
+              542.0,
+              130.0
+            ],
+            "type": "ocr",
+            "score": 1
+          },
+          {
+            "text": "Tel. 08 3824 6823",
+            "bbox": [
+              281.0,
+              153.0,
+              452.0,
+              177.0
+            ],
+            "type": "ocr",
+            "score": 1
+          },
+          {
+            "text": "PHIẾU TÍNH TIÊN",
+            "bbox": [
+              220.0,
+              204.0,
+              515.0,
+              239.0
+            ],
+            "type": "ocr",
+            "score": 1
+          },
+          {
+            "text": "IDO450-21/10/2018-20:07 - Thu ngân",
+            "bbox": [
+              59.0,
+              269.0,
+              486.0,
+              295.0
+            ],
+            "type": "ocr",
+            "score": 1
+          },
+          {
+            "text": "Bàn 14",
+            "bbox": [
+              60.0,
+              306.0,
+              140.0,
+              331.0
+            ],
+            "type": "ocr",
+            "score": 1
+          },
+          {
+            "text": "5.00",
+            "bbox": [
+              469.0,
+              311.0,
+              522.0,
+              336.0
+            ],
+            "type": "ocr",
+            "score": 1
+          },
+          {
+            "text": "(3)",
+            "bbox": [
+              572.0,
+              311.0,
+              626.0,
+              341.0
+            ],
+            "type": "ocr",
+            "score": 1
+          },
+          {
+            "text": "19 Cơm chiên cá mặn (Fried",
+            "bbox": [
+              70.0,
+              360.0,
+              385.0,
+              385.0
+            ],
+            "type": "ocr",
+            "score": 1
+          },
+          {
+            "text": "1.00",
+            "bbox": [
+              469.0,
+              363.0,
+              523.0,
+              392.0
+            ],
+            "type": "ocr",
+            "score": 1
+          },
+          {
+            "text": "119,000",
+            "bbox": [
+              586.0,
+              364.0,
+              678.0,
+              392.0
+            ],
+            "type": "ocr",
+            "score": 1
+          },
+          {
+            "text": "rice with salted fish)",
+            "bbox": [
+              112.0,
+              391.0,
+              324.0,
+              414.0
+            ],
+            "type": "ocr",
+            "score": 1
+          },
+          {
+            "text": "2 ) Bún thêm (Extra noodle)",
+            "bbox": [
+              66.0,
+              416.0,
+              372.0,
+              443.0
+            ],
+            "type": "ocr",
+            "score": 1
+          },
+          {
+            "text": "1.00",
+            "bbox": [
+              469.0,
+              420.0,
+              523.0,
+              449.0
+            ],
+            "type": "ocr",
+            "score": 1
+          },
+          {
+            "text": "10,000",
+            "bbox": [
+              599.0,
+              422.0,
+              677.0,
+              450.0
+            ],
+            "type": "ocr",
+            "score": 1
+          },
+          {
+            "text": "3",
+            "bbox": [
+              72.0,
+              453.0,
+              86.0,
+              469.0
+            ],
+            "type": "ocr",
+            "score": 1
+          },
+          {
+            "text": "BB) Soda chanh( Lemon Soda)",
+            "bbox": [
+              75.0,
+              450.0,
+              400.0,
+              476.0
+            ],
+            "type": "ocr",
+            "score": 1
+          },
+          {
+            "text": "1.00",
+            "bbox": [
+              469.0,
+              454.0,
+              522.0,
+              483.0
+            ],
+            "type": "ocr",
+            "score": 1
+          },
+          {
+            "text": "40,000",
+            "bbox": [
+              597.0,
+              457.0,
+              677.0,
+              485.0
+            ],
+            "type": "ocr",
+            "score": 1
+          },
+          {
+            "text": "4 ) Lessi Tắc (Kumquatlessi)",
+            "bbox": [
+              66.0,
+              484.0,
+              391.0,
+              511.0
+            ],
+            "type": "ocr",
+            "score": 1
+          },
+          {
+            "text": "1.00",
+            "bbox": [
+              469.0,
+              489.0,
+              522.0,
+              517.0
+            ],
+            "type": "ocr",
+            "score": 1
+          },
+          {
+            "text": "45,000",
+            "bbox": [
+              597.0,
+              491.0,
+              677.0,
+              519.0
+            ],
+            "type": "ocr",
+            "score": 1
+          },
+          {
+            "text": "5 ) Táo ép (Apple jucie yoody.vm.00",
+            "bbox": [
+              64.0,
+              515.0,
+              524.0,
+              553.0
+            ],
+            "type": "ocr",
+            "score": 1
+          },
+          {
+            "text": "45,000",
+            "bbox": [
+              597.0,
+              525.0,
+              677.0,
+              553.0
+            ],
+            "type": "ocr",
+            "score": 1
+          },
+          {
+            "text": "Tổng cộng",
+            "bbox": [
+              126.0,
+              564.0,
+              265.0,
+              598.0
+            ],
+            "type": "ocr",
+            "score": 1
+          },
+          {
+            "text": "259,000",
+            "bbox": [
+              561.0,
+              575.0,
+              677.0,
+              606.0
+            ],
+            "type": "ocr",
+            "score": 1
+          },
+          {
+            "text": "THUẾ VAT (10.00%)",
+            "bbox": [
+              128.0,
+              606.0,
+              350.0,
+              634.0
+            ],
+            "type": "ocr",
+            "score": 1
+          },
+          {
+            "text": "25,900",
+            "bbox": [
+              577.0,
+              617.0,
+              676.0,
+              650.0
+            ],
+            "type": "ocr",
+            "score": 1
+          },
+          {
+            "text": "Phụ phí",
+            "bbox": [
+              125.0,
+              653.0,
+              211.0,
+              685.0
+            ],
+            "type": "ocr",
+            "score": 1
+          },
+          {
+            "text": "14,245",
+            "bbox": [
+              576.0,
+              665.0,
+              675.0,
+              697.0
+            ],
+            "type": "ocr",
+            "score": 1
+          },
+          {
+            "text": "Thanh toán",
+            "bbox": [
+              128.0,
+              705.0,
+              270.0,
+              733.0
+            ],
+            "type": "ocr",
+            "score": 1
+          },
+          {
+            "text": "299,145",
+            "bbox": [
+              560.0,
+              711.0,
+              676.0,
+              744.0
+            ],
+            "type": "ocr",
+            "score": 1
+          },
+          {
+            "text": "Khách đưa",
+            "bbox": [
+              129.0,
+              750.0,
+              267.0,
+              778.0
+            ],
+            "type": "ocr",
+            "score": 1
+          },
+          {
+            "text": "299,145",
+            "bbox": [
+              560.0,
+              759.0,
+              676.0,
+              790.0
+            ],
+            "type": "ocr",
+            "score": 1
+          },
+          {
+            "text": "Nợ lại",
+            "bbox": [
+              127.0,
+              795.0,
+              208.0,
+              827.0
+            ],
+            "type": "ocr",
+            "score": 1
+          },
+          {
+            "text": "O",
+            "bbox": [
+              656.0,
+              814.0,
+              670.0,
+              827.0
+            ],
+            "type": "ocr",
+            "score": 1
+          },
+          {
+            "text": "Cám ơn quý khách la",
+            "bbox": [
+              236.0,
+              894.0,
+              490.0,
+              924.0
+            ],
+            "type": "ocr",
+            "score": 1
+          },
+          {
+            "text": "In lúc: 20:27:45 - 21/10/2018",
+            "bbox": [
+              245.0,
+              937.0,
+              477.0,
+              960.0
+            ],
+            "type": "ocr",
+            "score": 1
+          },
+          {
+            "text": "Long Nguyễn",
+            "bbox": [
+              684.0,
+              1013.0,
+              781.0,
+              1033.0
+            ],
+            "type": "ocr",
+            "score": 1
+          },
+          {
+            "text": "Foodym",
+            "bbox": [
+              681.0,
+              1029.0,
+              744.0,
+              1053.0
+            ],
+            "type": "ocr",
+            "score": 1
+          }
+        ]
+      }
+    }
+  ],
+  "invoice": {
+    "layout_config": {
+      "type": "invoice",
+      "sections": {
+        "header": {
+          "description": "Store/vendor, title, address, contact, invoice metadata."
+        },
+        "items": {
+          "description": "Purchased goods/services, quantities, unit prices, and line totals."
+        },
+        "totals": {
+          "description": "Subtotal, tax, fees, total, payment, and remaining amount.",
+          "keywords": [
+            "tong",
+            "tong cong",
+            "thanh toan",
+            "khach dua",
+            "no lai",
+            "tien nuoc",
+            "thue",
+            "vat",
+            "gtgt",
+            "phi",
+            "phu phi",
+            "tieu thu"
+          ]
+        },
+        "footer": {
+          "description": "Cashier/staff, thanks text, print time, website, and hotline.",
+          "keywords": [
+            "cam on",
+            "nhan vien",
+            "dien thoai",
+            "ngay gui",
+            "in luc",
+            "hotline",
+            "www"
+          ]
+        }
+      },
+      "item_header_keywords": [
+        "description",
+        "dien giai",
+        "ten hang",
+        "mat hang",
+        "don gia",
+        "so luong",
+        "qty"
+      ]
+    },
+    "image": {
+      "width": 800,
+      "height": 1066
+    },
+    "text": "Halaidsaigon\n31 Dong Du, Ben Thanh Ward, Dist 1991\nTel. 08 3824 6823\nPHIẾU TÍNH TIÊN\nIDO450-21/10/2018-20:07 - Thu ngân\nBàn 14\n5.00\n(3)\n19 Cơm chiên cá mặn (Fried\n1.00\n119,000\nrice with salted fish)\n2 ) Bún thêm (Extra noodle)\n1.00\n10,000\n3\nBB) Soda chanh( Lemon Soda)\n1.00\n40,000\n4 ) Lessi Tắc (Kumquatlessi)\n1.00\n45,000\n5 ) Táo ép (Apple jucie yoody.vm.00\n45,000\nTổng cộng\n259,000\nTHUẾ VAT (10.00%)\n25,900\nPhụ phí\n14,245\nThanh toán\n299,145\nKhách đưa\n299,145\nNợ lại\nO\nCám ơn quý khách la\nIn lúc: 20:27:45 - 21/10/2018\nLong Nguyễn\nFoodym",
+    "fields": {
+      "dates": [
+        "21/10/2018",
+        "21/10/2018"
+      ],
+      "phones": [
+        "0838246823"
+      ],
+      "total_amount": {
+        "value": 299145,
+        "raw": "299,145",
+        "line": "Thanh toán 299,145",
+        "bbox": [
+          128.0,
+          705.0,
+          676.0,
+          744.0
+        ]
+      },
+      "tax": [
+        {
+          "value": 25900,
+          "raw": "25,900",
+          "line": "THUẾ VAT (10.00%) 25,900",
+          "bbox": [
+            128.0,
+            606.0,
+            676.0,
+            650.0
+          ]
+        }
+      ],
+      "fee": [
+        {
+          "value": 14245,
+          "raw": "14,245",
+          "line": "Phụ phí 14,245",
+          "bbox": [
+            125.0,
+            653.0,
+            675.0,
+            697.0
+          ]
+        }
+      ]
+    },
+    "sections": {
+      "header": {
+        "text": "Halaidsaigon\n31 Dong Du, Ben Thanh Ward, Dist 1991\nTel. 08 3824 6823\nPHIẾU TÍNH TIÊN\nIDO450-21/10/2018-20:07 - Thu ngân\nBàn 14 5.00 (3)",
+        "bbox": [
+          59.0,
+          50.0,
+          626.0,
+          341.0
+        ],
+        "lines": [
+          {
+            "index": 0,
+            "text": "Halaidsaigon",
+            "bbox": [
+              265.0,
+              50.0,
+              472.0,
+              77.0
+            ],
+            "boxes": [
+              {
+                "text": "Halaidsaigon",
+                "bbox": [
+                  265.0,
+                  50.0,
+                  472.0,
+                  77.0
+                ],
+                "type": "ocr",
+                "score": 1
+              }
+            ]
+          },
+          {
+            "index": 1,
+            "text": "31 Dong Du, Ben Thanh Ward, Dist 1991",
+            "bbox": [
+              192.0,
+              104.0,
+              542.0,
+              130.0
+            ],
+            "boxes": [
+              {
+                "text": "31 Dong Du, Ben Thanh Ward, Dist 1991",
+                "bbox": [
+                  192.0,
+                  104.0,
+                  542.0,
+                  130.0
+                ],
+                "type": "ocr",
+                "score": 1
+              }
+            ]
+          },
+          {
+            "index": 2,
+            "text": "Tel. 08 3824 6823",
+            "bbox": [
+              281.0,
+              153.0,
+              452.0,
+              177.0
+            ],
+            "boxes": [
+              {
+                "text": "Tel. 08 3824 6823",
+                "bbox": [
+                  281.0,
+                  153.0,
+                  452.0,
+                  177.0
+                ],
+                "type": "ocr",
+                "score": 1
+              }
+            ]
+          },
+          {
+            "index": 3,
+            "text": "PHIẾU TÍNH TIÊN",
+            "bbox": [
+              220.0,
+              204.0,
+              515.0,
+              239.0
+            ],
+            "boxes": [
+              {
+                "text": "PHIẾU TÍNH TIÊN",
+                "bbox": [
+                  220.0,
+                  204.0,
+                  515.0,
+                  239.0
+                ],
+                "type": "ocr",
+                "score": 1
+              }
+            ]
+          },
+          {
+            "index": 4,
+            "text": "IDO450-21/10/2018-20:07 - Thu ngân",
+            "bbox": [
+              59.0,
+              269.0,
+              486.0,
+              295.0
+            ],
+            "boxes": [
+              {
+                "text": "IDO450-21/10/2018-20:07 - Thu ngân",
+                "bbox": [
+                  59.0,
+                  269.0,
+                  486.0,
+                  295.0
+                ],
+                "type": "ocr",
+                "score": 1
+              }
+            ]
+          },
+          {
+            "index": 5,
+            "text": "Bàn 14 5.00 (3)",
+            "bbox": [
+              60.0,
+              306.0,
+              626.0,
+              341.0
+            ],
+            "boxes": [
+              {
+                "text": "Bàn 14",
+                "bbox": [
+                  60.0,
+                  306.0,
+                  140.0,
+                  331.0
+                ],
+                "type": "ocr",
+                "score": 1
+              },
+              {
+                "text": "5.00",
+                "bbox": [
+                  469.0,
+                  311.0,
+                  522.0,
+                  336.0
+                ],
+                "type": "ocr",
+                "score": 1
+              },
+              {
+                "text": "(3)",
+                "bbox": [
+                  572.0,
+                  311.0,
+                  626.0,
+                  341.0
+                ],
+                "type": "ocr",
+                "score": 1
+              }
+            ]
+          }
+        ]
+      },
+      "items": {
+        "text": "19 Cơm chiên cá mặn (Fried 1.00 119,000\nrice with salted fish)\n2 ) Bún thêm (Extra noodle) 1.00 10,000\n3 BB) Soda chanh( Lemon Soda) 1.00 40,000\n4 ) Lessi Tắc (Kumquatlessi) 1.00 45,000\n5 ) Táo ép (Apple jucie yoody.vm.00 45,000",
+        "bbox": [
+          64.0,
+          360.0,
+          678.0,
+          553.0
+        ],
+        "lines": [
+          {
+            "index": 6,
+            "text": "19 Cơm chiên cá mặn (Fried 1.00 119,000",
+            "bbox": [
+              70.0,
+              360.0,
+              678.0,
+              392.0
+            ],
+            "boxes": [
+              {
+                "text": "19 Cơm chiên cá mặn (Fried",
+                "bbox": [
+                  70.0,
+                  360.0,
+                  385.0,
+                  385.0
+                ],
+                "type": "ocr",
+                "score": 1
+              },
+              {
+                "text": "1.00",
+                "bbox": [
+                  469.0,
+                  363.0,
+                  523.0,
+                  392.0
+                ],
+                "type": "ocr",
+                "score": 1
+              },
+              {
+                "text": "119,000",
+                "bbox": [
+                  586.0,
+                  364.0,
+                  678.0,
+                  392.0
+                ],
+                "type": "ocr",
+                "score": 1
+              }
+            ]
+          },
+          {
+            "index": 7,
+            "text": "rice with salted fish)",
+            "bbox": [
+              112.0,
+              391.0,
+              324.0,
+              414.0
+            ],
+            "boxes": [
+              {
+                "text": "rice with salted fish)",
+                "bbox": [
+                  112.0,
+                  391.0,
+                  324.0,
+                  414.0
+                ],
+                "type": "ocr",
+                "score": 1
+              }
+            ]
+          },
+          {
+            "index": 8,
+            "text": "2 ) Bún thêm (Extra noodle) 1.00 10,000",
+            "bbox": [
+              66.0,
+              416.0,
+              677.0,
+              450.0
+            ],
+            "boxes": [
+              {
+                "text": "2 ) Bún thêm (Extra noodle)",
+                "bbox": [
+                  66.0,
+                  416.0,
+                  372.0,
+                  443.0
+                ],
+                "type": "ocr",
+                "score": 1
+              },
+              {
+                "text": "1.00",
+                "bbox": [
+                  469.0,
+                  420.0,
+                  523.0,
+                  449.0
+                ],
+                "type": "ocr",
+                "score": 1
+              },
+              {
+                "text": "10,000",
+                "bbox": [
+                  599.0,
+                  422.0,
+                  677.0,
+                  450.0
+                ],
+                "type": "ocr",
+                "score": 1
+              }
+            ]
+          },
+          {
+            "index": 9,
+            "text": "3 BB) Soda chanh( Lemon Soda) 1.00 40,000",
+            "bbox": [
+              72.0,
+              450.0,
+              677.0,
+              485.0
+            ],
+            "boxes": [
+              {
+                "text": "3",
+                "bbox": [
+                  72.0,
+                  453.0,
+                  86.0,
+                  469.0
+                ],
+                "type": "ocr",
+                "score": 1
+              },
+              {
+                "text": "BB) Soda chanh( Lemon Soda)",
+                "bbox": [
+                  75.0,
+                  450.0,
+                  400.0,
+                  476.0
+                ],
+                "type": "ocr",
+                "score": 1
+              },
+              {
+                "text": "1.00",
+                "bbox": [
+                  469.0,
+                  454.0,
+                  522.0,
+                  483.0
+                ],
+                "type": "ocr",
+                "score": 1
+              },
+              {
+                "text": "40,000",
+                "bbox": [
+                  597.0,
+                  457.0,
+                  677.0,
+                  485.0
+                ],
+                "type": "ocr",
+                "score": 1
+              }
+            ]
+          },
+          {
+            "index": 10,
+            "text": "4 ) Lessi Tắc (Kumquatlessi) 1.00 45,000",
+            "bbox": [
+              66.0,
+              484.0,
+              677.0,
+              519.0
+            ],
+            "boxes": [
+              {
+                "text": "4 ) Lessi Tắc (Kumquatlessi)",
+                "bbox": [
+                  66.0,
+                  484.0,
+                  391.0,
+                  511.0
+                ],
+                "type": "ocr",
+                "score": 1
+              },
+              {
+                "text": "1.00",
+                "bbox": [
+                  469.0,
+                  489.0,
+                  522.0,
+                  517.0
+                ],
+                "type": "ocr",
+                "score": 1
+              },
+              {
+                "text": "45,000",
+                "bbox": [
+                  597.0,
+                  491.0,
+                  677.0,
+                  519.0
+                ],
+                "type": "ocr",
+                "score": 1
+              }
+            ]
+          },
+          {
+            "index": 11,
+            "text": "5 ) Táo ép (Apple jucie yoody.vm.00 45,000",
+            "bbox": [
+              64.0,
+              515.0,
+              677.0,
+              553.0
+            ],
+            "boxes": [
+              {
+                "text": "5 ) Táo ép (Apple jucie yoody.vm.00",
+                "bbox": [
+                  64.0,
+                  515.0,
+                  524.0,
+                  553.0
+                ],
+                "type": "ocr",
+                "score": 1
+              },
+              {
+                "text": "45,000",
+                "bbox": [
+                  597.0,
+                  525.0,
+                  677.0,
+                  553.0
+                ],
+                "type": "ocr",
+                "score": 1
+              }
+            ]
+          }
+        ]
+      },
+      "totals": {
+        "text": "Tổng cộng 259,000\nTHUẾ VAT (10.00%) 25,900\nPhụ phí 14,245\nThanh toán 299,145\nKhách đưa 299,145\nNợ lại O",
+        "bbox": [
+          125.0,
+          564.0,
+          677.0,
+          827.0
+        ],
+        "lines": [
+          {
+            "index": 12,
+            "text": "Tổng cộng 259,000",
+            "bbox": [
+              126.0,
+              564.0,
+              677.0,
+              606.0
+            ],
+            "boxes": [
+              {
+                "text": "Tổng cộng",
+                "bbox": [
+                  126.0,
+                  564.0,
+                  265.0,
+                  598.0
+                ],
+                "type": "ocr",
+                "score": 1
+              },
+              {
+                "text": "259,000",
+                "bbox": [
+                  561.0,
+                  575.0,
+                  677.0,
+                  606.0
+                ],
+                "type": "ocr",
+                "score": 1
+              }
+            ]
+          },
+          {
+            "index": 13,
+            "text": "THUẾ VAT (10.00%) 25,900",
+            "bbox": [
+              128.0,
+              606.0,
+              676.0,
+              650.0
+            ],
+            "boxes": [
+              {
+                "text": "THUẾ VAT (10.00%)",
+                "bbox": [
+                  128.0,
+                  606.0,
+                  350.0,
+                  634.0
+                ],
+                "type": "ocr",
+                "score": 1
+              },
+              {
+                "text": "25,900",
+                "bbox": [
+                  577.0,
+                  617.0,
+                  676.0,
+                  650.0
+                ],
+                "type": "ocr",
+                "score": 1
+              }
+            ]
+          },
+          {
+            "index": 14,
+            "text": "Phụ phí 14,245",
+            "bbox": [
+              125.0,
+              653.0,
+              675.0,
+              697.0
+            ],
+            "boxes": [
+              {
+                "text": "Phụ phí",
+                "bbox": [
+                  125.0,
+                  653.0,
+                  211.0,
+                  685.0
+                ],
+                "type": "ocr",
+                "score": 1
+              },
+              {
+                "text": "14,245",
+                "bbox": [
+                  576.0,
+                  665.0,
+                  675.0,
+                  697.0
+                ],
+                "type": "ocr",
+                "score": 1
+              }
+            ]
+          },
+          {
+            "index": 15,
+            "text": "Thanh toán 299,145",
+            "bbox": [
+              128.0,
+              705.0,
+              676.0,
+              744.0
+            ],
+            "boxes": [
+              {
+                "text": "Thanh toán",
+                "bbox": [
+                  128.0,
+                  705.0,
+                  270.0,
+                  733.0
+                ],
+                "type": "ocr",
+                "score": 1
+              },
+              {
+                "text": "299,145",
+                "bbox": [
+                  560.0,
+                  711.0,
+                  676.0,
+                  744.0
+                ],
+                "type": "ocr",
+                "score": 1
+              }
+            ]
+          },
+          {
+            "index": 16,
+            "text": "Khách đưa 299,145",
+            "bbox": [
+              129.0,
+              750.0,
+              676.0,
+              790.0
+            ],
+            "boxes": [
+              {
+                "text": "Khách đưa",
+                "bbox": [
+                  129.0,
+                  750.0,
+                  267.0,
+                  778.0
+                ],
+                "type": "ocr",
+                "score": 1
+              },
+              {
+                "text": "299,145",
+                "bbox": [
+                  560.0,
+                  759.0,
+                  676.0,
+                  790.0
+                ],
+                "type": "ocr",
+                "score": 1
+              }
+            ]
+          },
+          {
+            "index": 17,
+            "text": "Nợ lại O",
+            "bbox": [
+              127.0,
+              795.0,
+              670.0,
+              827.0
+            ],
+            "boxes": [
+              {
+                "text": "Nợ lại",
+                "bbox": [
+                  127.0,
+                  795.0,
+                  208.0,
+                  827.0
+                ],
+                "type": "ocr",
+                "score": 1
+              },
+              {
+                "text": "O",
+                "bbox": [
+                  656.0,
+                  814.0,
+                  670.0,
+                  827.0
+                ],
+                "type": "ocr",
+                "score": 1
+              }
+            ]
+          }
+        ]
+      },
+      "footer": {
+        "text": "Cám ơn quý khách la\nIn lúc: 20:27:45 - 21/10/2018\nFoodym Long Nguyễn",
+        "bbox": [
+          236.0,
+          894.0,
+          781.0,
+          1053.0
+        ],
+        "lines": [
+          {
+            "index": 18,
+            "text": "Cám ơn quý khách la",
+            "bbox": [
+              236.0,
+              894.0,
+              490.0,
+              924.0
+            ],
+            "boxes": [
+              {
+                "text": "Cám ơn quý khách la",
+                "bbox": [
+                  236.0,
+                  894.0,
+                  490.0,
+                  924.0
+                ],
+                "type": "ocr",
+                "score": 1
+              }
+            ]
+          },
+          {
+            "index": 19,
+            "text": "In lúc: 20:27:45 - 21/10/2018",
+            "bbox": [
+              245.0,
+              937.0,
+              477.0,
+              960.0
+            ],
+            "boxes": [
+              {
+                "text": "In lúc: 20:27:45 - 21/10/2018",
+                "bbox": [
+                  245.0,
+                  937.0,
+                  477.0,
+                  960.0
+                ],
+                "type": "ocr",
+                "score": 1
+              }
+            ]
+          },
+          {
+            "index": 20,
+            "text": "Foodym Long Nguyễn",
+            "bbox": [
+              681.0,
+              1013.0,
+              781.0,
+              1053.0
+            ],
+            "boxes": [
+              {
+                "text": "Foodym",
+                "bbox": [
+                  681.0,
+                  1029.0,
+                  744.0,
+                  1053.0
+                ],
+                "type": "ocr",
+                "score": 1
+              },
+              {
+                "text": "Long Nguyễn",
+                "bbox": [
+                  684.0,
+                  1013.0,
+                  781.0,
+                  1033.0
+                ],
+                "type": "ocr",
+                "score": 1
+              }
+            ]
+          }
+        ]
+      }
+    },
+    "items": [
+      {
+        "name": "Cơm chiên cá mặn (Fried 1.00",
+        "quantity": null,
+        "unit_price": null,
+        "line_total": 119000,
+        "raw_text": "19 Cơm chiên cá mặn (Fried 1.00 119,000",
+        "bbox": [
+          70.0,
+          360.0,
+          678.0,
+          392.0
+        ]
+      },
+      {
+        "name": "rice with salted fish) 2 ) Bún thêm (Extra noodle) 1.00",
+        "quantity": null,
+        "unit_price": null,
+        "line_total": 10000,
+        "raw_text": "2 ) Bún thêm (Extra noodle) 1.00 10,000",
+        "bbox": [
+          66.0,
+          416.0,
+          677.0,
+          450.0
+        ]
+      },
+      {
+        "name": "BB) Soda chanh( Lemon Soda) 1.00",
+        "quantity": null,
+        "unit_price": null,
+        "line_total": 40000,
+        "raw_text": "3 BB) Soda chanh( Lemon Soda) 1.00 40,000",
+        "bbox": [
+          72.0,
+          450.0,
+          677.0,
+          485.0
+        ]
+      },
+      {
+        "name": "Lessi Tắc (Kumquatlessi) 1.00",
+        "quantity": null,
+        "unit_price": null,
+        "line_total": 45000,
+        "raw_text": "4 ) Lessi Tắc (Kumquatlessi) 1.00 45,000",
+        "bbox": [
+          66.0,
+          484.0,
+          677.0,
+          519.0
+        ]
+      },
+      {
+        "name": "Táo ép (Apple jucie yoody.vm.00",
+        "quantity": null,
+        "unit_price": null,
+        "line_total": 45000,
+        "raw_text": "5 ) Táo ép (Apple jucie yoody.vm.00 45,000",
+        "bbox": [
+          64.0,
+          515.0,
+          677.0,
+          553.0
+        ]
+      }
+    ],
+    "boxes": [
+      {
+        "text": "Halaidsaigon",
+        "bbox": [
+          265.0,
+          50.0,
+          472.0,
+          77.0
+        ],
+        "type": "ocr",
+        "score": 1
+      },
+      {
+        "text": "31 Dong Du, Ben Thanh Ward, Dist 1991",
+        "bbox": [
+          192.0,
+          104.0,
+          542.0,
+          130.0
+        ],
+        "type": "ocr",
+        "score": 1
+      },
+      {
+        "text": "Tel. 08 3824 6823",
+        "bbox": [
+          281.0,
+          153.0,
+          452.0,
+          177.0
+        ],
+        "type": "ocr",
+        "score": 1
+      },
+      {
+        "text": "PHIẾU TÍNH TIÊN",
+        "bbox": [
+          220.0,
+          204.0,
+          515.0,
+          239.0
+        ],
+        "type": "ocr",
+        "score": 1
+      },
+      {
+        "text": "IDO450-21/10/2018-20:07 - Thu ngân",
+        "bbox": [
+          59.0,
+          269.0,
+          486.0,
+          295.0
+        ],
+        "type": "ocr",
+        "score": 1
+      },
+      {
+        "text": "Bàn 14",
+        "bbox": [
+          60.0,
+          306.0,
+          140.0,
+          331.0
+        ],
+        "type": "ocr",
+        "score": 1
+      },
+      {
+        "text": "5.00",
+        "bbox": [
+          469.0,
+          311.0,
+          522.0,
+          336.0
+        ],
+        "type": "ocr",
+        "score": 1
+      },
+      {
+        "text": "(3)",
+        "bbox": [
+          572.0,
+          311.0,
+          626.0,
+          341.0
+        ],
+        "type": "ocr",
+        "score": 1
+      },
+      {
+        "text": "19 Cơm chiên cá mặn (Fried",
+        "bbox": [
+          70.0,
+          360.0,
+          385.0,
+          385.0
+        ],
+        "type": "ocr",
+        "score": 1
+      },
+      {
+        "text": "1.00",
+        "bbox": [
+          469.0,
+          363.0,
+          523.0,
+          392.0
+        ],
+        "type": "ocr",
+        "score": 1
+      },
+      {
+        "text": "119,000",
+        "bbox": [
+          586.0,
+          364.0,
+          678.0,
+          392.0
+        ],
+        "type": "ocr",
+        "score": 1
+      },
+      {
+        "text": "rice with salted fish)",
+        "bbox": [
+          112.0,
+          391.0,
+          324.0,
+          414.0
+        ],
+        "type": "ocr",
+        "score": 1
+      },
+      {
+        "text": "2 ) Bún thêm (Extra noodle)",
+        "bbox": [
+          66.0,
+          416.0,
+          372.0,
+          443.0
+        ],
+        "type": "ocr",
+        "score": 1
+      },
+      {
+        "text": "1.00",
+        "bbox": [
+          469.0,
+          420.0,
+          523.0,
+          449.0
+        ],
+        "type": "ocr",
+        "score": 1
+      },
+      {
+        "text": "10,000",
+        "bbox": [
+          599.0,
+          422.0,
+          677.0,
+          450.0
+        ],
+        "type": "ocr",
+        "score": 1
+      },
+      {
+        "text": "3",
+        "bbox": [
+          72.0,
+          453.0,
+          86.0,
+          469.0
+        ],
+        "type": "ocr",
+        "score": 1
+      },
+      {
+        "text": "BB) Soda chanh( Lemon Soda)",
+        "bbox": [
+          75.0,
+          450.0,
+          400.0,
+          476.0
+        ],
+        "type": "ocr",
+        "score": 1
+      },
+      {
+        "text": "1.00",
+        "bbox": [
+          469.0,
+          454.0,
+          522.0,
+          483.0
+        ],
+        "type": "ocr",
+        "score": 1
+      },
+      {
+        "text": "40,000",
+        "bbox": [
+          597.0,
+          457.0,
+          677.0,
+          485.0
+        ],
+        "type": "ocr",
+        "score": 1
+      },
+      {
+        "text": "4 ) Lessi Tắc (Kumquatlessi)",
+        "bbox": [
+          66.0,
+          484.0,
+          391.0,
+          511.0
+        ],
+        "type": "ocr",
+        "score": 1
+      },
+      {
+        "text": "1.00",
+        "bbox": [
+          469.0,
+          489.0,
+          522.0,
+          517.0
+        ],
+        "type": "ocr",
+        "score": 1
+      },
+      {
+        "text": "45,000",
+        "bbox": [
+          597.0,
+          491.0,
+          677.0,
+          519.0
+        ],
+        "type": "ocr",
+        "score": 1
+      },
+      {
+        "text": "5 ) Táo ép (Apple jucie yoody.vm.00",
+        "bbox": [
+          64.0,
+          515.0,
+          524.0,
+          553.0
+        ],
+        "type": "ocr",
+        "score": 1
+      },
+      {
+        "text": "45,000",
+        "bbox": [
+          597.0,
+          525.0,
+          677.0,
+          553.0
+        ],
+        "type": "ocr",
+        "score": 1
+      },
+      {
+        "text": "Tổng cộng",
+        "bbox": [
+          126.0,
+          564.0,
+          265.0,
+          598.0
+        ],
+        "type": "ocr",
+        "score": 1
+      },
+      {
+        "text": "259,000",
+        "bbox": [
+          561.0,
+          575.0,
+          677.0,
+          606.0
+        ],
+        "type": "ocr",
+        "score": 1
+      },
+      {
+        "text": "THUẾ VAT (10.00%)",
+        "bbox": [
+          128.0,
+          606.0,
+          350.0,
+          634.0
+        ],
+        "type": "ocr",
+        "score": 1
+      },
+      {
+        "text": "25,900",
+        "bbox": [
+          577.0,
+          617.0,
+          676.0,
+          650.0
+        ],
+        "type": "ocr",
+        "score": 1
+      },
+      {
+        "text": "Phụ phí",
+        "bbox": [
+          125.0,
+          653.0,
+          211.0,
+          685.0
+        ],
+        "type": "ocr",
+        "score": 1
+      },
+      {
+        "text": "14,245",
+        "bbox": [
+          576.0,
+          665.0,
+          675.0,
+          697.0
+        ],
+        "type": "ocr",
+        "score": 1
+      },
+      {
+        "text": "Thanh toán",
+        "bbox": [
+          128.0,
+          705.0,
+          270.0,
+          733.0
+        ],
+        "type": "ocr",
+        "score": 1
+      },
+      {
+        "text": "299,145",
+        "bbox": [
+          560.0,
+          711.0,
+          676.0,
+          744.0
+        ],
+        "type": "ocr",
+        "score": 1
+      },
+      {
+        "text": "Khách đưa",
+        "bbox": [
+          129.0,
+          750.0,
+          267.0,
+          778.0
+        ],
+        "type": "ocr",
+        "score": 1
+      },
+      {
+        "text": "299,145",
+        "bbox": [
+          560.0,
+          759.0,
+          676.0,
+          790.0
+        ],
+        "type": "ocr",
+        "score": 1
+      },
+      {
+        "text": "Nợ lại",
+        "bbox": [
+          127.0,
+          795.0,
+          208.0,
+          827.0
+        ],
+        "type": "ocr",
+        "score": 1
+      },
+      {
+        "text": "O",
+        "bbox": [
+          656.0,
+          814.0,
+          670.0,
+          827.0
+        ],
+        "type": "ocr",
+        "score": 1
+      },
+      {
+        "text": "Cám ơn quý khách la",
+        "bbox": [
+          236.0,
+          894.0,
+          490.0,
+          924.0
+        ],
+        "type": "ocr",
+        "score": 1
+      },
+      {
+        "text": "In lúc: 20:27:45 - 21/10/2018",
+        "bbox": [
+          245.0,
+          937.0,
+          477.0,
+          960.0
+        ],
+        "type": "ocr",
+        "score": 1
+      },
+      {
+        "text": "Long Nguyễn",
+        "bbox": [
+          684.0,
+          1013.0,
+          781.0,
+          1033.0
+        ],
+        "type": "ocr",
+        "score": 1
+      },
+      {
+        "text": "Foodym",
+        "bbox": [
+          681.0,
+          1029.0,
+          744.0,
+          1053.0
+        ],
+        "type": "ocr",
+        "score": 1
+      }
+    ]
+  }
+}

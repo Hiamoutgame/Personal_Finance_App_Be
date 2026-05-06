@@ -1,0 +1,27 @@
+services:
+  api:
+    container_name: personal-finance-api
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Development}
+      PORT: ${API_CONTAINER_PORT:-8080}
+      ApplyMigrations: ${APPLY_MIGRATIONS:-false}
+      EnableSwagger: ${ENABLE_SWAGGER:-false}
+      ConnectionStrings__DefaultConnection: ${CONNECTION_STRING:-Host=localhost;Port=5432;Database=PersonalFinanceManagementDb;Username=postgres;Password=postgres123}
+      JwtOptions__SecretKey: ${JWT_SECRET_KEY:-replace-with-a-long-random-secret-at-least-32-chars}
+      JwtOptions__Issuer: ${JWT_ISSUER:-PersonalFinanceManagement}
+      JwtOptions__Audience: ${JWT_AUDIENCE:-PersonalFinanceManagement}
+      JwtOptions__ExpireMinutes: ${JWT_EXPIRE_MINUTES:-120}
+      CloudinaryOptions__CloudName: ${CLOUDINARY_CLOUD_NAME:-}
+      CloudinaryOptions__ApiKey: ${CLOUDINARY_API_KEY:-}
+      CloudinaryOptions__ApiSecret: ${CLOUDINARY_API_SECRET:-}
+      MailOptions__Mail: ${MAIL_ADDRESS:-}
+      MailOptions__DisplayName: ${MAIL_DISPLAY_NAME:-Personal Finance}
+      MailOptions__Password: ${MAIL_PASSWORD:-}
+      MailOptions__Host: ${MAIL_HOST:-smtp.gmail.com}
+      MailOptions__Port: ${MAIL_PORT:-587}
+    ports:
+      - "${API_PORT:-8080}:${API_CONTAINER_PORT:-8080}"
