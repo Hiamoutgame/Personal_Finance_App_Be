@@ -5,14 +5,16 @@ namespace Personal_Finance_Management.Repository.Entity;
 public class  Reminder : BaseEntity, IAudictableEntity
 {
     public string Title { get; set; } = null!;
-    public decimal? Amount { get; set; }
+    public decimal Amount { get; set; }
     public string? Frequency { get; set; }
 
     public short? DayOfMonth { get; set; }
     public DateTime StartDate { get; set; }
     public string? Note { get; set; }
     public string Status { get; set; } = "Active";
+    //Nhắc nhở trước ngày hôm đó 
     public short? NotifyDaysBefore { get; set; } = 1;
+    
 
     //Nối với Account 
     public Guid UserId { get; set; }

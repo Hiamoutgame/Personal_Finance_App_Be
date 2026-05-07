@@ -7,10 +7,10 @@ public class Request
             public required string Title { get; set; }
             public decimal Amount { get; set; }
             public required string Frequency { get; set; }
-            public int? DayOfMonth { get; set; }
+            public short? DayOfMonth { get; set; }
             public DateTimeOffset StartDate { get; set; }
             public Guid? CategoryId { get; set; }
-            public int NotifyDaysBefore { get; set; }
+            public short? NotifyDaysBefore { get; set; }
             public string? Note { get; set; }
         }
 

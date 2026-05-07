@@ -13,6 +13,7 @@ public class Response
         public required string Title { get; set; }
         public decimal Amount { get; set; }
         public required string Frequency { get; set; }
+        
         public DateTimeOffset NextDueDate { get; set; }
         public required string Status { get; set; }
     }
