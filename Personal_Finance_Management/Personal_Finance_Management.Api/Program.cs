@@ -13,7 +13,7 @@ using OcrService = Personal_Finance_Management.Service.ocr;
 using OnboardingService = Personal_Finance_Management.Service.Onboarding;
 using UserService = Personal_Finance_Management.Service.User;
 using validationService = Personal_Finance_Management.Service.Validations;
-
+using AIService = Personal_Finance_Management.Service.AI;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -45,6 +45,7 @@ builder.Services.AddScoped<UserService.IService, UserService.Service>();
 builder.Services.AddScoped<CategoryService.IService, CategoryService.Service>();
 builder.Services.AddScoped<BroadcastService.IService, BroadcastService.Service>();
 builder.Services.AddScoped<AdminService.IService, AdminService.Service>();
+builder.Services.AddScoped<AIService.IService, AIService.Service>();
 builder.Services.AddHttpClient<OcrService.IService, OcrService.Service>(client =>
 {
     var timeoutSeconds = builder.Configuration.GetValue<int?>("Ocr:TimeoutSeconds") ?? 120;
