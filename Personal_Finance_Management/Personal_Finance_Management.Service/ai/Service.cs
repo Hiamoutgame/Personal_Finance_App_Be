@@ -27,74 +27,6 @@ public class Service : IService
         _httpContextAccessor = httpContextAccessor;
     }
 
-    public async Task<Response.AnswerResponse> GetAiSettings(Request.ChatBoxRequest request)
-    {
-        if (request == null || string.IsNullOrWhiteSpace(request.Message))
-        {
-            throw AppValidationException.BadRequest("Message is required.", "message", "REQUIRED");
-        }
-
-        var apiKeyGemini = _configuration["GoogleAI:ApiKey"];
-        if (string.IsNullOrWhiteSpace(apiKeyGemini))
-        {
-            return BuildRuleBasedFallback();
-        }
-
-        var setting = await _dbContext.AiSettings
-            .AsNoTracking()
-            .OrderByDescending(ai => ai.UpdatedAt)
-            .FirstOrDefaultAsync();
-        if (setting is null || !setting.IsEnabled)
-        {
-            return BuildRuleBasedFallback();
-        }
-
-        try
-        {
-            var client = new Client(apiKey: apiKeyGemini);
-            var recent = request.RecentMessages is null
-                ? ""
-                : string.Join("\n", request.RecentMessages.Select(x => $"{x.Sender}: {x.Content}"));
-
-            var prompt = $"Recent conversation:\n{recent}\n\nUser: {request.Message}\nAI:";
-
-            var response = await client.Models.GenerateContentAsync(
-                model: setting.ModelName,
-                contents: prompt,
-                config: new GenerateContentConfig
-                {
-                    SystemInstruction = new Content
-                    {
-                        Parts = [new Part { Text = setting.SystemPrompt }]
-                    },
-                    Temperature = (float)setting.Temperature,
-                    MaxOutputTokens = setting.MaxTokens,
-                    ResponseMimeType = "application/json"
-                });
-            var text = response.Text;
-            if (string.IsNullOrWhiteSpace(text))
-            {
-                return BuildRuleBasedFallback();
-            }
-
-            var result = JsonSerializer.Deserialize<Response.AnswerResponse>(
-                text,
-                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-            if (result is null || string.IsNullOrWhiteSpace(result.Answer))
-            {
-                return BuildRuleBasedFallback();
-            }
-
-            result.Source = "AI";
-            result.Suggestions ??= [];
-            return result;
-        }
-        catch
-        {
-            return BuildRuleBasedFallback();
-        }
-    }
-
     public async Task<Response.AdminAiSettingsResponse> GetAdminAiSettings()
     {
         var setting = await _dbContext.AiSettings
@@ -283,4 +215,6 @@ public class Service : IService
 
         return $"{trimmedKey[..4]}...{trimmedKey[^4..]}";
     }
+    
+    
 }

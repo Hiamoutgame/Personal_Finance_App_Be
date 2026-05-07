@@ -174,6 +174,12 @@ Danh sách dưới đây là các REST APIs chính cho MVP. Chi tiết request/r
 | PATCH  | `/api/v1/reminders/{id}` | Cập nhật nhắc nhở  |
 | DELETE | `/api/v1/reminders/{id}` | Xóa nhắc nhở       |
 
+#### AI Chatbot
+
+| Method | Endpoint          | Mục đích                          |
+| ------ | ----------------- | --------------------------------- |
+| POST   | `/api/v1/ai/chat` | Chat với AI trợ lý tài chính MVP |
+
 #### Admin / Backoffice
 
 | Method | Endpoint                          | Mục đích                       |
@@ -2087,6 +2093,54 @@ Notes
 - Nếu `apiKey = null`, giữ nguyên API key đang lưu.
 - Nếu `apiKey` có giá trị, backend phải mã hóa trước khi lưu vào `apiKeyEncrypted`.
 - Nên ghi audit log với `actionType = AiSettingChange`, `entityType = AiSetting`.
+
+## P7 - AI Chatbot MVP
+
+### `POST /api/v1/ai/chat`
+
+- Auth: Bearer
+- Mục đích: cho user chat với trợ lý tài chính ở mức MVP, dựa trên message hiện tại, lịch sử chat gần đây và dữ liệu tài chính cá nhân mà backend được phép dùng.
+
+Request
+
+```json
+{
+  "message": "Tháng này tui có đang tiêu quá tay không?",
+  "recentMessages": [
+    {
+      "sender": "User",
+      "content": "Tháng này tui chi ổn không?"
+    },
+    {
+      "sender": "AI",
+      "content": "Bạn đang chi ăn uống hơi cao so với mức chi tháng này."
+    }
+  ]
+}
+```
+
+Response `200 OK`
+
+```json
+{
+  "answer": "Tháng này bạn đang chi nhanh hơn bình thường ở nhóm ăn uống và mua sắm. Nếu tiếp tục tốc độ này, bạn có thể vượt ngân sách trước cuối tháng.",
+  "suggestions": [
+    "Giảm chi ăn ngoài trong 7 ngày tới.",
+    "Kiểm tra lại các giao dịch mua sắm gần đây trước khi tạo khoản chi mới.",
+    "Theo dõi các hạn mức đang gần ngưỡng cảnh báo."
+  ],
+  "source": "AI"
+}
+```
+
+Notes
+
+- `message` là bắt buộc và không được rỗng.
+- `recentMessages` là optional, chỉ dùng để giữ ngữ cảnh hội thoại ngắn hạn; MVP chưa yêu cầu lưu session chat riêng.
+- `sender` chỉ nhận `User | AI`.
+- `source` trả `AI` nếu câu trả lời đến từ provider AI, hoặc `RuleBased` nếu backend fallback bằng rule nội bộ.
+- Endpoint này không được trả dữ liệu nhạy cảm như API key, prompt nội bộ, connection string hoặc raw financial payload không cần thiết.
+- Nếu AI settings bị tắt hoặc provider lỗi, backend có thể trả câu trả lời fallback với `source = "RuleBased"`.
 
 ## 6. Field response đã cắt giảm so với bản cũ
 
