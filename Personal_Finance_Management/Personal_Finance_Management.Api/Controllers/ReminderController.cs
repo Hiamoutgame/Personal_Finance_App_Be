@@ -29,4 +29,18 @@ public class ReminderController: ControllerBase
         var result = await _reminderService.CreateReminder(request);
         return Ok(result);
     }
+    
+    [HttpPatch("{id}")]
+    public async Task<IActionResult> UpdateReminder(Guid id, [FromBody] Request.UpdateReminderRequest request)
+    {
+        var result = await _reminderService.UpdateReminder(id, request);
+        return Ok(result);
+    }
+    
+    [HttpDelete("{id}")]
+    public async Task<IActionResult> DeleteReminder(Guid id)
+    {
+        var result = await _reminderService.DeleteReminder(id);
+        return Ok(result);
+    }
 }
