@@ -1405,7 +1405,7 @@ namespace Personal_Finance_Management.Repository.Migrations
                         .HasColumnType("character varying(150)")
                         .HasColumnName("external_transaction_id");
 
-                    b.Property<Guid>("FinancialAccountId")
+                    b.Property<Guid?>("FinancialAccountId")
                         .HasColumnType("uuid")
                         .HasColumnName("financial_account_id");
 
@@ -1508,13 +1508,13 @@ namespace Personal_Finance_Management.Repository.Migrations
 
                     b.ToTable("transactions", null, t =>
                         {
-                            t.HasCheckConstraint("chk_transactions_amount_by_type", "(\"type\" = 'Income' AND \"transactions_amount\" > 0) OR (\"type\" = 'Expense' AND \"transactions_amount\" < 0)");
+                            t.HasCheckConstraint("chk_transactions_amount_by_type", "(\"type\" = 'Income' AND \"transactions_amount\" > 0) OR (\"type\" = 'Expense' AND \"transactions_amount\" > 0) OR (\"type\" = 'Transfer' AND \"transactions_amount\" <> 0)");
 
                             t.HasCheckConstraint("chk_transactions_jar_direction", "\"from_jar_id\" IS NULL OR \"to_jar_id\" IS NULL OR \"from_jar_id\" <> \"to_jar_id\"");
 
                             t.HasCheckConstraint("chk_transactions_source_type", "\"source_type\" IN ('Manual','Imported','OCR','Jar','System')");
 
-                            t.HasCheckConstraint("chk_transactions_type", "\"type\" IN ('Income','Expense')");
+                            t.HasCheckConstraint("chk_transactions_type", "\"type\" IN ('Income','Expense', 'Transfer')");
                         });
                 });
 
@@ -1810,7 +1810,6 @@ namespace Personal_Finance_Management.Repository.Migrations
                         .WithMany()
                         .HasForeignKey("FinancialAccountId")
                         .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired()
                         .HasConstraintName("fk_transactions_financial_accounts_financial_account_id");
 
                     b.HasOne("Personal_Finance_Management.Repository.Entity.Jar", "FromJar")

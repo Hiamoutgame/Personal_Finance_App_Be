@@ -23,7 +23,7 @@ public class UserController : ControllerBase
     }
 
     [HttpPatch("me")]
-    public async Task<IActionResult> UpdateMe(Request.UpdateUserRequest request)
+    public async Task<IActionResult> UpdateMe([FromBody] Request.UpdateUserRequest request)
     {
         var result = await _service.UpdateUserProfile(request);
         return Ok(result);

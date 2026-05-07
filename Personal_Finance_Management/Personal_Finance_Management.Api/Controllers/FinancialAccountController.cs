@@ -23,7 +23,7 @@ public class FinancialAccountController : ControllerBase
     }
 
     [HttpPost("")]
-    public async Task<IActionResult> CreateFinancialAccount(Request.CreateFinancialAccountRequest request)
+    public async Task<IActionResult> CreateFinancialAccount([FromBody] Request.CreateFinancialAccountRequest request)
     {
         var result = await _service.CreateFinancialAccount(request);
         return Ok(result);

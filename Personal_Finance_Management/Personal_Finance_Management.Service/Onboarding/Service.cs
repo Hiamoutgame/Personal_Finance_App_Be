@@ -166,6 +166,14 @@ public class Service : IService
             UpdatedAt = now
         });
         _dbContext.Categories.AddRange(savedCategory);
+
+        var jarSetup = new Repository.Entity.JarSetup()
+        {
+            UserId = userIdGuid,
+            MethodType = request.budgetMethodPreference,
+        };
+        _dbContext.JarSetups.Add(jarSetup);
+        await _dbContext.SaveChangesAsync();
         var savedJar = response.recommendedJars.Select(x => new Repository.Entity.Jar()
         {
             UserId = userIdGuid,
@@ -174,10 +182,10 @@ public class Service : IService
             Balance = 0m,
             Currency = "VND",
             Status = "Active",
+            JarSetupId =  jarSetup.Id,
             CreatedAt = now,
             UpdatedAt = now
         });
-
         _dbContext.Jars.AddRange(savedJar);
         user.IsOnboardingCompleted = true;
         await _dbContext.SaveChangesAsync();
