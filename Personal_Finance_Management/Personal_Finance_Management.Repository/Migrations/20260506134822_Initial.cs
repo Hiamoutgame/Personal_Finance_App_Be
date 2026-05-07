@@ -461,8 +461,8 @@ namespace Personal_Finance_Management.Repository.Migrations
                     edited_note = table.Column<string>(type: "text", nullable: true),
                     is_valid = table.Column<bool>(type: "boolean", nullable: false, defaultValue: true),
                     validation_error = table.Column<string>(type: "text", nullable: true),
-                    normalized_payload_json = table.Column<string>(type: "json", nullable: true),
-                    import_job_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    normalized_payload_json = table.Column<string>(type: "jsonb", nullable: true),
+                    import_job_id = table.Column<Guid>(type: "uuid", nullable: true),
                     edited_category_id = table.Column<Guid>(type: "uuid", nullable: true),
                     edited_jar_id = table.Column<Guid>(type: "uuid", nullable: true),
                     created_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false, defaultValueSql: "NOW()"),
@@ -471,7 +471,7 @@ namespace Personal_Finance_Management.Repository.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("pk_import_transaction_drafts", x => x.id);
-                    table.CheckConstraint("chk_import_transaction_drafts_row_index", "\"row_index\" >= 0");
+                    table.CheckConstraint("chk_import_transaction_drafts_row_index", "(\"import_job_id\" IS NOT NULL AND \"row_index\" >= 0) OR (\"import_job_id\" IS NULL AND \"row_index\" < 0)");
                     table.CheckConstraint("chk_import_transaction_drafts_type", "\"type\" IS NULL OR \"type\" IN ('Income','Expense')");
                     table.ForeignKey(
                         name: "fk_import_transaction_drafts_categories_edited_category_id",

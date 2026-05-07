@@ -1676,7 +1676,6 @@ namespace Personal_Finance_Management.Repository.Migrations
                         .WithMany("Drafts")
                         .HasForeignKey("ImportJobId")
                         .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired()
                         .HasConstraintName("fk_import_transaction_drafts_import_jobs_import_job_id");
 
                     b.Navigation("EditedCategory");
