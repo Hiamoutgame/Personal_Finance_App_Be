@@ -5,6 +5,7 @@ using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Formats.Bmp;
 using SixLabors.ImageSharp.Formats.Jpeg;
 using SixLabors.ImageSharp.Formats.Png;
+using AdminRequest = Personal_Finance_Management.Service.Admin.Request;
 using AuthRequest = Personal_Finance_Management.Service.Auth.Request;
 
 namespace Personal_Finance_Management.Service.Validations;
@@ -12,6 +13,8 @@ namespace Personal_Finance_Management.Service.Validations;
 public class ValidationServices : IServices
 {
     private readonly AppDbContext _dbContext;
+    private readonly AdminDashboardRequestValidator _adminDashboardRequestValidator = new();
+    private readonly AdminAuditLogsRequestValidator _adminAuditLogsRequestValidator = new();
 
     public ValidationServices(AppDbContext dbContext)
     {
@@ -167,5 +170,15 @@ public class ValidationServices : IServices
         {
             throw AppValidationException.BadRequest("Invalid image file.", "file", "INVALID_IMAGE");
         }
+    }
+
+    public async Task ValidateAdminDashboardRequest(AdminRequest.AdminDashboardRequest request)
+    {
+        await _adminDashboardRequestValidator.ValidateOrThrowAppException(request);
+    }
+
+    public async Task ValidateAdminAuditLogsRequest(AdminRequest.AdminAuditLogsRequest request)
+    {
+        await _adminAuditLogsRequestValidator.ValidateOrThrowAppException(request);
     }
 }

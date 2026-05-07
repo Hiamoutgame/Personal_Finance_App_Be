@@ -2,14 +2,16 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Personal_Finance_Management.Api.Extensions;
 using Personal_Finance_Management.Service.User;
 
 namespace Personal_Finance_Management.Api.Controllers
 {
     [ApiController]
     [Route("api/v1/admin/users")]
-
+    [Authorize(Policy = AuthorizationExtension.Policies.Admin)]
     public class AdminUserController : ControllerBase
     {
         private readonly Service.User.IService _userService;
