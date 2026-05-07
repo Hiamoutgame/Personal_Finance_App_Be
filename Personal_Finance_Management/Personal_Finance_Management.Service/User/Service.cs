@@ -27,18 +27,40 @@ public class Service : IService
         var selectedQuery = query.Select(x => new Response.GetUserInforResponse()
         {
             Id = x.Id,
-            userName = x.Username,
-            firstName = x.FirstName,
-            lastName = x.LastName,
-            email = x.Email,
-            phone = x.Phone,
-            avatarUrl = x.AvatarUrl,
-            preferredCurrency = x.PreferredCurrency,
-            isOnboardingCompleted = x.IsOnboardingCompleted
+            UserName = x.Username,
+            FirstName = x.FirstName,
+            LastName = x.LastName,
+            Email = x.Email,
+            Phone = x.Phone,
+            AvatarUrl = x.AvatarUrl,
+            PreferredCurrency = x.PreferredCurrency,
+            IsOnboardingCompleted = x.IsOnboardingCompleted
         });
         var result = await selectedQuery.FirstOrDefaultAsync();
         return result ?? throw new Exception("User not found");
     }
+
+    public async Task<Response.GetUserInforResponse> GetUserInforById(Request.UserIdRequest request)
+    {
+        var query = _dbContext.Accounts.Where(x => x.Id == request.UserId);
+        var selectedQuery = query.Select(x => new Response.GetUserInforResponse()
+        {
+            Id = x.Id,
+            UserName = x.Username,
+            FirstName = x.FirstName,
+            LastName = x.LastName,
+            Email = x.Email,
+            Phone = x.Phone,
+            AvatarUrl = x.AvatarUrl,
+            PreferredCurrency = x.PreferredCurrency,
+            IsOnboardingCompleted = x.IsOnboardingCompleted
+        });
+        var result = await selectedQuery.FirstOrDefaultAsync();
+        return result ?? throw new Exception("User not found");
+    }
+
+
+
 
     public async Task<Response.UpdateUserResponse> UpdateUserProfile(Request.UpdateUserRequest request)
     {
@@ -68,6 +90,32 @@ public class Service : IService
             avatarUrl = user.AvatarUrl,
         };
         return result;
+    }
+
+    public async Task<Response.GetUserInforResponse> UpdateUserStatus(Request.UserStatusRequest request)
+    {
+        var user = await _dbContext.Accounts
+            .FirstOrDefaultAsync(x => x.Id == request.UserId);
+
+        if (user == null)
+            throw new Exception("User not found");
+
+        user.Status = user.Status == "Banned" ? "Active" : "Banned";
+        user.StatusReason = user.Status == "Banned" ? "User account has been banned." : "User account has been reactivated.";
+
+        await _dbContext.SaveChangesAsync();
+        return new Response.GetUserInforResponse()
+        {
+            Id = user.Id,
+            UserName = user.Username,
+            FirstName = user.FirstName,
+            LastName = user.LastName,
+            Email = user.Email,
+            Phone = user.Phone,
+            AvatarUrl = user.AvatarUrl,
+            PreferredCurrency = user.PreferredCurrency,
+            IsOnboardingCompleted = user.IsOnboardingCompleted
+        };
     }
 
     public async Task<Response.ViewSetupResponse> ViewSetup()

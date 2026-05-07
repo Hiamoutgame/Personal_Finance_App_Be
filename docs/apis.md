@@ -81,6 +81,117 @@ Nguồn đồng bộ:
 }
 ```
 
+### 3.6. REST API tổng hợp
+
+Danh sách dưới đây là các REST APIs chính cho MVP. Chi tiết request/response nằm ở từng contract phía dưới.
+
+#### Financial Accounts
+
+| Method | Endpoint | Mục đích |
+| --- | --- | --- |
+| GET | `/api/v1/financial-accounts` | Danh sách nguồn tiền |
+| POST | `/api/v1/financial-accounts` | Tạo nguồn tiền |
+| PATCH | `/api/v1/financial-accounts/{id}` | Sửa thông tin nguồn tiền |
+| PATCH | `/api/v1/financial-accounts/{id}/balance` | Điều chỉnh số dư |
+| DELETE | `/api/v1/financial-accounts/{id}` | Xóa/ngưng theo dõi nguồn tiền |
+
+#### Categories
+
+| Method | Endpoint | Mục đích |
+| --- | --- | --- |
+| GET | `/api/v1/categories` | Danh sách danh mục |
+| POST | `/api/v1/categories` | Tạo danh mục mới |
+| PATCH | `/api/v1/categories/{id}` | Cập nhật danh mục |
+| DELETE | `/api/v1/categories/{id}` | Xóa danh mục |
+
+#### Jars
+
+| Method | Endpoint | Mục đích |
+| --- | --- | --- |
+| GET | `/api/v1/jars` | Danh sách hũ |
+| POST | `/api/v1/jars/setup` | Khởi tạo bộ hũ ban đầu, dùng chung với onboarding |
+| POST | `/api/v1/jars` | Tạo hũ mới |
+| PATCH | `/api/v1/jars/{id}` | Cập nhật hũ |
+| DELETE | `/api/v1/jars/{id}` | Xóa hũ |
+
+#### Transactions
+
+| Method | Endpoint | Mục đích |
+| --- | --- | --- |
+| GET | `/api/v1/transactions` | Danh sách giao dịch |
+| POST | `/api/v1/transactions` | Tạo giao dịch |
+| PATCH | `/api/v1/transactions/{id}` | Cập nhật giao dịch |
+| DELETE | `/api/v1/transactions/{id}` | Xóa giao dịch |
+
+#### Imports
+
+| Method | Endpoint | Mục đích |
+| --- | --- | --- |
+| POST | `/api/v1/imports` | Tải file sao kê lên |
+| GET | `/api/v1/imports/{id}` | Lấy trạng thái file nhập |
+| GET | `/api/v1/imports/{id}/preview` | Xem trước dữ liệu sao kê |
+| POST | `/api/v1/imports/{id}/confirm` | Xác nhận lưu dữ liệu sao kê |
+
+#### Dashboard & Reporting
+
+| Method | Endpoint | Mục đích |
+| --- | --- | --- |
+| GET | `/api/v1/dashboard` | Lấy dữ liệu tổng quan cho trang chủ |
+
+#### Limits
+
+| Method | Endpoint | Mục đích |
+| --- | --- | --- |
+| GET | `/api/v1/limits` | Danh sách hạn mức |
+| POST | `/api/v1/limits` | Tạo hạn mức |
+| PATCH | `/api/v1/limits/{id}` | Cập nhật hạn mức |
+| DELETE | `/api/v1/limits/{id}` | Xóa hạn mức |
+
+#### Notifications
+
+| Method | Endpoint | Mục đích |
+| --- | --- | --- |
+| GET | `/api/v1/notifications` | Danh sách thông báo |
+| PATCH | `/api/v1/notifications/status` | Đánh dấu đã đọc thông báo |
+
+#### Goals
+
+| Method | Endpoint | Mục đích |
+| --- | --- | --- |
+| GET | `/api/v1/goals` | Danh sách mục tiêu |
+| GET | `/api/v1/goals/{id}` | Chi tiết mục tiêu |
+| POST | `/api/v1/goals` | Tạo mục tiêu mới |
+| PATCH | `/api/v1/goals/{id}` | Cập nhật mục tiêu |
+| DELETE | `/api/v1/goals/{id}` | Xóa mục tiêu |
+| POST | `/api/v1/goals/{id}/contributions` | Thêm tiền đóng góp vào mục tiêu |
+
+#### Reminders
+
+| Method | Endpoint | Mục đích |
+| --- | --- | --- |
+| GET | `/api/v1/reminders` | Danh sách nhắc nhở |
+| POST | `/api/v1/reminders` | Tạo nhắc nhở |
+| PATCH | `/api/v1/reminders/{id}` | Cập nhật nhắc nhở |
+| DELETE | `/api/v1/reminders/{id}` | Xóa nhắc nhở |
+
+#### Admin / Backoffice
+
+| Method | Endpoint | Mục đích |
+| --- | --- | --- |
+| GET | `/api/v1/admin/users` | Danh sách người dùng |
+| GET | `/api/v1/admin/users/{id}` | Chi tiết người dùng |
+| PATCH | `/api/v1/admin/users/{id}/status` | Cập nhật trạng thái người dùng |
+| GET | `/api/v1/admin/categories` | Lấy danh mục mặc định |
+| POST | `/api/v1/admin/categories` | Tạo danh mục mặc định |
+| PATCH | `/api/v1/admin/categories/{id}` | Sửa danh mục mặc định |
+| DELETE | `/api/v1/admin/categories/{id}` | Xóa danh mục mặc định |
+| POST | `/api/v1/admin/broadcasts` | Gửi thông báo hệ thống |
+| GET | `/api/v1/admin/broadcasts` | Lịch sử gửi thông báo hệ thống |
+| GET | `/api/v1/admin/dashboard` | Thống kê cho admin |
+| GET | `/api/v1/admin/audit-logs` | Nhật ký hệ thống |
+| GET | `/api/v1/admin/ai-settings` | Cấu hình AI/LLM |
+| PATCH | `/api/v1/admin/ai-settings` | Cập nhật cấu hình AI/LLM |
+
 ## 4. Khi nào giữ field thời gian trong response
 
 Không phải tất cả field thời gian đều vô ích. Các field dưới đây được giữ vì có giá trị UI rõ ràng:
@@ -289,7 +400,6 @@ Response `200 OK`
   "isOnboardingCompleted": true,
   "monthlyIncome": 15000000,
   "budgetMethod": "SixJars",
-  "financialAccountCount": 2,
   "defaultFinancialAccountId": "guid | null",
   "jarCount": 6,
   "financialAccountCount": 1,
@@ -317,8 +427,6 @@ Response `200 OK`
       "maskedAccountNumber": null,
       "currency": "VND",
       "currentBalance": 3000000,
-      "availableBalance": null,
-      "balanceAsOf": "ISO8601 | null",
       "syncStatus": "NeverSynced",
       "isDefault": true,
       "isActive": true
@@ -374,8 +482,8 @@ Response `200 OK`
 ```json
 {
   "name": "Tiền mặt chính",
-  "currentBalance": 3500000,
-  "isDefault": true
+  "isDefault": true,
+  "isActive": true
 }
 ```
 
@@ -385,16 +493,44 @@ Response `200 OK`
 {
   "id": "guid",
   "name": "Tiền mặt chính",
-  "currentBalance": 3500000,
   "isDefault": true,
-  "updatedAt": "ISO8601"
+  "isActive": true
 }
 ```
 
 **Notes**
 
 - Chỉ cho user cập nhật nguồn tiền thuộc sở hữu của chính họ.
+- Điều chỉnh số dư dùng endpoint riêng `PATCH /api/v1/financial-accounts/{id}/balance`.
 - Với `connectionMode = LinkedApi`, backend có thể giới hạn field được sửa thủ công để tránh lệch dữ liệu sync.
+
+### `PATCH /api/v1/financial-accounts/{id}/balance`
+
+- **Auth**: Bearer
+- **Mục đích**: điều chỉnh số dư thủ công của nguồn tiền user đang theo dõi
+
+**Request**
+
+```json
+{
+  "newBalance": 6500000,
+  "note": "Điều chỉnh số dư đầu kỳ"
+}
+```
+
+**Response `200 OK`**
+
+```json
+{
+  "id": "guid",
+  "currentBalance": 6500000
+}
+```
+
+**Notes**
+
+- Chỉ cho phép điều chỉnh nguồn tiền thuộc sở hữu của chính user.
+- Backend có thể tạo audit/transaction điều chỉnh số dư nội bộ nếu cần truy vết.
 
 ### `DELETE /api/v1/financial-accounts/{id}`
 
@@ -460,116 +596,6 @@ Response `200 OK`
     "name": "Tiền mặt",
     "accountType": "Cash"
   }
-}
-```
-
-### `GET /api/v1/financial-accounts`
-
-- Auth: Bearer
-
-Response `200 OK`
-
-```json
-{
-  "data": [
-    {
-      "id": "guid",
-      "name": "Tiền mặt",
-      "accountType": "Cash",
-      "connectionMode": "Manual",
-      "currentBalance": 5000000,
-      "isDefault": true,
-      "isActive": true
-    }
-  ]
-}
-```
-
-### `POST /api/v1/financial-accounts`
-
-- Auth: Bearer
-
-Request
-
-```json
-{
-  "name": "Tiền mặt",
-  "accountType": "Cash",
-  "initialBalance": 5000000,
-  "isDefault": true
-}
-```
-
-Response `201 Created`
-
-```json
-{
-  "id": "guid",
-  "name": "Tiền mặt",
-  "accountType": "Cash",
-  "connectionMode": "Manual",
-  "currentBalance": 5000000,
-  "isDefault": true,
-  "isActive": true
-}
-```
-
-### `PATCH /api/v1/financial-accounts/{id}`
-
-- Auth: Bearer
-
-Request
-
-```json
-{
-  "name": "Tiền mặt gia đình",
-  "isDefault": true,
-  "isActive": true
-}
-```
-
-Response `200 OK`
-
-```json
-{
-  "id": "guid",
-  "name": "Tiền mặt gia đình",
-  "isDefault": true,
-  "isActive": true
-}
-```
-
-### `PATCH /api/v1/financial-accounts/{id}/balance`
-
-- Auth: Bearer
-
-Request
-
-```json
-{
-  "newBalance": 6500000,
-  "note": "Điều chỉnh số dư đầu kỳ"
-}
-```
-
-Response `200 OK`
-
-```json
-{
-  "id": "guid",
-  "currentBalance": 6500000
-}
-```
-
-### `DELETE /api/v1/financial-accounts/{id}`
-
-- Auth: Bearer
-
-Response `200 OK`
-
-```json
-{
-  "message": "Financial account deleted"
 }
 ```
 
@@ -691,7 +717,7 @@ Response `200 OK`
 ### `POST /api/v1/jars/setup`
 
 - **Auth**: Bearer
-- **Mục đích**: tạo bộ hũ ban đầu sau onboarding, chưa bắt buộc phân bổ số dư ngay
+- **Mục đích**: khởi tạo bộ hũ ban đầu, dùng chung với onboarding. Nếu user chỉ muốn tạo thêm một hũ riêng lẻ sau đó thì dùng `POST /api/v1/jars`.
 
 Request
 
@@ -719,9 +745,10 @@ Response `201 Created`
 
 **Notes**
 
-- `409 Conflict` nếu user đã setup jars trước đó
-- tỷ lệ chia hũ là rule ứng dụng theo `methodType`, không persist trong bảng `jars`
-- số dư gốc nằm ở `financial_accounts`; nếu user muốn phân bổ tiền vào hũ sau setup thì gọi `POST /api/v1/jars/allocate`
+- `409 Conflict` nếu user đã setup jars trước đó.
+- API này chỉ tạo `jar_setups` và các `jars` ban đầu; không còn API phân bổ/chuyển hũ riêng.
+- Tỷ lệ chia hũ là rule ứng dụng theo `methodType`, không persist trong bảng `jars`.
+- Số dư gốc vẫn nằm ở `financial_accounts`. Các thay đổi tiền/hũ phát sinh sau này đi qua `transactions`.
 
 ### `POST /api/v1/jars`
 
@@ -783,98 +810,6 @@ Response `200 OK`
 ```json
 {
   "message": "Jar deleted"
-}
-```
-
-### `POST /api/v1/jars/allocate`
-
-- **Auth**: Bearer
-- **Mục đích**: phân bổ ngân sách từ một nguồn tiền đang theo dõi vào các hũ theo tỷ lệ hiện tại
-
-Request
-
-```json
-{
-  "financialAccountId": "guid",
-  "amount": 15000000,
-  "note": "Lương tháng 4"
-}
-```
-
-Response `200 OK`
-
-```json
-{
-  "transactionIds": ["guid"],
-  "financialAccountId": "guid",
-  "totalAllocated": 15000000,
-  "affectedJarCount": 6
-}
-```
-
-**Notes**
-
-- Scope MVP không còn `jar_allocations`; backend ghi nhận phân bổ bằng `transactions.source_type = 'Jar'`, `to_jar_id` và `jar_balance_after_allocation`.
-- Field `financialAccountId` map vào `transactions.financial_account_id`; FinJar không rút/chuyển tiền thật khỏi ngân hàng.
-
-### `POST /api/v1/jars/transfer`
-
-- **Auth**: Bearer
-- **Mục đích**: chuyển ngân sách nội bộ giữa các hũ
-
-Request
-
-```json
-{
-  "fromJarId": "guid",
-  "toJarId": "guid",
-  "amount": 500000,
-  "note": "Bù ngân sách ăn uống"
-}
-```
-
-Response `200 OK`
-
-```json
-{
-  "transactionId": "guid",
-  "amount": 500000,
-  "fromJarId": "guid",
-  "toJarId": "guid"
-}
-```
-
-### `GET /api/v1/jars/transfers`
-
-- Auth: Bearer
-
-Query Params
-
-- `page=1`
-- `pageSize=20`
-- `fromDate=2026-04-01`
-- `toDate=2026-04-30`
-
-Response `200 OK`
-
-```json
-{
-  "data": [
-    {
-      "id": "guid",
-      "amount": 500000,
-      "fromJarName": "Savings",
-      "toJarName": "Necessities",
-      "note": "Bù ngân sách ăn uống",
-      "date": "ISO8601"
-    }
-  ],
-  "pagination": {
-    "page": 1,
-    "pageSize": 20,
-    "totalCount": 1,
-    "totalPages": 1
-  }
 }
 ```
 
@@ -1116,6 +1051,12 @@ Response `200 OK`
   "failedCount": 0
 }
 ```
+
+**Notes**
+
+- Nếu dòng draft là `Expense`, `editedJarId` trong preview map vào `transactions.from_jar_id`.
+- Nếu dòng draft là `Income`, `editedJarId` trong preview map vào `transactions.to_jar_id`.
+- `fromJarId` và `toJarId` trong request confirm cho phép FE override mapping mặc định khi cần.
 
 ## P3 - Personal Dashboard
 
@@ -1585,6 +1526,30 @@ Response `200 OK`
 
 ## P6 - Admin User Management & System Notifications
 
+Phạm vi P6 chuẩn hóa theo danh sách API admin hiện tại:
+
+| Method | Endpoint | Mục đích |
+| --- | --- | --- |
+| GET | `/api/v1/admin/users` | Xem, tìm kiếm, phân trang danh sách user |
+| GET | `/api/v1/admin/users/{id}` | Xem chi tiết một user |
+| PATCH | `/api/v1/admin/users/{id}/status` | Khóa hoặc mở khóa tài khoản user |
+| GET | `/api/v1/admin/categories` | Xem danh mục mặc định toàn hệ thống |
+| POST | `/api/v1/admin/categories` | Tạo danh mục mặc định |
+| PATCH | `/api/v1/admin/categories/{id}` | Cập nhật danh mục mặc định |
+| DELETE | `/api/v1/admin/categories/{id}` | Xóa mềm danh mục mặc định |
+| POST | `/api/v1/admin/broadcasts` | Tạo broadcast notification |
+| GET | `/api/v1/admin/broadcasts` | Xem lịch sử broadcast notification |
+| GET | `/api/v1/admin/dashboard` | Lấy dữ liệu dashboard vận hành |
+| GET | `/api/v1/admin/audit-logs` | Xem audit log thao tác admin |
+| GET | `/api/v1/admin/ai-settings` | Xem cấu hình AI hiện tại |
+| PATCH | `/api/v1/admin/ai-settings` | Cập nhật cấu hình AI |
+
+Rules chung:
+
+- Auth: tất cả endpoint trong P6 yêu cầu access token role `Admin`.
+- Các thao tác nhạy cảm phải ghi `audit_logs`: đổi trạng thái user, CRUD danh mục mặc định, tạo broadcast, cập nhật AI settings.
+- Không endpoint nào trong P6 trả secret thô. Riêng AI settings chỉ được trả `apiKeyMasked`, không trả `apiKeyEncrypted` hoặc API key đầy đủ.
+
 ### `GET /api/v1/admin/users`
 
 - Auth: Admin
@@ -1675,9 +1640,19 @@ Response `200 OK`
 }
 ```
 
+Notes
+
+- `status` chỉ nhận `Active | Banned`.
+- Khi chuyển sang `Banned`, backend nên chặn user đó đăng nhập hoặc gọi protected user APIs.
+- Backend ghi audit log với `actionType = BanUser` hoặc `UnbanUser`, `entityType = User`.
+
 ### `GET /api/v1/admin/categories`
 
 - Auth: Admin
+
+Query Params
+
+- `isActive=true|false` optional, nếu không truyền thì trả cả active và inactive tùy nhu cầu màn admin.
 
 Response `200 OK`
 
@@ -1695,6 +1670,11 @@ Response `200 OK`
   ]
 }
 ```
+
+Notes
+
+- API này chỉ quản lý default categories: `isDefault = true`, `ownerUserId = null`.
+- Response nên sắp xếp tăng dần theo `order`.
 
 ### `POST /api/v1/admin/categories`
 
@@ -1723,6 +1703,11 @@ Response `201 Created`
   "isActive": true
 }
 ```
+
+Notes
+
+- Backend set `isDefault = true`, `ownerUserId = null`.
+- Nên ghi audit log với `actionType = CategoryChange`, `entityType = Category`.
 
 ### `PATCH /api/v1/admin/categories/{id}`
 
@@ -1753,6 +1738,12 @@ Response `200 OK`
 }
 ```
 
+Notes
+
+- Chỉ cho phép sửa default category.
+- Nếu category không phải default category hoặc đã thuộc user cụ thể, trả `404 Not Found` hoặc `403 Forbidden` theo policy backend.
+- Nên ghi audit log với `actionType = CategoryChange`, `entityType = Category`.
+
 ### `DELETE /api/v1/admin/categories/{id}`
 
 - Auth: Admin
@@ -1764,6 +1755,12 @@ Response `200 OK`
   "message": "Category deleted"
 }
 ```
+
+Notes
+
+- Nên xóa mềm bằng `isActive = false` và/hoặc `deletedAt`, không hard delete nếu đã có transaction liên quan.
+- Chỉ cho phép xóa default category.
+- Nên ghi audit log với `actionType = CategoryChange`, `entityType = Category`.
 
 ### `POST /api/v1/admin/broadcasts`
 
@@ -1791,6 +1788,13 @@ Response `202 Accepted`
 }
 ```
 
+Notes
+
+- `targetAudience` MVP dùng `All`.
+- Nếu `scheduledAt = null`, backend có thể đưa broadcast vào queue gửi ngay.
+- Khi dispatch đồng bộ, tạo `notifications` cho user trong cùng transaction với broadcast nếu có thể.
+- Nên ghi audit log với `actionType = BroadcastSend`, `entityType = Broadcast`.
+
 ### `GET /api/v1/admin/broadcasts`
 
 - Auth: Admin
@@ -1811,6 +1815,7 @@ Response `200 OK`
       "title": "Bảo trì hệ thống",
       "targetAudience": "All",
       "targetCount": 1482,
+      "deliveredCount": 1482,
       "status": "Sent",
       "sentAt": "ISO8601"
     }
@@ -1823,6 +1828,11 @@ Response `200 OK`
   }
 }
 ```
+
+Notes
+
+- Danh sách nên sắp xếp broadcast mới nhất trước.
+- `deliveredCount` là số notification đã tạo/gửi thành công cho broadcast.
 
 ### `GET /api/v1/admin/dashboard`
 
@@ -1866,7 +1876,7 @@ Response `200 OK`
     {
       "type": "transactions",
       "label": "Tổng giá trị giao dịch",
-      "totalTransactionValue": 100000000, // SUM(amount) với transaction status hợp lệ trong kỳ của timeframe
+      "totalTransactionValue": 100000000, // SUM(ABS(transactions_amount)) với transaction hợp lệ trong kỳ của timeframe
       "totalTransactions": 200, // COUNT(*) transaction trong kỳ của timeframe
     },
     {
@@ -1888,7 +1898,7 @@ Response `200 OK`
     { "label": "CN", "amount": 16000000, "count": 32 },
   ],
   "topSpendingCategories": [
-    { "label": "Ăn uống", "value": 32000000 }, // SUM(amount) của category
+    { "label": "Ăn uống", "value": 32000000 }, // SUM(ABS(transactions_amount)) của expense theo category
     { "label": "Mua sắm", "value": 24000000 }, // tính theo công thức mô tả bên dưới
     { "label": "Di chuyển", "value": 18000000 },
     { "label": "Giải trí", "value": 14000000 },
@@ -1965,7 +1975,7 @@ Ghi chú:
   - `month`: 12 điểm gần nhất, `label` = `T1..T12` (hoặc `YYYY-MM`), mỗi điểm trả cả `amount` và `count` theo tháng.
   - `year`: 5 điểm gần nhất, `label` = `YYYY`, mỗi điểm trả cả `amount` và `count` theo năm.
 - `topSpendingCategories`:
-  - Công thức: `value = SUM(amount)` theo từng category.
+  - Công thức: `value = SUM(ABS(transactions_amount))` theo từng category với `type = Expense`.
   - Sắp xếp giảm dần theo `value`, trả top N (khuyến nghị N=4), phần còn lại gộp thành `"Khác"`.
   - FE tính tỷ trọng hiển thị theo công thức: `value / SUM(value của tất cả category) * 100`.
 - `retentionTrend`:
@@ -1988,7 +1998,7 @@ Ghi chú:
 Query Params
 
 - `adminId=guid`
-- `actionType=Login|BanUser|CategoryChange|BroadcastSend`
+- `actionType=Login|BanUser|UnbanUser|CategoryChange|BroadcastSend|AiSettingChange`
 - `entityType=User|Category|Broadcast|AiSetting`
 - `fromDate=2026-04-01`
 - `toDate=2026-04-30`
@@ -2018,6 +2028,12 @@ Response `200 OK`
 }
 ```
 
+Notes
+
+- Audit log là append-only, không có API sửa/xóa trong MVP.
+- Query theo `adminId` map với `audit_logs.actor_account_id`.
+- Response không cần trả `metadataJson` mặc định; chỉ bổ sung khi màn điều tra chi tiết cần.
+
 ### `GET /api/v1/admin/ai-settings`
 
 - Auth: Admin
@@ -2034,6 +2050,11 @@ Response `200 OK`
   "apiKeyMasked": "sk-...xxxx"
 }
 ```
+
+Notes
+
+- Không trả `apiKey` hoặc `apiKeyEncrypted`.
+- Nếu chưa có cấu hình trong DB, backend có thể trả default config an toàn với `isEnabled = false`.
 
 ### `PATCH /api/v1/admin/ai-settings`
 
@@ -2061,6 +2082,12 @@ Response `200 OK`
 }
 ```
 
+Notes
+
+- Nếu `apiKey = null`, giữ nguyên API key đang lưu.
+- Nếu `apiKey` có giá trị, backend phải mã hóa trước khi lưu vào `apiKeyEncrypted`.
+- Nên ghi audit log với `actionType = AiSettingChange`, `entityType = AiSetting`.
+
 ## 6. Field response đã cắt giảm so với bản cũ
 
 Đã cắt bỏ khỏi nhiều write responses:
@@ -2086,7 +2113,7 @@ Nguyên tắc áp dụng:
 
 - Không expose entity DB trực tiếp.
 - Mapping DTO theo nguyên tắc: write gọn, read đủ thông tin cho UI.
-- Xử lý atomic cho allocate/transfer/transaction/contribution.
+- Xử lý atomic cho transaction/import/contribution và các thao tác cập nhật số dư liên quan.
 
 ## 8. Tổng kết
 

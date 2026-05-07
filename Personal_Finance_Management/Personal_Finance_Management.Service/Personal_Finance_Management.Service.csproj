@@ -10,10 +10,11 @@
         <PackageReference Include="CloudinaryDotNet" Version="1.28.0" />
         <PackageReference Include="MailKit" Version="4.15.1" />
         <PackageReference Include="Microsoft.AspNetCore.Http" Version="2.3.9" />
-        <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="10.0.1" />
+        <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="8.0.2" />
         <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.16.0" />
         <PackageReference Include="Quartz" Version="3.17.1" />
         <PackageReference Include="Quartz.Extensions.Hosting" Version="3.17.1" />
+        <PackageReference Include="SixLabors.ImageSharp" Version="3.1.1" />
     </ItemGroup>
     <ItemGroup>
         <ProjectReference Include="../Personal_Finance_Management.Repository/Personal_Finance_Management.Repository.csproj" />
