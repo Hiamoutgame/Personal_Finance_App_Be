@@ -11,7 +11,7 @@ namespace Personal_Finance_Management.Service.Admin;
 public class Service : IService
 {
     private const int TopCategoryLimit = 4;
-    private const int RecentLimit = 10;
+    private const int RecentLimit = 5;
 
     private readonly AppDbContext _dbContext;
     private readonly IServices _validationServices;
@@ -27,57 +27,57 @@ public class Service : IService
         _httpContextAccessor = httpContextAccessor;
     }
 
-    public async Task<Response.AdminDashboardResponse> GetDashboard(string? timeframe)
+    public async Task<Response.AdminDashboardResponse> GetDashboard()
     {
-        var request = new Request.AdminDashboardRequest { Timeframe = timeframe };
-        await _validationServices.ValidateAdminDashboardRequest(request);
-
-        var normalizedTimeframe = DashboardTimeframe.Normalize(request.Timeframe);
         var now = DateTimeOffset.UtcNow;
-        var dateRange = DashboardDateRangeFactory.Create(normalizedTimeframe, now);
+        var monthStart = new DateTimeOffset(
+            now.UtcDateTime.Year,
+            now.UtcDateTime.Month,
+            1,
+            0,
+            0,
+            0,
+            TimeSpan.Zero);
+        var nextMonthStart = monthStart.AddMonths(1);
 
         var userQuery = _dbContext.Accounts.AsNoTracking()
             .RegularUsers();
 
         var totalUsers = await userQuery.CountAsync();
-        var previousTotalUsers = await userQuery
-            .Where(account => account.CreatedAt < dateRange.PeriodStart)
+        var newUsersThisMonth = await userQuery
+            .Where(account => account.CreatedAt >= monthStart && account.CreatedAt < nextMonthStart)
             .CountAsync();
-        var deltaPercent = CalculatePercentDelta(totalUsers, previousTotalUsers);
-
-        var dayStart = new DateTimeOffset(now.UtcDateTime.Date, TimeSpan.Zero);
-        var dayEnd = dayStart.AddDays(1);
-        var dau = await userQuery
-            .Where(account => account.LastLoginAt != null
-                              && account.LastLoginAt >= dayStart
-                              && account.LastLoginAt < dayEnd)
-            .CountAsync();
-        var mau = await userQuery
+        var activeUsersLast30Days = await userQuery
             .Where(account => account.LastLoginAt != null
                               && account.LastLoginAt >= now.AddDays(-30))
             .CountAsync();
-        var stickinessPercent = CalculatePercent(dau, mau);
+        var bannedUsers = await userQuery
+            .Where(account => account.Status == AccountStatus.Banned.ToString())
+            .CountAsync();
 
-        var transactionPeriodQuery = _dbContext.Transactions.AsNoTracking()
-            .InDateRange(dateRange.PeriodStart, dateRange.PeriodEnd);
+        var activeTransactionQuery = _dbContext.Transactions.AsNoTracking()
+            .ActiveTransactions();
 
-        var totalTransactions = await transactionPeriodQuery.CountAsync();
-        var totalTransactionValue = await transactionPeriodQuery
-            .Select(transaction => Math.Abs(transaction.TransactionsAmount))
-            .DefaultIfEmpty(0m)
-            .SumAsync();
+        var totalTransactions = await activeTransactionQuery.CountAsync();
+        var transactionsThisMonth = await activeTransactionQuery
+            .Where(transaction => transaction.TransactionDate >= monthStart
+                                  && transaction.TransactionDate < nextMonthStart)
+            .CountAsync();
 
-        var transactionTrendQuery = _dbContext.Transactions.AsNoTracking()
-            .InDateRange(dateRange.Trend.Start, dateRange.Trend.End);
+        var jarQuery = _dbContext.Jars.AsNoTracking();
+        var totalJars = await jarQuery.CountAsync();
 
-        var transactionTrend = await BuildTransactionTrend(
-            transactionTrendQuery,
-            dateRange.Trend,
-            normalizedTimeframe);
-        var topSpendingCategories = await GetTopSpendingCategories(
-            dateRange.PeriodStart,
-            dateRange.PeriodEnd);
-        var retentionTrend = await BuildRetentionTrend();
+        var goalQuery = _dbContext.Goals.AsNoTracking();
+        var activeGoals = await goalQuery
+            .Where(goal => goal.Status == GoalStatus.Active.ToString())
+            .CountAsync();
+
+        var importJobQuery = _dbContext.ImportJobs.AsNoTracking();
+        var pendingImportJobs = await importJobQuery
+            .Where(job => job.Status == ImportJobStatus.Pending.ToString()
+                          || job.Status == ImportJobStatus.Processing.ToString()
+                          || job.Status == ImportJobStatus.AwaitingReview.ToString())
+            .CountAsync();
 
         var recentUsers = await userQuery
             .OrderByDescending(account => account.CreatedAt)
@@ -85,76 +85,67 @@ public class Service : IService
             .Select(account => new Response.RecentUserItem
             {
                 Id = account.Id,
-                FullName = (account.FirstName + " " + account.LastName).Trim(),
+                Username = account.Username,
+                FirstName = account.FirstName,
+                LastName = account.LastName,
                 Email = account.Email,
                 Status = account.Status,
-                CreatedAt = account.CreatedAt
+                IsOnboardingCompleted = account.IsOnboardingCompleted,
+                LastLoginAt = account.LastLoginAt
             })
             .ToListAsync();
 
-        var recentTransactions = await _dbContext.Transactions.AsNoTracking()
+        var recentTransactions = await activeTransactionQuery
             .OrderByDescending(transaction => transaction.TransactionDate)
             .Take(RecentLimit)
             .Select(transaction => new Response.RecentTransactionItem
             {
                 Id = transaction.Id,
                 Type = transaction.Type,
-                Amount = Math.Abs(transaction.TransactionsAmount),
+                TransactionsAmount = transaction.Type == TransactionType.Expense.ToString()
+                    ? -Math.Abs(transaction.TransactionsAmount)
+                    : Math.Abs(transaction.TransactionsAmount),
                 Note = transaction.Note,
-                TransactionDate = transaction.TransactionDate
+                TransactionDate = transaction.TransactionDate,
+                User = new Response.TransactionUserItem
+                {
+                    Id = transaction.User.Id,
+                    Username = transaction.User.Username,
+                    FirstName = transaction.User.FirstName,
+                    LastName = transaction.User.LastName
+                },
+                FinancialAccount = transaction.FinancialAccount == null
+                    ? null
+                    : new Response.TransactionFinancialAccountItem
+                    {
+                        Id = transaction.FinancialAccount.Id,
+                        Name = transaction.FinancialAccount.Name,
+                        AccountType = transaction.FinancialAccount.AccountType
+                    },
+                Category = transaction.Category == null
+                    ? null
+                    : new Response.TransactionCategoryItem
+                    {
+                        Id = transaction.Category.Id,
+                        Name = transaction.Category.Name
+                    }
             })
             .ToListAsync();
 
-        var bannedUsers = await userQuery
-            .Where(account => account.Status == AccountStatus.Banned.ToString())
-            .CountAsync();
-        var totalJobs = await _dbContext.ImportJobs.AsNoTracking().CountAsync();
-        var failedJobs = await _dbContext.ImportJobs.AsNoTracking()
-            .Where(job => job.Status == ImportJobStatus.Failed.ToString())
-            .CountAsync();
-        var errorRatePercent = totalJobs == 0
-            ? 0
-            : Math.Round(failedJobs * 100m / totalJobs, 2, MidpointRounding.AwayFromZero);
-        var systemHealthStatus = GetSystemHealthStatus(errorRatePercent);
-
         return new Response.AdminDashboardResponse
         {
-            StatCards =
-            [
-                new Response.StatCard
-                {
-                    Type = "total_users",
-                    Label = "Total users",
-                    Value = totalUsers,
-                    DeltaPercent = deltaPercent
-                },
-                new Response.StatCard
-                {
-                    Type = "engagement",
-                    Label = "Engagement (DAU/MAU)",
-                    Dau = dau,
-                    Mau = mau,
-                    StickinessPercent = stickinessPercent
-                },
-                new Response.StatCard
-                {
-                    Type = "transactions",
-                    Label = "Total transactions",
-                    TotalTransactionValue = totalTransactionValue,
-                    TotalTransactions = totalTransactions
-                },
-                new Response.StatCard
-                {
-                    Type = "system_health",
-                    Label = "System health",
-                    ErrorRatePercent = errorRatePercent,
-                    Status = systemHealthStatus,
-                    BannedUsers = bannedUsers
-                }
-            ],
-            TransactionVolumeTrend = transactionTrend,
-            TopSpendingCategories = topSpendingCategories,
-            RetentionTrend = retentionTrend,
+            Summary = new Response.AdminDashboardSummary
+            {
+                TotalUsers = totalUsers,
+                NewUsersThisMonth = newUsersThisMonth,
+                ActiveUsersLast30Days = activeUsersLast30Days,
+                BannedUsers = bannedUsers,
+                TotalTransactions = totalTransactions,
+                TransactionsThisMonth = transactionsThisMonth,
+                TotalJars = totalJars,
+                ActiveGoals = activeGoals,
+                PendingImportJobs = pendingImportJobs
+            },
             RecentUsers = recentUsers,
             RecentTransactions = recentTransactions
         };

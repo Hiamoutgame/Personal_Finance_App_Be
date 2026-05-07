@@ -174,6 +174,12 @@ Danh sách dưới đây là các REST APIs chính cho MVP. Chi tiết request/r
 | PATCH  | `/api/v1/reminders/{id}` | Cập nhật nhắc nhở  |
 | DELETE | `/api/v1/reminders/{id}` | Xóa nhắc nhở       |
 
+#### AI Chatbot
+
+| Method | Endpoint          | Mục đích                          |
+| ------ | ----------------- | --------------------------------- |
+| POST   | `/api/v1/ai/chat` | Chat với AI trợ lý tài chính MVP |
+
 #### Admin / Backoffice
 
 | Method | Endpoint                          | Mục đích                       |
@@ -1837,159 +1843,86 @@ Notes
 ### `GET /api/v1/admin/dashboard`
 
 - Auth: Admin
-
-Query Params
-
-- `timeframe` (optional, enum: `day | month | year`, default: `day`)
-
-Request Rules
-
-- Nếu không truyền `timeframe`, backend tự dùng `day`.
-- Nếu `timeframe` không thuộc enum hợp lệ, trả `400 Bad Request`.
+- Mục đích: Lấy thống kê vận hành cơ bản cho admin dashboard MVP.
 - Endpoint không nhận request body.
+- Không cần query params ở MVP.
 
 Example Request
 
 ```http
-GET /api/v1/admin/dashboard?timeframe=day
+GET /api/v1/admin/dashboard
 Authorization: Bearer <admin_access_token>
 ```
 
 Response `200 OK`
 
-```jsonc
+```json
 {
-  "statCards": [
-    {
-      "type": "total_users",
-      "label": "Tổng người dùng",
-      "value": 1357,
-      "deltaPercent": 12, // ((currentTotalUsers - previousTotalUsers) / previousTotalUsers) * 100
-    },
-    {
-      "type": "engagement",
-      "label": "Tương tác (DAU/MAU)",
-      "dau": 892, // distinct users active trong ngày cuối kỳ (hoặc ngày được chọn)
-      "mau": 1234, // distinct users active trong 30 ngày gần nhất
-      "stickinessPercent": 72, // (dau / mau) * 100
-    },
-    {
-      "type": "transactions",
-      "label": "Tổng giá trị giao dịch",
-      "totalTransactionValue": 100000000, // SUM(ABS(transactions_amount)) với transaction hợp lệ trong kỳ của timeframe
-      "totalTransactions": 200, // COUNT(*) transaction trong kỳ của timeframe
-    },
-    {
-      "type": "system_health",
-      "label": "Sức khỏe hệ thống",
-      "errorRatePercent": 0.02, // (failed_sync_or_ocr_jobs / total_sync_or_ocr_jobs) * 100
-      "status": "Good",
-      "bannedUsers": 12,
-    },
-  ],
-  "transactionVolumeTrend": [
-    //bảng xu hướng thể hiện tổng giá trị giao dịch + số lượng giao dịch theo param day | month | year
-    { "label": "T2", "amount": 14000000, "count": 28 },
-    { "label": "T3", "amount": 12000000, "count": 24 },
-    { "label": "T4", "amount": 16000000, "count": 32 },
-    { "label": "T5", "amount": 13000000, "count": 26 },
-    { "label": "T6", "amount": 17000000, "count": 34 },
-    { "label": "T7", "amount": 12000000, "count": 24 },
-    { "label": "CN", "amount": 16000000, "count": 32 },
-  ],
-  "topSpendingCategories": [
-    { "label": "Ăn uống", "value": 32000000 }, // SUM(ABS(transactions_amount)) của expense theo category
-    { "label": "Mua sắm", "value": 24000000 }, // tính theo công thức mô tả bên dưới
-    { "label": "Di chuyển", "value": 18000000 },
-    { "label": "Giải trí", "value": 14000000 },
-    { "label": "Khác", "value": 12000000 }, // Tổng phần còn lại ngoài top category
-  ],
-  "retentionTrend": [
-    {
-      "periodLabel": "D0", // mốc ngày kể từ thời điểm onboarding của cohort
-      "cohortA": 100, // Nhóm Q1/2026: D0 luôn = 100%
-      "cohortB": 100, // Nhóm Q2/2025: D0 luôn = 100%
-      "cohortC": 100, // Nhóm Q3/2025: D0 luôn = 100%
-      "cohortD": 100, // Nhóm Q4/2025: D0 luôn = 100%
-    },
-    {
-      "periodLabel": "D7",
-      "cohortA": 76, // (activeUsersInCohortAtDay7 / totalUsersInCohort) * 100
-      "cohortB": 72, // (activeUsersInCohortAtDay7 / totalUsersInCohort) * 100
-      "cohortC": 68, // (activeUsersInCohortAtDay7 / totalUsersInCohort) * 100
-      "cohortD": 64, // (activeUsersInCohortAtDay7 / totalUsersInCohort) * 100
-    },
-    {
-      "periodLabel": "D14",
-      "cohortA": 66, // (activeUsersInCohortAtDay14 / totalUsersInCohort) * 100
-      "cohortB": 61, // (activeUsersInCohortAtDay14 / totalUsersInCohort) * 100
-      "cohortC": 57, // (activeUsersInCohortAtDay14 / totalUsersInCohort) * 100
-      "cohortD": 53, // (activeUsersInCohortAtDay14 / totalUsersInCohort) * 100
-    },
-    {
-      "periodLabel": "D21",
-      "cohortA": 59, // (activeUsersInCohortAtDay21 / totalUsersInCohort) * 100
-      "cohortB": 55, // (activeUsersInCohortAtDay21 / totalUsersInCohort) * 100
-      "cohortC": 51, // (activeUsersInCohortAtDay21 / totalUsersInCohort) * 100
-      "cohortD": 47, // (activeUsersInCohortAtDay21 / totalUsersInCohort) * 100
-    },
-    {
-      "periodLabel": "D30",
-      "cohortA": 52, // (activeUsersInCohortAtDay30 / totalUsersInCohort) * 100
-      "cohortB": 48, // (activeUsersInCohortAtDay30 / totalUsersInCohort) * 100
-      "cohortC": 44, // (activeUsersInCohortAtDay30 / totalUsersInCohort) * 100
-      "cohortD": 40, // (activeUsersInCohortAtDay30 / totalUsersInCohort) * 100
-    },
-  ],
+  "summary": {
+    "totalUsers": 1357,
+    "newUsersThisMonth": 42,
+    "activeUsersLast30Days": 320,
+    "bannedUsers": 12,
+    "totalTransactions": 8200,
+    "transactionsThisMonth": 950,
+    "totalJars": 6840,
+    "activeGoals": 287,
+    "pendingImportJobs": 7
+  },
   "recentUsers": [
-    //danh sách 10 user mới nhất nhm reverse
     {
       "id": "guid",
-      "fullName": "Nguyen Van Anh",
+      "username": "nguyenanh",
+      "firstName": "Anh",
+      "lastName": "Nguyen Van",
       "email": "anh@finjar.app",
       "status": "Active",
-      "createdAt": "ISO8601",
-    },
+      "isOnboardingCompleted": true,
+      "lastLoginAt": "ISO8601"
+    }
   ],
   "recentTransactions": [
-    //danh sách 10 transaction mới nhất nhm reverse
     {
       "id": "guid",
       "type": "Expense",
-      "amount": 120000,
+      "transactionsAmount": -120000,
       "note": "Ăn trưa",
       "transactionDate": "ISO8601",
-    },
-  ],
+      "user": {
+        "id": "guid",
+        "username": "nguyenanh",
+        "firstName": "Anh",
+        "lastName": "Nguyen Van"
+      },
+      "financialAccount": {
+        "id": "guid",
+        "name": "Vi Momo",
+        "accountType": "EWallet"
+      },
+      "category": {
+        "id": "guid",
+        "name": "Ăn uống"
+      }
+    }
+  ]
 }
 ```
 
 Ghi chú:
 
-- API này là nguồn dữ liệu duy nhất cho trang Admin Dashboard FE hiện tại.
-- `statCards` giữ dạng array, mỗi phần tử phải có `type` để FE map icon/format ổn định.
-- `statCards` ở phiên bản hiện tại phải trả đúng 4 phần tử theo thứ tự:
-  `total_users`, `engagement`, `transactions`, `system_health`.
-- `transactionVolumeTrend` phải trả về theo đúng `timeframe`:
-  - `day`: 7 điểm gần nhất, `label` = `T2..CN` (hoặc format ngày ngắn), mỗi điểm trả cả `amount` và `count` theo ngày.
-  - `month`: 12 điểm gần nhất, `label` = `T1..T12` (hoặc `YYYY-MM`), mỗi điểm trả cả `amount` và `count` theo tháng.
-  - `year`: 5 điểm gần nhất, `label` = `YYYY`, mỗi điểm trả cả `amount` và `count` theo năm.
-- `topSpendingCategories`:
-  - Công thức: `value = SUM(ABS(transactions_amount))` theo từng category với `type = Expense`.
-  - Sắp xếp giảm dần theo `value`, trả top N (khuyến nghị N=4), phần còn lại gộp thành `"Khác"`.
-  - FE tính tỷ trọng hiển thị theo công thức: `value / SUM(value của tất cả category) * 100`.
-- `retentionTrend`:
-  - `periodLabel` là số ngày kể từ mốc onboarding của cohort: `D0`, `D7`, `D14`, `D21`, `D30`.
-  - `cohortA..D` là tỷ lệ % user còn active tại mốc đó, giá trị kỳ vọng trong khoảng `0..100`.
-  - Công thức tại mốc `Dx`:
-    `retentionPercent = (activeUsersInCohortAtDayX / totalUsersInCohortAtD0) * 100`. (này xem từ audit tìm lastLogin)
-  - Định nghĩa cohort (phiên bản hiện tại):
-    - `cohortA`: user hoàn tất onboarding trong Q1/2026
-    - `cohortB`: user hoàn tất onboarding trong Q2/2025
-    - `cohortC`: user hoàn tất onboarding trong Q3/2025
-    - `cohortD`: user hoàn tất onboarding trong Q4/2025
-  - Quy tắc làm tròn: làm tròn số nguyên gần nhất.
-  - Quy tắc dữ liệu: nên đảm bảo xu hướng không tăng bất thường trong cùng cohort (`D0 >= D7 >= D14 >= D21 >= D30`).
+- `totalUsers`: đếm account có role `User`.
+- `newUsersThisMonth`: đếm user tạo trong tháng hiện tại.
+- `activeUsersLast30Days`: đếm user có `lastLoginAt` trong 30 ngày gần nhất.
+- `bannedUsers`: đếm user có `status = Banned`.
+- `totalTransactions`: đếm transaction chưa bị xóa mềm.
+- `transactionsThisMonth`: đếm transaction chưa bị xóa mềm trong tháng hiện tại.
+- `totalJars`: đếm toàn bộ hũ.
+- `activeGoals`: đếm mục tiêu có `status = Active`.
+- `pendingImportJobs`: đếm import job chưa kết thúc, gồm `Pending`, `Processing`, `AwaitingReview`.
+- `recentUsers`: lấy 5 user mới nhất, dùng `username`, `firstName`, `lastName` từ bảng `accounts`.
+- `recentTransactions`: lấy 5 transaction mới nhất chưa bị xóa mềm, kèm user, nguồn tiền và category để admin hiểu giao dịch thuộc về ai, tài khoản nào và loại chi/thu nào.
+- Dashboard MVP không trả `recentImportJobs`. Nếu admin cần xem danh sách import job, nên tách thành endpoint/màn quản trị import riêng.
+- MVP không trả các phần phân tích nâng cao: retention/cohort, DAU/MAU stickiness, transaction trend chart, top spending category toàn hệ thống, system health error rate.
 
 ### `GET /api/v1/admin/audit-logs`
 
@@ -2087,6 +2020,54 @@ Notes
 - Nếu `apiKey = null`, giữ nguyên API key đang lưu.
 - Nếu `apiKey` có giá trị, backend phải mã hóa trước khi lưu vào `apiKeyEncrypted`.
 - Nên ghi audit log với `actionType = AiSettingChange`, `entityType = AiSetting`.
+
+## P7 - AI Chatbot MVP
+
+### `POST /api/v1/ai/chat`
+
+- Auth: Bearer
+- Mục đích: cho user chat với trợ lý tài chính ở mức MVP, dựa trên message hiện tại, lịch sử chat gần đây và dữ liệu tài chính cá nhân mà backend được phép dùng.
+
+Request
+
+```json
+{
+  "message": "Tháng này tui có đang tiêu quá tay không?",
+  "recentMessages": [
+    {
+      "sender": "User",
+      "content": "Tháng này tui chi ổn không?"
+    },
+    {
+      "sender": "AI",
+      "content": "Bạn đang chi ăn uống hơi cao so với mức chi tháng này."
+    }
+  ]
+}
+```
+
+Response `200 OK`
+
+```json
+{
+  "answer": "Tháng này bạn đang chi nhanh hơn bình thường ở nhóm ăn uống và mua sắm. Nếu tiếp tục tốc độ này, bạn có thể vượt ngân sách trước cuối tháng.",
+  "suggestions": [
+    "Giảm chi ăn ngoài trong 7 ngày tới.",
+    "Kiểm tra lại các giao dịch mua sắm gần đây trước khi tạo khoản chi mới.",
+    "Theo dõi các hạn mức đang gần ngưỡng cảnh báo."
+  ],
+  "source": "AI"
+}
+```
+
+Notes
+
+- `message` là bắt buộc và không được rỗng.
+- `recentMessages` là optional, chỉ dùng để giữ ngữ cảnh hội thoại ngắn hạn; MVP chưa yêu cầu lưu session chat riêng.
+- `sender` chỉ nhận `User | AI`.
+- `source` trả `AI` nếu câu trả lời đến từ provider AI, hoặc `RuleBased` nếu backend fallback bằng rule nội bộ.
+- Endpoint này không được trả dữ liệu nhạy cảm như API key, prompt nội bộ, connection string hoặc raw financial payload không cần thiết.
+- Nếu AI settings bị tắt hoặc provider lỗi, backend có thể trả câu trả lời fallback với `source = "RuleBased"`.
 
 ## 6. Field response đã cắt giảm so với bản cũ
 

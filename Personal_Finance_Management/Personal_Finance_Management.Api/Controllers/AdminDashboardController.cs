@@ -18,9 +18,9 @@ namespace Personal_Finance_Management.Api.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetDashboard([FromQuery] string? timeframe = null)
+        public async Task<IActionResult> GetDashboard()
         {
-            var result = await _adminService.GetDashboard(timeframe);
+            var result = await _adminService.GetDashboard();
             return Ok(result);
         }
     }
