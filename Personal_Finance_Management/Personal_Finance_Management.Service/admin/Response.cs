@@ -4,12 +4,22 @@ public class Response
 {
     public class AdminDashboardResponse
     {
-        public List<StatCard> StatCards { get; set; } = [];
-        public List<TransactionTrendItem> TransactionVolumeTrend { get; set; } = [];
-        public List<TopCategoryItem> TopSpendingCategories { get; set; } = [];
-        public List<RetentionTrendItem> RetentionTrend { get; set; } = [];
+        public AdminDashboardSummary Summary { get; set; } = null!;
         public List<RecentUserItem> RecentUsers { get; set; } = [];
         public List<RecentTransactionItem> RecentTransactions { get; set; } = [];
+    }
+
+    public class AdminDashboardSummary
+    {
+        public int TotalUsers { get; set; }
+        public int NewUsersThisMonth { get; set; }
+        public int ActiveUsersLast30Days { get; set; }
+        public int BannedUsers { get; set; }
+        public int TotalTransactions { get; set; }
+        public int TransactionsThisMonth { get; set; }
+        public int TotalJars { get; set; }
+        public int ActiveGoals { get; set; }
+        public int PendingImportJobs { get; set; }
     }
 
     public class StatCard
@@ -53,19 +63,46 @@ public class Response
     public class RecentUserItem
     {
         public Guid Id { get; set; }
-        public string FullName { get; set; } = null!;
+        public string Username { get; set; } = null!;
+        public string FirstName { get; set; } = null!;
+        public string LastName { get; set; } = null!;
         public string Email { get; set; } = null!;
         public string Status { get; set; } = null!;
-        public DateTimeOffset CreatedAt { get; set; }
+        public bool IsOnboardingCompleted { get; set; }
+        public DateTimeOffset? LastLoginAt { get; set; }
     }
 
     public class RecentTransactionItem
     {
         public Guid Id { get; set; }
         public string Type { get; set; } = null!;
-        public decimal Amount { get; set; }
+        public decimal TransactionsAmount { get; set; }
         public string? Note { get; set; }
         public DateTimeOffset TransactionDate { get; set; }
+        public TransactionUserItem User { get; set; } = null!;
+        public TransactionFinancialAccountItem? FinancialAccount { get; set; }
+        public TransactionCategoryItem? Category { get; set; }
+    }
+
+    public class TransactionUserItem
+    {
+        public Guid Id { get; set; }
+        public string Username { get; set; } = null!;
+        public string FirstName { get; set; } = null!;
+        public string LastName { get; set; } = null!;
+    }
+
+    public class TransactionFinancialAccountItem
+    {
+        public Guid Id { get; set; }
+        public string Name { get; set; } = null!;
+        public string AccountType { get; set; } = null!;
+    }
+
+    public class TransactionCategoryItem
+    {
+        public Guid Id { get; set; }
+        public string Name { get; set; } = null!;
     }
 
     public class AdminAuditLogItem

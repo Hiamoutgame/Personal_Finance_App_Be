@@ -2,7 +2,7 @@
 
 public interface IService
 {
-    // public Task<Response.AnswerResponse> GetAiSettings(Request.ChatBoxRequest request);
+    public Task<Response.AnswerResponse> ChatBot(Request.ChatBoxRequest request);
     public Task<Response.AdminAiSettingsResponse> GetAdminAiSettings();
     public Task<Response.UpdateAiSettingsResponse> UpdateAdminAiSettings(Request.UpdateAiSettingsRequest request);
 }

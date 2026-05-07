@@ -5,7 +5,7 @@ namespace Personal_Finance_Management.Service.Admin;
 
 public interface IService
 {
-    Task<Response.AdminDashboardResponse> GetDashboard(string? timeframe);
+    Task<Response.AdminDashboardResponse> GetDashboard();
     Task<Page<Response.AdminAuditLogItem>> GetAuditLogs(Request.AdminAuditLogsRequest request);
     Task<string> UpdateRole(Guid userId, AccountRole role);
 }

@@ -1,6 +1,5 @@
+using System.Net.Http.Json;
 using System.Text.Json;
-using Google.GenAI;
-using Google.GenAI.Types;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -25,6 +24,58 @@ public class Service : IService
         _dbContext = dbContext;
         _configuration = configuration;
         _httpContextAccessor = httpContextAccessor;
+    }
+
+    
+
+    public async Task<Response.AnswerResponse> ChatBot(Request.ChatBoxRequest request)
+    {
+        if (request is null)
+        {
+            throw AppValidationException.BadRequest("Request body is required.", "body", "REQUIRED");
+        }
+
+        var message = NormalizeRequiredText(request.Message, "message", "Message is required.");
+        ValidateRecentMessages(request.RecentMessages);
+
+        var userId = GetCurrentUserId();
+        var setting = await _dbContext.AiSettings
+            .AsNoTracking()
+            .OrderByDescending(ai => ai.UpdatedAt)
+            .FirstOrDefaultAsync();
+
+        var apiKey = _configuration["GoogleAI:ApiKey"]?.Trim();
+        if (setting is null || !setting.IsEnabled || string.IsNullOrWhiteSpace(apiKey))
+        {
+            return BuildRuleBasedFallback();
+        }
+
+        try
+        {
+            var prompt = await BuildChatPrompt(userId, message, request.RecentMessages, setting);
+            var answer = await CallGoogleAi(setting, apiKey, prompt);
+
+            if (string.IsNullOrWhiteSpace(answer))
+            {
+                return BuildRuleBasedFallback();
+            }
+
+            return new Response.AnswerResponse
+            {
+                Answer = answer.Trim(),
+                Suggestions =
+                [
+                    "Xem lai cac giao dich gan day.",
+                    "Kiem tra cac han muc dang gan nguong canh bao.",
+                    "Dieu chinh hu chi tieu neu can."
+                ],
+                Source = "AI"
+            };
+        }
+        catch
+        {
+            return BuildRuleBasedFallback();
+        }
     }
 
     public async Task<Response.AdminAiSettingsResponse> GetAdminAiSettings()
@@ -171,6 +222,192 @@ public class Service : IService
         };
     }
 
+    private async Task<string> BuildChatPrompt(
+        Guid userId,
+        string message,
+        List<Request.RecentMessage>? recentMessages,
+        AiSetting setting)
+    {
+        var now = DateTimeOffset.UtcNow;
+        var monthStart = new DateTimeOffset(now.Year, now.Month, 1, 0, 0, 0, TimeSpan.Zero);
+
+        var accounts = await _dbContext.FinancialAccounts
+            .AsNoTracking()
+            .Where(account => account.UserId == userId && account.IsActive)
+            .Select(account => new
+            {
+                account.Name,
+                account.AccountType,
+                account.CurrentBalance,
+                account.Currency,
+                account.IsDefault
+            })
+            .ToListAsync();
+
+        var jars = await _dbContext.Jars
+            .AsNoTracking()
+            .Where(jar => jar.UserId == userId && jar.Status == "Active")
+            .Select(jar => new
+            {
+                jar.Name,
+                jar.Balance,
+                jar.Currency
+            })
+            .ToListAsync();
+
+        var monthTransactions = await _dbContext.Transactions
+            .AsNoTracking()
+            .Where(transaction =>
+                transaction.UserId == userId
+                && !transaction.IsDeleted
+                && transaction.TransactionDate >= monthStart
+                && transaction.TransactionDate <= now)
+            .Select(transaction => new
+            {
+                transaction.Type,
+                transaction.TransactionsAmount,
+                transaction.Note,
+                transaction.TransactionDate,
+                CategoryName = transaction.Category == null ? null : transaction.Category.Name
+            })
+            .ToListAsync();
+
+        var incomeThisMonth = monthTransactions
+            .Where(transaction => transaction.Type == "Income")
+            .Sum(transaction => Math.Abs(transaction.TransactionsAmount));
+
+        var expenseThisMonth = monthTransactions
+            .Where(transaction => transaction.Type == "Expense")
+            .Sum(transaction => Math.Abs(transaction.TransactionsAmount));
+
+        var topCategories = monthTransactions
+            .Where(transaction => transaction.Type == "Expense")
+            .GroupBy(transaction => transaction.CategoryName ?? "Uncategorized")
+            .Select(group => new
+            {
+                Category = group.Key,
+                Amount = group.Sum(item => Math.Abs(item.TransactionsAmount))
+            })
+            .OrderByDescending(item => item.Amount)
+            .Take(5)
+            .ToList();
+
+        var recentTransactions = await _dbContext.Transactions
+            .AsNoTracking()
+            .Where(transaction => transaction.UserId == userId && !transaction.IsDeleted)
+            .OrderByDescending(transaction => transaction.TransactionDate)
+            .Take(8)
+            .Select(transaction => new
+            {
+                transaction.Type,
+                transaction.TransactionsAmount,
+                transaction.Note,
+                transaction.TransactionDate,
+                CategoryName = transaction.Category == null ? null : transaction.Category.Name
+            })
+            .ToListAsync();
+
+        var safeRecentMessages = (recentMessages ?? [])
+            .TakeLast(6)
+            .Select(item => new
+            {
+                Sender = item.Sender.Trim(),
+                Content = Truncate(item.Content.Trim(), 500)
+            })
+            .ToList();
+
+        var context = new
+        {
+            Currency = "VND",
+            UserQuestion = message,
+            Accounts = accounts,
+            Jars = jars,
+            ThisMonth = new
+            {
+                Income = incomeThisMonth,
+                Expense = expenseThisMonth,
+                Net = incomeThisMonth - expenseThisMonth,
+                TopSpendingCategories = topCategories
+            },
+            RecentTransactions = recentTransactions,
+            RecentMessages = safeRecentMessages
+        };
+
+        var systemPrompt = string.IsNullOrWhiteSpace(setting.SystemPrompt)
+            ? "You are FinJar, a personal finance assistant. Answer in Vietnamese. Be concise, practical, and avoid exposing secrets or raw internal data."
+            : setting.SystemPrompt.Trim();
+
+        return systemPrompt
+               + Environment.NewLine
+               + "Use this JSON financial context. Return only a helpful answer, not JSON."
+               + Environment.NewLine
+               + JsonSerializer.Serialize(context);
+    }
+
+    private static async Task<string?> CallGoogleAi(AiSetting setting, string apiKey, string prompt)
+    {
+        using var httpClient = new HttpClient
+        {
+            Timeout = TimeSpan.FromSeconds(30)
+        };
+
+        var modelName = string.IsNullOrWhiteSpace(setting.ModelName)
+            ? "gemini-2.0-flash"
+            : setting.ModelName.Trim();
+
+        var requestUri =
+            $"https://generativelanguage.googleapis.com/v1beta/models/{Uri.EscapeDataString(modelName)}:generateContent?key={Uri.EscapeDataString(apiKey)}";
+
+        var payload = new
+        {
+            contents = new[]
+            {
+                new
+                {
+                    role = "user",
+                    parts = new[]
+                    {
+                        new { text = prompt }
+                    }
+                }
+            },
+            generationConfig = new
+            {
+                temperature = setting.Temperature,
+                maxOutputTokens = setting.MaxTokens
+            }
+        };
+
+        using var response = await httpClient.PostAsJsonAsync(requestUri, payload);
+        if (!response.IsSuccessStatusCode)
+        {
+            return null;
+        }
+
+        await using var responseStream = await response.Content.ReadAsStreamAsync();
+        using var json = await JsonDocument.ParseAsync(responseStream);
+
+        if (!json.RootElement.TryGetProperty("candidates", out var candidates)
+            || candidates.ValueKind != JsonValueKind.Array
+            || candidates.GetArrayLength() == 0)
+        {
+            return null;
+        }
+
+        var firstCandidate = candidates[0];
+        if (!firstCandidate.TryGetProperty("content", out var content)
+            || !content.TryGetProperty("parts", out var parts)
+            || parts.ValueKind != JsonValueKind.Array
+            || parts.GetArrayLength() == 0)
+        {
+            return null;
+        }
+
+        return parts[0].TryGetProperty("text", out var text)
+            ? text.GetString()
+            : null;
+    }
+
     private string GetDefaultModelName()
     {
         return _configuration["GoogleAI:DefaultModel"]?.Trim() ?? "gemini-2.0-flash";
@@ -189,6 +426,48 @@ public class Service : IService
         return adminId;
     }
 
+    private Guid GetCurrentUserId()
+    {
+        var userIdValue = _httpContextAccessor.HttpContext?.User.Claims
+            .FirstOrDefault(x => x.Type == "id")?.Value;
+
+        if (!Guid.TryParse(userIdValue, out var userId))
+        {
+            throw new UnauthorizedAccessException("User ID claim is missing");
+        }
+
+        return userId;
+    }
+
+    private static void ValidateRecentMessages(List<Request.RecentMessage>? recentMessages)
+    {
+        if (recentMessages is null)
+        {
+            return;
+        }
+
+        foreach (var recentMessage in recentMessages)
+        {
+            var sender = NormalizeRequiredText(
+                recentMessage.Sender,
+                "sender",
+                "Recent message sender is required.");
+
+            if (sender != "User" && sender != "AI")
+            {
+                throw AppValidationException.BadRequest(
+                    "Recent message sender must be User or AI.",
+                    "sender",
+                    "AI_CHAT_INVALID");
+            }
+
+            NormalizeRequiredText(
+                recentMessage.Content,
+                "content",
+                "Recent message content is required.");
+        }
+    }
+
     private static string NormalizeRequiredText(string value, string field, string message)
     {
         var normalizedValue = value.Trim();
@@ -198,6 +477,13 @@ public class Service : IService
         }
 
         return normalizedValue;
+    }
+
+    private static string Truncate(string value, int maxLength)
+    {
+        return value.Length <= maxLength
+            ? value
+            : value[..maxLength];
     }
 
     private static string? MaskApiKey(string? apiKey)
