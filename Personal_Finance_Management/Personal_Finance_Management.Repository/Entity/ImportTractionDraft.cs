@@ -21,8 +21,8 @@ public class ImportTransactionDraft : BaseEntity, IAudictableEntity
     public string? NormalizedPayloadJson { get; set; }
 
     //Nối với importJob
-    public Guid ImportJobId { get; set; }
-    public ImportJob ImportJob { get; set; } = null!;
+    public Guid? ImportJobId { get; set; }
+    public ImportJob? ImportJob { get; set; }
 
     //Nối với category
     public Guid? EditedCategoryId { get; set; }

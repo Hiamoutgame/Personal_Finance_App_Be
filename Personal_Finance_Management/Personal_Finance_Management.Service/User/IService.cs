@@ -6,4 +6,6 @@ public interface IService
     public Task<Response.GetUserInforResponse> GetUserInfor();
     public Task<Response.UpdateUserResponse> UpdateUserProfile(Request.UpdateUserRequest request);
     public Task<Response.ViewSetupResponse> ViewSetup();
+    public Task<Response.GetUserInforResponse> GetUserInforById(Request.UserIdRequest request);
+    public Task<Response.GetUserInforResponse> UpdateUserStatus(Request.UserStatusRequest request);
 }

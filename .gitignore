@@ -61,3 +61,6 @@ nunit-*.xml
 !.env.example
 
 note/
+Ocr_Service/.venv
+__pycache__
+log
