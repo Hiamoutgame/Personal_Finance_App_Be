@@ -22,6 +22,7 @@ bld/
 [Oo]bj/
 [Ll]og/
 [Ll]ogs/
+*.log
 
 # .NET Core
 project.lock.json
@@ -59,7 +60,6 @@ nunit-*.xml
 .env
 .env.*
 !.env.example
-*
 
 note/
 Ocr_Service/.venv
