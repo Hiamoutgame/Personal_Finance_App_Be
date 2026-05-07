@@ -24,8 +24,8 @@ public class Transaction : BaseEntity, IAudictableEntity
     public Account User { get; set; } = null!;
 
     //Nối với FinancialAccount 
-    public Guid FinancialAccountId { get; set; }
-    public FinancialAccount FinancialAccount { get; set; } = null!;
+    public Guid? FinancialAccountId { get; set; }
+    public FinancialAccount? FinancialAccount { get; set; } = null!;
 
     public Guid? CategoryId { get; set; }
     public Category? Category { get; set; }

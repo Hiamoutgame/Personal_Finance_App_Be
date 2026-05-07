@@ -15,6 +15,10 @@ using UserService = Personal_Finance_Management.Service.User;
 using validationService = Personal_Finance_Management.Service.Validations;
 using AIService = Personal_Finance_Management.Service.AI;
 
+using financialAccountService = Personal_Finance_Management.Service.FinancialAccount;
+using jarsService = Personal_Finance_Management.Service.Jar;
+using transactionService = Personal_Finance_Management.Service.Transaction;
+using dashboardService = Personal_Finance_Management.Service.Dashboard;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
@@ -37,11 +41,16 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 builder.Services.AddJwtServices(builder.Configuration);
 builder.Services.AddAuthorizationPolicies();
 
+
 builder.Services.AddScoped<authService.IService, authService.Service>();
 builder.Services.AddScoped<jwtService.IService, jwtService.Service>();
 builder.Services.AddScoped<validationService.IServices, validationService.ValidationServices>();
 builder.Services.AddScoped<OnboardingService.IService, OnboardingService.Service>();
 builder.Services.AddScoped<UserService.IService, UserService.Service>();
+builder.Services.AddScoped<financialAccountService.IService, financialAccountService.Service>();
+builder.Services.AddScoped<jarsService.IService, jarsService.Service>();
+builder.Services.AddScoped<transactionService.IService, transactionService.Service>();
+builder.Services.AddScoped<dashboardService.IService, dashboardService.Service>();
 builder.Services.AddScoped<CategoryService.IService, CategoryService.Service>();
 builder.Services.AddScoped<BroadcastService.IService, BroadcastService.Service>();
 builder.Services.AddScoped<AdminService.IService, AdminService.Service>();
