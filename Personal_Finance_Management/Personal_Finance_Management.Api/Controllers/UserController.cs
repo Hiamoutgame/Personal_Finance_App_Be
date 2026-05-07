@@ -1,12 +1,13 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Personal_Finance_Management.Api.Extensions;
 using Personal_Finance_Management.Service.User;
 
 namespace Personal_Finance_Management.Api.Controllers;
 
 [ApiController]
 [Route("[controller]")]
-[Authorize]
+[Authorize(Policy = AuthorizationExtension.Policies.User)]
 public class UserController : ControllerBase
 {
     private readonly IService _service;
