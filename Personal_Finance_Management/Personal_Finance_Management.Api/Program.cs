@@ -14,6 +14,7 @@ using OnboardingService = Personal_Finance_Management.Service.Onboarding;
 using UserService = Personal_Finance_Management.Service.User;
 using validationService = Personal_Finance_Management.Service.Validations;
 using AIService = Personal_Finance_Management.Service.AI;
+using Personal_Finance_Management.Service.Seeding;
 
 using financialAccountService = Personal_Finance_Management.Service.FinancialAccount;
 using jarsService = Personal_Finance_Management.Service.Jar;
@@ -40,6 +41,8 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 );
 builder.Services.AddJwtServices(builder.Configuration);
 builder.Services.AddAuthorizationPolicies();
+builder.Services.Configure<SeedAccountsOptions>(
+    builder.Configuration.GetSection(SeedAccountsOptions.SectionName));
 
 
 builder.Services.AddScoped<authService.IService, authService.Service>();
@@ -55,6 +58,7 @@ builder.Services.AddScoped<CategoryService.IService, CategoryService.Service>();
 builder.Services.AddScoped<BroadcastService.IService, BroadcastService.Service>();
 builder.Services.AddScoped<AdminService.IService, AdminService.Service>();
 builder.Services.AddScoped<AIService.IService, AIService.Service>();
+builder.Services.AddScoped<DatabaseSeedService>();
 builder.Services.AddHttpClient<OcrService.IService, OcrService.Service>(client =>
 {
     var timeoutSeconds = builder.Configuration.GetValue<int?>("Ocr:TimeoutSeconds") ?? 120;
@@ -66,6 +70,10 @@ var app = builder.Build();
 
 // hien: khuc nay dung de tu dong apply database migration khi bien ApplyMigrations duoc bat
 app.ApplyDatabaseMigrations();
+if (app.Configuration.GetValue<bool>("SeedAccounts:Enabled"))
+{
+    await app.SeedConfiguredAccountsAsync();
+}
 
 app.UseMiddleware<GlobalExceptionHandlerMiddleware>();
 

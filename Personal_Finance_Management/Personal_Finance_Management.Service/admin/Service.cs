@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Personal_Finance_Management.Repository;
 using Personal_Finance_Management.Repository.Entity;
@@ -15,12 +16,15 @@ public class Service : IService
     private readonly AppDbContext _dbContext;
     private readonly IServices _validationServices;
 
+    private readonly IHttpContextAccessor _httpContextAccessor;
+
     public Service(
-        AppDbContext dbContext,
-        IServices validationServices)
+        AppDbContext dbContext, IServices validationServices,
+        IHttpContextAccessor httpContextAccessor)
     {
         _dbContext = dbContext;
         _validationServices = validationServices;
+        _httpContextAccessor = httpContextAccessor;
     }
 
     public async Task<Response.AdminDashboardResponse> GetDashboard(string? timeframe)
@@ -45,17 +49,16 @@ public class Service : IService
         var dayEnd = dayStart.AddDays(1);
         var dau = await userQuery
             .Where(account => account.LastLoginAt != null
-                && account.LastLoginAt >= dayStart
-                && account.LastLoginAt < dayEnd)
+                              && account.LastLoginAt >= dayStart
+                              && account.LastLoginAt < dayEnd)
             .CountAsync();
         var mau = await userQuery
             .Where(account => account.LastLoginAt != null
-                && account.LastLoginAt >= now.AddDays(-30))
+                              && account.LastLoginAt >= now.AddDays(-30))
             .CountAsync();
         var stickinessPercent = CalculatePercent(dau, mau);
 
         var transactionPeriodQuery = _dbContext.Transactions.AsNoTracking()
-            .ActiveTransactions()
             .InDateRange(dateRange.PeriodStart, dateRange.PeriodEnd);
 
         var totalTransactions = await transactionPeriodQuery.CountAsync();
@@ -65,7 +68,6 @@ public class Service : IService
             .SumAsync();
 
         var transactionTrendQuery = _dbContext.Transactions.AsNoTracking()
-            .ActiveTransactions()
             .InDateRange(dateRange.Trend.Start, dateRange.Trend.End);
 
         var transactionTrend = await BuildTransactionTrend(
@@ -91,7 +93,6 @@ public class Service : IService
             .ToListAsync();
 
         var recentTransactions = await _dbContext.Transactions.AsNoTracking()
-            .ActiveTransactions()
             .OrderByDescending(transaction => transaction.TransactionDate)
             .Take(RecentLimit)
             .Select(transaction => new Response.RecentTransactionItem
@@ -222,8 +223,31 @@ public class Service : IService
         };
     }
 
+    public async Task<string> UpdateRole(Guid userId, AccountRole role)
+    {
+        var adminId = _httpContextAccessor.HttpContext.User.Claims.FirstOrDefault(x => x.Type == "id")?.Value;
+        if (string.IsNullOrEmpty(adminId))
+            throw new UnauthorizedAccessException("AdminId not found in token");
+        var user = await _dbContext.Accounts.FirstOrDefaultAsync(x => x.Id == userId);
+        if (user == null)
+        {
+            throw new Exception("User not found");
+        }
+
+        var roleCode = role.ToString();
+        var roleEntities = await _dbContext.Roles.FirstOrDefaultAsync(x => x.Code == roleCode);
+        if (roleEntities == null)
+        {
+            throw new Exception("Role not found");
+        }
+        user.RoleId = roleEntities.Id;
+        user.UpdatedAt = DateTimeOffset.UtcNow;
+        await _dbContext.SaveChangesAsync();
+        return "User role updated successfully";
+    }
+
     private async Task<List<Response.TransactionTrendItem>> BuildTransactionTrend(
-        IQueryable<Transaction> transactionQuery,
+        IQueryable<Repository.Entity.Transaction> transactionQuery,
         TrendRange trendRange,
         string timeframe)
     {
@@ -416,7 +440,7 @@ public class Service : IService
         {
             var profiles = await _dbContext.OnboardingProfiles.AsNoTracking()
                 .Where(profile => profile.CompletedAt >= cohort.Start
-                    && profile.CompletedAt < cohort.End)
+                                  && profile.CompletedAt < cohort.End)
                 .Select(profile => new { profile.CompletedAt, profile.User.LastLoginAt })
                 .ToListAsync();
 
@@ -433,7 +457,8 @@ public class Service : IService
                 }
 
                 var active = profiles.Count(profile => profile.LastLoginAt.HasValue
-                    && profile.LastLoginAt.Value >= profile.CompletedAt.AddDays(days));
+                                                       && profile.LastLoginAt.Value >=
+                                                       profile.CompletedAt.AddDays(days));
                 percents[i] = CalculatePercent(active, total);
             }
 

@@ -87,110 +87,110 @@ Danh sách dưới đây là các REST APIs chính cho MVP. Chi tiết request/r
 
 #### Financial Accounts
 
-| Method | Endpoint | Mục đích |
-| --- | --- | --- |
-| GET | `/api/v1/financial-accounts` | Danh sách nguồn tiền |
-| POST | `/api/v1/financial-accounts` | Tạo nguồn tiền |
-| PATCH | `/api/v1/financial-accounts/{id}` | Sửa thông tin nguồn tiền |
-| PATCH | `/api/v1/financial-accounts/{id}/balance` | Điều chỉnh số dư |
-| DELETE | `/api/v1/financial-accounts/{id}` | Xóa/ngưng theo dõi nguồn tiền |
+| Method | Endpoint                                  | Mục đích                      |
+| ------ | ----------------------------------------- | ----------------------------- |
+| GET    | `/api/v1/financial-accounts`              | Danh sách nguồn tiền          |
+| POST   | `/api/v1/financial-accounts`              | Tạo nguồn tiền                |
+| PATCH  | `/api/v1/financial-accounts/{id}`         | Sửa thông tin nguồn tiền      |
+| PATCH  | `/api/v1/financial-accounts/{id}/balance` | Điều chỉnh số dư              |
+| DELETE | `/api/v1/financial-accounts/{id}`         | Xóa/ngưng theo dõi nguồn tiền |
 
 #### Categories
 
-| Method | Endpoint | Mục đích |
-| --- | --- | --- |
-| GET | `/api/v1/categories` | Danh sách danh mục |
-| POST | `/api/v1/categories` | Tạo danh mục mới |
-| PATCH | `/api/v1/categories/{id}` | Cập nhật danh mục |
-| DELETE | `/api/v1/categories/{id}` | Xóa danh mục |
+| Method | Endpoint                  | Mục đích           |
+| ------ | ------------------------- | ------------------ |
+| GET    | `/api/v1/categories`      | Danh sách danh mục |
+| POST   | `/api/v1/categories`      | Tạo danh mục mới   |
+| PATCH  | `/api/v1/categories/{id}` | Cập nhật danh mục  |
+| DELETE | `/api/v1/categories/{id}` | Xóa danh mục       |
 
 #### Jars
 
-| Method | Endpoint | Mục đích |
-| --- | --- | --- |
-| GET | `/api/v1/jars` | Danh sách hũ |
-| POST | `/api/v1/jars/setup` | Khởi tạo bộ hũ ban đầu, dùng chung với onboarding |
-| POST | `/api/v1/jars` | Tạo hũ mới |
-| PATCH | `/api/v1/jars/{id}` | Cập nhật hũ |
-| DELETE | `/api/v1/jars/{id}` | Xóa hũ |
+| Method | Endpoint             | Mục đích                                          |
+| ------ | -------------------- | ------------------------------------------------- |
+| GET    | `/api/v1/jars`       | Danh sách hũ                                      |
+| POST   | `/api/v1/jars/setup` | Khởi tạo bộ hũ ban đầu, dùng chung với onboarding |
+| POST   | `/api/v1/jars`       | Tạo hũ mới                                        |
+| PATCH  | `/api/v1/jars/{id}`  | Cập nhật hũ                                       |
+| DELETE | `/api/v1/jars/{id}`  | Xóa hũ                                            |
 
 #### Transactions
 
-| Method | Endpoint | Mục đích |
-| --- | --- | --- |
-| GET | `/api/v1/transactions` | Danh sách giao dịch |
-| POST | `/api/v1/transactions` | Tạo giao dịch |
-| PATCH | `/api/v1/transactions/{id}` | Cập nhật giao dịch |
-| DELETE | `/api/v1/transactions/{id}` | Xóa giao dịch |
+| Method | Endpoint                    | Mục đích            |
+| ------ | --------------------------- | ------------------- |
+| GET    | `/api/v1/transactions`      | Danh sách giao dịch |
+| POST   | `/api/v1/transactions`      | Tạo giao dịch       |
+| PATCH  | `/api/v1/transactions/{id}` | Cập nhật giao dịch  |
+| DELETE | `/api/v1/transactions/{id}` | Xóa giao dịch       |
 
 #### Imports
 
-| Method | Endpoint | Mục đích |
-| --- | --- | --- |
-| POST | `/api/v1/imports` | Tải file sao kê lên |
-| GET | `/api/v1/imports/{id}` | Lấy trạng thái file nhập |
-| GET | `/api/v1/imports/{id}/preview` | Xem trước dữ liệu sao kê |
-| POST | `/api/v1/imports/{id}/confirm` | Xác nhận lưu dữ liệu sao kê |
+| Method | Endpoint                       | Mục đích                    |
+| ------ | ------------------------------ | --------------------------- |
+| POST   | `/api/v1/imports`              | Tải file sao kê lên         |
+| GET    | `/api/v1/imports/{id}`         | Lấy trạng thái file nhập    |
+| GET    | `/api/v1/imports/{id}/preview` | Xem trước dữ liệu sao kê    |
+| POST   | `/api/v1/imports/{id}/confirm` | Xác nhận lưu dữ liệu sao kê |
 
 #### Dashboard & Reporting
 
-| Method | Endpoint | Mục đích |
-| --- | --- | --- |
-| GET | `/api/v1/dashboard` | Lấy dữ liệu tổng quan cho trang chủ |
+| Method | Endpoint            | Mục đích                            |
+| ------ | ------------------- | ----------------------------------- |
+| GET    | `/api/v1/dashboard` | Lấy dữ liệu tổng quan cho trang chủ |
 
 #### Limits
 
-| Method | Endpoint | Mục đích |
-| --- | --- | --- |
-| GET | `/api/v1/limits` | Danh sách hạn mức |
-| POST | `/api/v1/limits` | Tạo hạn mức |
-| PATCH | `/api/v1/limits/{id}` | Cập nhật hạn mức |
-| DELETE | `/api/v1/limits/{id}` | Xóa hạn mức |
+| Method | Endpoint              | Mục đích          |
+| ------ | --------------------- | ----------------- |
+| GET    | `/api/v1/limits`      | Danh sách hạn mức |
+| POST   | `/api/v1/limits`      | Tạo hạn mức       |
+| PATCH  | `/api/v1/limits/{id}` | Cập nhật hạn mức  |
+| DELETE | `/api/v1/limits/{id}` | Xóa hạn mức       |
 
 #### Notifications
 
-| Method | Endpoint | Mục đích |
-| --- | --- | --- |
-| GET | `/api/v1/notifications` | Danh sách thông báo |
-| PATCH | `/api/v1/notifications/status` | Đánh dấu đã đọc thông báo |
+| Method | Endpoint                       | Mục đích                  |
+| ------ | ------------------------------ | ------------------------- |
+| GET    | `/api/v1/notifications`        | Danh sách thông báo       |
+| PATCH  | `/api/v1/notifications/status` | Đánh dấu đã đọc thông báo |
 
 #### Goals
 
-| Method | Endpoint | Mục đích |
-| --- | --- | --- |
-| GET | `/api/v1/goals` | Danh sách mục tiêu |
-| GET | `/api/v1/goals/{id}` | Chi tiết mục tiêu |
-| POST | `/api/v1/goals` | Tạo mục tiêu mới |
-| PATCH | `/api/v1/goals/{id}` | Cập nhật mục tiêu |
-| DELETE | `/api/v1/goals/{id}` | Xóa mục tiêu |
-| POST | `/api/v1/goals/{id}/contributions` | Thêm tiền đóng góp vào mục tiêu |
+| Method | Endpoint                           | Mục đích                        |
+| ------ | ---------------------------------- | ------------------------------- |
+| GET    | `/api/v1/goals`                    | Danh sách mục tiêu              |
+| GET    | `/api/v1/goals/{id}`               | Chi tiết mục tiêu               |
+| POST   | `/api/v1/goals`                    | Tạo mục tiêu mới                |
+| PATCH  | `/api/v1/goals/{id}`               | Cập nhật mục tiêu               |
+| DELETE | `/api/v1/goals/{id}`               | Xóa mục tiêu                    |
+| POST   | `/api/v1/goals/{id}/contributions` | Thêm tiền đóng góp vào mục tiêu |
 
 #### Reminders
 
-| Method | Endpoint | Mục đích |
-| --- | --- | --- |
-| GET | `/api/v1/reminders` | Danh sách nhắc nhở |
-| POST | `/api/v1/reminders` | Tạo nhắc nhở |
-| PATCH | `/api/v1/reminders/{id}` | Cập nhật nhắc nhở |
-| DELETE | `/api/v1/reminders/{id}` | Xóa nhắc nhở |
+| Method | Endpoint                 | Mục đích           |
+| ------ | ------------------------ | ------------------ |
+| GET    | `/api/v1/reminders`      | Danh sách nhắc nhở |
+| POST   | `/api/v1/reminders`      | Tạo nhắc nhở       |
+| PATCH  | `/api/v1/reminders/{id}` | Cập nhật nhắc nhở  |
+| DELETE | `/api/v1/reminders/{id}` | Xóa nhắc nhở       |
 
 #### Admin / Backoffice
 
-| Method | Endpoint | Mục đích |
-| --- | --- | --- |
-| GET | `/api/v1/admin/users` | Danh sách người dùng |
-| GET | `/api/v1/admin/users/{id}` | Chi tiết người dùng |
-| PATCH | `/api/v1/admin/users/{id}/status` | Cập nhật trạng thái người dùng |
-| GET | `/api/v1/admin/categories` | Lấy danh mục mặc định |
-| POST | `/api/v1/admin/categories` | Tạo danh mục mặc định |
-| PATCH | `/api/v1/admin/categories/{id}` | Sửa danh mục mặc định |
-| DELETE | `/api/v1/admin/categories/{id}` | Xóa danh mục mặc định |
-| POST | `/api/v1/admin/broadcasts` | Gửi thông báo hệ thống |
-| GET | `/api/v1/admin/broadcasts` | Lịch sử gửi thông báo hệ thống |
-| GET | `/api/v1/admin/dashboard` | Thống kê cho admin |
-| GET | `/api/v1/admin/audit-logs` | Nhật ký hệ thống |
-| GET | `/api/v1/admin/ai-settings` | Cấu hình AI/LLM |
-| PATCH | `/api/v1/admin/ai-settings` | Cập nhật cấu hình AI/LLM |
+| Method | Endpoint                          | Mục đích                       |
+| ------ | --------------------------------- | ------------------------------ |
+| GET    | `/api/v1/admin/users`             | Danh sách người dùng           |
+| GET    | `/api/v1/admin/users/{id}`        | Chi tiết người dùng            |
+| PATCH  | `/api/v1/admin/users/{id}/status` | Cập nhật trạng thái người dùng |
+| GET    | `/api/v1/admin/categories`        | Lấy danh mục mặc định          |
+| POST   | `/api/v1/admin/categories`        | Tạo danh mục mặc định          |
+| PATCH  | `/api/v1/admin/categories/{id}`   | Sửa danh mục mặc định          |
+| DELETE | `/api/v1/admin/categories/{id}`   | Xóa danh mục mặc định          |
+| POST   | `/api/v1/admin/broadcasts`        | Gửi thông báo hệ thống         |
+| GET    | `/api/v1/admin/broadcasts`        | Lịch sử gửi thông báo hệ thống |
+| GET    | `/api/v1/admin/dashboard`         | Thống kê cho admin             |
+| GET    | `/api/v1/admin/audit-logs`        | Nhật ký hệ thống               |
+| GET    | `/api/v1/admin/ai-settings`       | Cấu hình AI/LLM                |
+| PATCH  | `/api/v1/admin/ai-settings`       | Cập nhật cấu hình AI/LLM       |
 
 ## 4. Khi nào giữ field thời gian trong response
 
@@ -1528,21 +1528,21 @@ Response `200 OK`
 
 Phạm vi P6 chuẩn hóa theo danh sách API admin hiện tại:
 
-| Method | Endpoint | Mục đích |
-| --- | --- | --- |
-| GET | `/api/v1/admin/users` | Xem, tìm kiếm, phân trang danh sách user |
-| GET | `/api/v1/admin/users/{id}` | Xem chi tiết một user |
-| PATCH | `/api/v1/admin/users/{id}/status` | Khóa hoặc mở khóa tài khoản user |
-| GET | `/api/v1/admin/categories` | Xem danh mục mặc định toàn hệ thống |
-| POST | `/api/v1/admin/categories` | Tạo danh mục mặc định |
-| PATCH | `/api/v1/admin/categories/{id}` | Cập nhật danh mục mặc định |
-| DELETE | `/api/v1/admin/categories/{id}` | Xóa mềm danh mục mặc định |
-| POST | `/api/v1/admin/broadcasts` | Tạo broadcast notification |
-| GET | `/api/v1/admin/broadcasts` | Xem lịch sử broadcast notification |
-| GET | `/api/v1/admin/dashboard` | Lấy dữ liệu dashboard vận hành |
-| GET | `/api/v1/admin/audit-logs` | Xem audit log thao tác admin |
-| GET | `/api/v1/admin/ai-settings` | Xem cấu hình AI hiện tại |
-| PATCH | `/api/v1/admin/ai-settings` | Cập nhật cấu hình AI |
+| Method | Endpoint                          | Mục đích                                 |
+| ------ | --------------------------------- | ---------------------------------------- |
+| GET    | `/api/v1/admin/users`             | Xem, tìm kiếm, phân trang danh sách user |
+| GET    | `/api/v1/admin/users/{id}`        | Xem chi tiết một user                    |
+| PATCH  | `/api/v1/admin/users/{id}/status` | Khóa hoặc mở khóa tài khoản user         |
+| GET    | `/api/v1/admin/categories`        | Xem danh mục mặc định toàn hệ thống      |
+| POST   | `/api/v1/admin/categories`        | Tạo danh mục mặc định                    |
+| PATCH  | `/api/v1/admin/categories/{id}`   | Cập nhật danh mục mặc định               |
+| DELETE | `/api/v1/admin/categories/{id}`   | Xóa mềm danh mục mặc định                |
+| POST   | `/api/v1/admin/broadcasts`        | Tạo broadcast notification               |
+| GET    | `/api/v1/admin/broadcasts`        | Xem lịch sử broadcast notification       |
+| GET    | `/api/v1/admin/dashboard`         | Lấy dữ liệu dashboard vận hành           |
+| GET    | `/api/v1/admin/audit-logs`        | Xem audit log thao tác admin             |
+| GET    | `/api/v1/admin/ai-settings`       | Xem cấu hình AI hiện tại                 |
+| PATCH  | `/api/v1/admin/ai-settings`       | Cập nhật cấu hình AI                     |
 
 Rules chung:
 

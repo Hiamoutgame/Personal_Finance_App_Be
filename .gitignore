@@ -59,6 +59,7 @@ nunit-*.xml
 .env
 .env.*
 !.env.example
+*
 
 note/
 Ocr_Service/.venv

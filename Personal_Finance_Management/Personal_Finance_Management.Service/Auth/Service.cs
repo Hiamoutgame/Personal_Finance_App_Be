@@ -2,6 +2,7 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using Microsoft.EntityFrameworkCore;
 using Personal_Finance_Management.Repository;
+using Personal_Finance_Management.Repository.Constants;
 using Personal_Finance_Management.Repository.Entity;
 using Personal_Finance_Management.Repository.Enum;
 using ValidationService = Personal_Finance_Management.Service.Validations;
@@ -11,8 +12,8 @@ namespace Personal_Finance_Management.Service.Auth;
 
 public class Service : IService
 {
-    private static readonly Guid DefaultRoleId = Guid.Parse("00000000-0000-0000-0000-000000000001");
-    private const string DefaultRoleCode = "User";
+    private static readonly Guid DefaultRoleId = AppRoles.Ids.User;
+    private static readonly string DefaultRoleCode = AppRoles.Codes.User;
 
     private readonly AppDbContext _dbContext;
     private readonly JwtService.IService _jwtService;

@@ -11,13 +11,13 @@ internal static class AdminQueryExtensions
         return query.Where(account => account.Role.Code == userRoleCode);
     }
 
-    public static IQueryable<Transaction> ActiveTransactions(this IQueryable<Transaction> query)
+    public static IQueryable<Repository.Entity.Transaction> ActiveTransactions(this IQueryable<Repository.Entity.Transaction> query)
     {
         return query.Where(transaction => !transaction.IsDeleted);
     }
 
-    public static IQueryable<Transaction> InDateRange(
-        this IQueryable<Transaction> query,
+    public static IQueryable<Repository.Entity.Transaction> InDateRange(
+        this IQueryable<Repository.Entity.Transaction> query,
         DateTimeOffset start,
         DateTimeOffset end)
     {
@@ -25,7 +25,7 @@ internal static class AdminQueryExtensions
             && transaction.TransactionDate < end);
     }
 
-    public static IQueryable<Transaction> Expenses(this IQueryable<Transaction> query)
+    public static IQueryable<Repository.Entity.Transaction> Expenses(this IQueryable<Repository.Entity.Transaction> query)
     {
         return query.Where(transaction => transaction.Type == TransactionType.Expense.ToString());
     }
