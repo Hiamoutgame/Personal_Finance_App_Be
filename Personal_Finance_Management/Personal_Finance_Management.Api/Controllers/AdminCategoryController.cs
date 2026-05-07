@@ -6,7 +6,7 @@ namespace Personal_Finance_Management.Api.Controllers
 {
     [ApiController]
     [Route("api/v1/admin/categories")]
-    [Authorize(Roles = "Admin")]
+    // [Authorize(Roles = "Admin")]
     public class AdminCategoryController : ControllerBase
     {
         private readonly CategoryService.IService _categoryService;

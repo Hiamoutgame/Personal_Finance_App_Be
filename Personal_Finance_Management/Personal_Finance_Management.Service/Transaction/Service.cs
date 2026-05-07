@@ -342,8 +342,8 @@ public class Service : IService
                 {
                     var financialAccount = _dbContext.FinancialAccounts.FirstOrDefault(x => x.Id == transaction.FinancialAccountId);
                     if (financialAccount == null) throw new Exception("Financial account not found");
-                    var isUse = _dbContext.Transactions.Any(x => x.FinancialAccountId == financialAccount.Id);
-                    if (isUse != null)
+                    var isUse = _dbContext.Transactions.Any(x => x.FinancialAccountId == financialAccount.Id && x.Type != "Income");
+                    if (isUse)
                     {
                         throw new Exception("The Income has been used!. The Change will terminated the existed money flow logic");
                     }

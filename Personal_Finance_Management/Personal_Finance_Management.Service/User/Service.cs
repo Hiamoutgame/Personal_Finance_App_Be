@@ -76,10 +76,10 @@ public class Service : IService
         if (user == null)
             throw new Exception("User not found");
 
-        user.FirstName = request.firstName ?? user.FirstName;
-        user.LastName = request.lastName ?? user.LastName;
-        user.Phone = request.phone ?? user.Phone;
-        user.AvatarUrl = request.avatarUrl ?? user.AvatarUrl;
+        user.FirstName = request.FirstName ?? user.FirstName;
+        user.LastName = request.LastName ?? user.LastName;
+        user.Phone = request.Phone ?? user.Phone;
+        user.AvatarUrl = request.AvatarUrl ?? user.AvatarUrl;
 
         await _dbContext.SaveChangesAsync();
         var result = new Response.UpdateUserResponse()
