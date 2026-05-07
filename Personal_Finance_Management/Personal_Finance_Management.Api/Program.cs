@@ -11,7 +11,9 @@ using OcrService = Personal_Finance_Management.Service.ocr;
 using OnboardingService = Personal_Finance_Management.Service.Onboarding;
 using UserService = Personal_Finance_Management.Service.User;
 using validationService = Personal_Finance_Management.Service.Validations;
-
+using financialAccountService = Personal_Finance_Management.Service.FinancialAccount;
+using jarsService = Personal_Finance_Management.Service.Jar;
+using transactionService = Personal_Finance_Management.Service.Transaction;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
@@ -33,11 +35,15 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 );
 builder.Services.AddJwtServices(builder.Configuration);
 
+
 builder.Services.AddScoped<authService.IService, authService.Service>();
 builder.Services.AddScoped<jwtService.IService, jwtService.Service>();
 builder.Services.AddScoped<validationService.IServices, validationService.ValidationServices>();
 builder.Services.AddScoped<OnboardingService.IService, OnboardingService.Service>();
 builder.Services.AddScoped<UserService.IService, UserService.Service>();
+builder.Services.AddScoped<financialAccountService.IService, financialAccountService.Service>();
+builder.Services.AddScoped<jarsService.IService, jarsService.Service>();
+builder.Services.AddScoped<transactionService.IService, transactionService.Service>();
 builder.Services.AddScoped<CategoryService.IService, CategoryService.Service>();
 builder.Services.AddHttpClient<OcrService.IService, OcrService.Service>(client =>
 {

@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Personal_Finance_Management.Service.Onboarding;
 
@@ -5,6 +6,7 @@ namespace Personal_Finance_Management.Api.Controllers;
 
 [ApiController]
 [Route("[controller]")]
+[Authorize]
 public class OnboardingController : ControllerBase
 {
     private readonly IService _service;

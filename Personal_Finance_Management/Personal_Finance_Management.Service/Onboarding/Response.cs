@@ -19,7 +19,6 @@ public class Response
     public class Jar
     {
         public string name { get; set; }
-        public int percentage { get; set; }
     }
     
     public class defaultFAccount
