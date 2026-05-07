@@ -1,5 +1,6 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
+using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Personal_Finance_Management.Repository;
 using Personal_Finance_Management.Repository.Constants;
@@ -18,15 +19,18 @@ public class Service : IService
     private readonly AppDbContext _dbContext;
     private readonly JwtService.IService _jwtService;
     private readonly ValidationService.IServices _validationServices;
+    private readonly IHttpContextAccessor _httpContext;
 
     public Service(
         AppDbContext dbContext,
         JwtService.IService jwtService,
-        ValidationService.IServices validationServices)
+        ValidationService.IServices validationServices,
+        IHttpContextAccessor httpContext)
     {
         _dbContext = dbContext;
         _jwtService = jwtService;
         _validationServices = validationServices;
+        _httpContext = httpContext;
     }
 
     public async Task<Response.RegisterResponse> Register(Request.RegisterRequest request)
@@ -136,5 +140,15 @@ public class Service : IService
             Email = user.Email,
             AccessToken = token
         });
+    }
+
+    public async Task<string> Logout()
+    {
+        var userId = _httpContext.HttpContext.User.Claims.FirstOrDefault(x => x.Type == "id")?.Value;
+        if (string.IsNullOrEmpty(userId))
+        {
+            throw new Exception("Invalid user id.");
+        }
+        return await Task.FromResult("Logout successful.");
     }
 }
