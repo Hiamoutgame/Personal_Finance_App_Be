@@ -11,6 +11,7 @@ using validationService = Personal_Finance_Management.Service.Validations;
 using financialAccountService = Personal_Finance_Management.Service.FinancialAccount;
 using jarsService = Personal_Finance_Management.Service.Jar;
 using transactionService = Personal_Finance_Management.Service.Transaction;
+using dashboardService = Personal_Finance_Management.Service.Dashboard;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
@@ -41,6 +42,7 @@ builder.Services.AddScoped<UserService.IService, UserService.Service>();
 builder.Services.AddScoped<financialAccountService.IService, financialAccountService.Service>();
 builder.Services.AddScoped<jarsService.IService, jarsService.Service>();
 builder.Services.AddScoped<transactionService.IService, transactionService.Service>();
+builder.Services.AddScoped<dashboardService.IService, dashboardService.Service>();
 var app = builder.Build();
 
 // hien: khuc nay dung de tu dong apply database migration khi bien ApplyMigrations duoc bat
