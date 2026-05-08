@@ -250,11 +250,11 @@ public class Service : IService
 
         if (user == null)
             throw new Exception("User not found");
-        var existedAccount = _dbContext.FinancialAccounts.FirstOrDefault(x => x.Id == id && x.Name == request.name);
-        if (existedAccount != null)
-        {
-            throw new Exception("FinancialAccount already exists");
-        }
+        // var existedAccount = _dbContext.FinancialAccounts.FirstOrDefault(x => x.Id == id && x.Name == request.name);
+        // if (existedAccount != null)
+        // {
+        //     throw new Exception("FinancialAccount already exists");
+        // }
         var query = _dbContext.FinancialAccounts.FirstOrDefault(x => x.Id == id && x.UserId == userIdGuid);
         if (query == null)
         {

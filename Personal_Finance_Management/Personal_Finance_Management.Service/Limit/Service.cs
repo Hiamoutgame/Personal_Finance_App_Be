@@ -47,8 +47,10 @@ public class Service : IService
             {
                 string targetName = "Unknow";
                 Guid targetId = Guid.Empty;
-                string targetType = "Unknow";
-
+                string targetType = "Jar";
+                
+                decimal currentSpent = limit.Jar?.Balance ?? 0;
+                
                 if (limit.Jar != null && limit.JarId.HasValue)
                 {
                     targetId = limit.JarId.Value;
@@ -69,8 +71,8 @@ public class Service : IService
                     LimitAmount = limit.LimitAmount,
                     Period = limit.Period,
                     AlertAtPercentage = limit.AlertAtPercentage,
-                    CurrentSpent = 0,
-                    CurrentPercentage = 0,
+                    CurrentSpent = currentSpent,
+                    CurrentPercentage = (double)((currentSpent * 100) / limit.LimitAmount),
                     Status = "Active",
                     TargetType = targetType
                 };

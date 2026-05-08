@@ -248,8 +248,7 @@ public class Service : IService
                 var financialAccount = _dbContext.FinancialAccounts.FirstOrDefault(x => x.Id == transaction.FinancialAccountId);
                 financialAccount.CurrentBalance = financialAccount.CurrentBalance +  transaction.TransactionsAmount;
             }
-        }else if (transaction.Type == "Transfer")
-        {
+        }else if (transaction.Type == "Transfer") {
             // Transfer from jar to jar
             if (transaction.FromJarId != null && transaction.ToJarId != null && transaction.FinancialAccountId == null)
             {
@@ -308,11 +307,12 @@ public class Service : IService
         if (transaction.ToJarId != null)
         {
             await CheckAndCompleteGoals(transaction.ToJarId.Value);
+            await CheckLimit(transaction.ToJarId.Value);
         }
-        if (transaction.FromJarId != null)
-        {
-            await CheckAndCompleteGoals(transaction.FromJarId.Value);
-        }
+        // if (transaction.FromJarId != null)
+        // {
+        //     await CheckAndCompleteGoals(transaction.FromJarId.Value);
+        // }
 
         var result = new Response.CreateTransactionResponse
         {
@@ -522,7 +522,35 @@ public class Service : IService
 
         await _dbContext.SaveChangesAsync();
     }
-}
+
+    private async Task CheckLimit(Guid jarId)
+    {
+        var jar = await _dbContext.Jars.FirstOrDefaultAsync(j => j.Id == jarId);
+        if (jar == null) return;
+
+        var activeLimit = await _dbContext.SpendingLimits.Where(x => x.JarId == jarId && x.IsActive == true).ToListAsync();
+        foreach (var item in activeLimit)
+        {
+            if (jar.Balance >= item.LimitAmount)
+            {
+                item.IsActive = false;
+                item.UpdatedAt = DateTimeOffset.UtcNow;
+                var notification = new Notification
+                {
+                    UserId = item.UserId,
+                    Type = "SpendingAlert",
+                    Title = "Xin thông báo! bạn đã chạm giới hạn chi tiêu",
+                    Body = $"Bạn đã bị vượt mức {item.LimitAmount:N0}đ trong hũ {jar.Name}.",
+                    IsRead = false,
+                    CreatedAt = DateTimeOffset.UtcNow,
+                    MetadataJson = $"{{\"limitId\": \"{item.Id}\", \"jarId\": \"{jar.Id}\"}}"
+                };
+                _dbContext.Notifications.Add(notification);
+            }
+        }
+        await _dbContext.SaveChangesAsync();
+    }
+    
     public async Task<Response.CassoTransactionsResponse> ProcessCassoWebhook(
         Request.CassoWebhookRequest request,
         string? secureToken,
