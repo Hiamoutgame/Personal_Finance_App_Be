@@ -17,7 +17,7 @@ public class Response
         public required string Status { get; set; }
         public decimal SuggestedMonthlyContribution { get; set; }
     }
-    public class GoalDetail
+    public class GetGoalById
     {
         public Guid Id { get; set; }
         public required string Title { get; set; }

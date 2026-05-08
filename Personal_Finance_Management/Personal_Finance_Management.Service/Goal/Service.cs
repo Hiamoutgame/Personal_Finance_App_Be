@@ -88,7 +88,7 @@ public class Service: IService
 
     public async Task<Response.GoalDetail> GetGoalById(Guid id)
     {
-       ;
+        
     }
     
     

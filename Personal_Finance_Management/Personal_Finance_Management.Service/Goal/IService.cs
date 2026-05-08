@@ -6,5 +6,5 @@ public interface IService
 {
     public Task<Response.GetGoalsResponse> GetGoals();
     
-    public Task<Response.GoalDetail> GetGoalById(Guid id);
+    public Task<Response.GetGoalsResponse> GetGoalById(Guid id);
 }
