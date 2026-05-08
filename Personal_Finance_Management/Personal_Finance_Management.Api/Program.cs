@@ -14,7 +14,11 @@ using OnboardingService = Personal_Finance_Management.Service.Onboarding;
 using UserService = Personal_Finance_Management.Service.User;
 using validationService = Personal_Finance_Management.Service.Validations;
 using ReminderService =  Personal_Finance_Management.Service.Reminder;
+using GoalService = Personal_Finance_Management.Service.goal;
+using LimitService = Personal_Finance_Management.Service.limit;
+using NotificationService = Personal_Finance_Management.Service.notification;
 using AIService = Personal_Finance_Management.Service.AI;
+
 using Personal_Finance_Management.Service.Seeding;
 
 using financialAccountService = Personal_Finance_Management.Service.FinancialAccount;
@@ -57,6 +61,9 @@ builder.Services.AddScoped<transactionService.IService, transactionService.Servi
 builder.Services.AddScoped<dashboardService.IService, dashboardService.Service>();
 builder.Services.AddScoped<CategoryService.IService, CategoryService.Service>();
 builder.Services.AddScoped<ReminderService.IService, ReminderService.Service>();
+builder.Services.AddScoped<GoalService.IService, GoalService.Service>();
+builder.Services.AddScoped<LimitService.IService, LimitService.Service>();
+builder.Services.AddScoped<NotificationService.IService, NotificationService.Service>();
 builder.Services.AddScoped<BroadcastService.IService, BroadcastService.Service>();
 builder.Services.AddScoped<AdminService.IService, AdminService.Service>();
 builder.Services.AddScoped<AIService.IService, AIService.Service>();

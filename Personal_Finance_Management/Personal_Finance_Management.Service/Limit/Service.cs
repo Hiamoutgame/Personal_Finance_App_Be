@@ -35,6 +35,8 @@ public class Service : IService
             var userId = GetCurrentUserId();
             
             var limits = await _appDbContext.SpendingLimits
+                .Include(l => l.Category)
+                .Include(l => l.Jar)
                 .Where(l => l.UserId == userId && l.IsActive)
                 .ToListAsync();
 
@@ -43,10 +45,22 @@ public class Service : IService
 
             foreach (var limit in limits)
             {
-                string targetName = "";
+                string targetName = "Unknow";
                 Guid targetId = Guid.Empty;
-                
-              
+                string targetType = "Unknow";
+
+                if (limit.Jar != null && limit.JarId.HasValue)
+                {
+                    targetId = limit.JarId.Value;
+                    targetName = limit.Jar.Name;
+                    targetType = "Jar";
+                }
+                if (limit.Category != null && limit.CategoryId.HasValue)
+                {
+                    targetType = "Category";
+                    targetId = limit.Category.Id;
+                    targetName = limit.Category.Name;
+                }
                 var item = new Response.GetLimitItem
                 {
                     Id = limit.Id,
@@ -55,9 +69,10 @@ public class Service : IService
                     LimitAmount = limit.LimitAmount,
                     Period = limit.Period,
                     AlertAtPercentage = limit.AlertAtPercentage,
-                    CurrentSpent = 0,       
-                    CurrentPercentage = 0, 
-                    Status = "Active" 
+                    CurrentSpent = 0,
+                    CurrentPercentage = 0,
+                    Status = "Active",
+                    TargetType = targetType
                 };
 
                 items.Add(item);
@@ -80,6 +95,15 @@ public class Service : IService
             CategoryId = null,
             JarId = null
         };
+        if (request.TargetType == "Category")
+        {
+            limit.CategoryId = request.TargetId;
+        }
+
+        if (request.TargetType == "Jar")
+        {
+            limit.JarId = request.TargetId;
+        }
         
         _appDbContext.SpendingLimits.Add(limit);
         await _appDbContext.SaveChangesAsync();
@@ -87,10 +111,11 @@ public class Service : IService
         return new Response.CreateLimitResponse
         {
             Id = limit.Id,
-            TargetId = request.TargetId,
             LimitAmount = limit.LimitAmount,
             Period = limit.Period,
-            AlertAtPercentage = limit.AlertAtPercentage
+            AlertAtPercentage = limit.AlertAtPercentage,
+            TargetType = request.TargetType,
+            TargetId = request.TargetId,
         };
     }
 
