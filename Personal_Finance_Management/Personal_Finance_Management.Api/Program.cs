@@ -13,6 +13,7 @@ using OcrService = Personal_Finance_Management.Service.ocr;
 using OnboardingService = Personal_Finance_Management.Service.Onboarding;
 using UserService = Personal_Finance_Management.Service.User;
 using validationService = Personal_Finance_Management.Service.Validations;
+using ReminderService =  Personal_Finance_Management.Service.Reminder;
 using AIService = Personal_Finance_Management.Service.AI;
 using Personal_Finance_Management.Service.Seeding;
 
@@ -55,6 +56,7 @@ builder.Services.AddScoped<jarsService.IService, jarsService.Service>();
 builder.Services.AddScoped<transactionService.IService, transactionService.Service>();
 builder.Services.AddScoped<dashboardService.IService, dashboardService.Service>();
 builder.Services.AddScoped<CategoryService.IService, CategoryService.Service>();
+builder.Services.AddScoped<ReminderService.IService, ReminderService.Service>();
 builder.Services.AddScoped<BroadcastService.IService, BroadcastService.Service>();
 builder.Services.AddScoped<AdminService.IService, AdminService.Service>();
 builder.Services.AddScoped<AIService.IService, AIService.Service>();
