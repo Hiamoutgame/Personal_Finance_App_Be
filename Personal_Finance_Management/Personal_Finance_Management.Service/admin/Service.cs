@@ -1,0 +1,517 @@
+using Microsoft.AspNetCore.Http;
+using Microsoft.EntityFrameworkCore;
+using Personal_Finance_Management.Repository;
+using Personal_Finance_Management.Repository.Entity;
+using Personal_Finance_Management.Repository.Enum;
+using Personal_Finance_Management.Service.baseServices;
+using Personal_Finance_Management.Service.Validations;
+
+namespace Personal_Finance_Management.Service.Admin;
+
+public class Service : IService
+{
+    private const int TopCategoryLimit = 4;
+    private const int RecentLimit = 5;
+
+    private readonly AppDbContext _dbContext;
+    private readonly IServices _validationServices;
+
+    private readonly IHttpContextAccessor _httpContextAccessor;
+
+    public Service(
+        AppDbContext dbContext, IServices validationServices,
+        IHttpContextAccessor httpContextAccessor)
+    {
+        _dbContext = dbContext;
+        _validationServices = validationServices;
+        _httpContextAccessor = httpContextAccessor;
+    }
+
+    public async Task<Response.AdminDashboardResponse> GetDashboard()
+    {
+        var now = DateTimeOffset.UtcNow;
+        var monthStart = new DateTimeOffset(
+            now.UtcDateTime.Year,
+            now.UtcDateTime.Month,
+            1,
+            0,
+            0,
+            0,
+            TimeSpan.Zero);
+        var nextMonthStart = monthStart.AddMonths(1);
+
+        var userQuery = _dbContext.Accounts.AsNoTracking()
+            .RegularUsers();
+
+        var totalUsers = await userQuery.CountAsync();
+        var newUsersThisMonth = await userQuery
+            .Where(account => account.CreatedAt >= monthStart && account.CreatedAt < nextMonthStart)
+            .CountAsync();
+        var activeUsersLast30Days = await userQuery
+            .Where(account => account.LastLoginAt != null
+                              && account.LastLoginAt >= now.AddDays(-30))
+            .CountAsync();
+        var bannedUsers = await userQuery
+            .Where(account => account.Status == AccountStatus.Banned.ToString())
+            .CountAsync();
+
+        var activeTransactionQuery = _dbContext.Transactions.AsNoTracking()
+            .ActiveTransactions();
+
+        var totalTransactions = await activeTransactionQuery.CountAsync();
+        var transactionsThisMonth = await activeTransactionQuery
+            .Where(transaction => transaction.TransactionDate >= monthStart
+                                  && transaction.TransactionDate < nextMonthStart)
+            .CountAsync();
+
+        var jarQuery = _dbContext.Jars.AsNoTracking();
+        var totalJars = await jarQuery.CountAsync();
+
+        var goalQuery = _dbContext.Goals.AsNoTracking();
+        var activeGoals = await goalQuery
+            .Where(goal => goal.Status == GoalStatus.Active.ToString())
+            .CountAsync();
+
+        var importJobQuery = _dbContext.ImportJobs.AsNoTracking();
+        var pendingImportJobs = await importJobQuery
+            .Where(job => job.Status == ImportJobStatus.Pending.ToString()
+                          || job.Status == ImportJobStatus.Processing.ToString()
+                          || job.Status == ImportJobStatus.AwaitingReview.ToString())
+            .CountAsync();
+
+        var recentUsers = await userQuery
+            .OrderByDescending(account => account.CreatedAt)
+            .Take(RecentLimit)
+            .Select(account => new Response.RecentUserItem
+            {
+                Id = account.Id,
+                Username = account.Username,
+                FirstName = account.FirstName,
+                LastName = account.LastName,
+                Email = account.Email,
+                Status = account.Status,
+                IsOnboardingCompleted = account.IsOnboardingCompleted,
+                LastLoginAt = account.LastLoginAt
+            })
+            .ToListAsync();
+
+        var recentTransactions = await activeTransactionQuery
+            .OrderByDescending(transaction => transaction.TransactionDate)
+            .Take(RecentLimit)
+            .Select(transaction => new Response.RecentTransactionItem
+            {
+                Id = transaction.Id,
+                Type = transaction.Type,
+                TransactionsAmount = transaction.Type == TransactionType.Expense.ToString()
+                    ? -Math.Abs(transaction.TransactionsAmount)
+                    : Math.Abs(transaction.TransactionsAmount),
+                Note = transaction.Note,
+                TransactionDate = transaction.TransactionDate,
+                User = new Response.TransactionUserItem
+                {
+                    Id = transaction.User.Id,
+                    Username = transaction.User.Username,
+                    FirstName = transaction.User.FirstName,
+                    LastName = transaction.User.LastName
+                },
+                FinancialAccount = transaction.FinancialAccount == null
+                    ? null
+                    : new Response.TransactionFinancialAccountItem
+                    {
+                        Id = transaction.FinancialAccount.Id,
+                        Name = transaction.FinancialAccount.Name,
+                        AccountType = transaction.FinancialAccount.AccountType
+                    },
+                Category = transaction.Category == null
+                    ? null
+                    : new Response.TransactionCategoryItem
+                    {
+                        Id = transaction.Category.Id,
+                        Name = transaction.Category.Name
+                    }
+            })
+            .ToListAsync();
+
+        return new Response.AdminDashboardResponse
+        {
+            Summary = new Response.AdminDashboardSummary
+            {
+                TotalUsers = totalUsers,
+                NewUsersThisMonth = newUsersThisMonth,
+                ActiveUsersLast30Days = activeUsersLast30Days,
+                BannedUsers = bannedUsers,
+                TotalTransactions = totalTransactions,
+                TransactionsThisMonth = transactionsThisMonth,
+                TotalJars = totalJars,
+                ActiveGoals = activeGoals,
+                PendingImportJobs = pendingImportJobs
+            },
+            RecentUsers = recentUsers,
+            RecentTransactions = recentTransactions
+        };
+    }
+
+    public async Task<Page<Response.AdminAuditLogItem>> GetAuditLogs(Request.AdminAuditLogsRequest request)
+    {
+        await _validationServices.ValidateAdminAuditLogsRequest(request);
+
+        var adminRoleCode = AccountRole.Admin.ToString();
+        var query = _dbContext.AuditLogs.AsNoTracking()
+            .Where(log => log.Account.Role.Code == adminRoleCode);
+
+        if (request.AdminId.HasValue)
+        {
+            query = query.Where(log => log.ActorAccountId == request.AdminId.Value);
+        }
+
+        if (!string.IsNullOrWhiteSpace(request.ActionType))
+        {
+            var actionType = request.ActionType.Trim();
+            query = query.Where(log => log.ActionType == actionType);
+        }
+
+        if (!string.IsNullOrWhiteSpace(request.EntityType))
+        {
+            var entityType = request.EntityType.Trim();
+            query = query.Where(log => log.EntityType == entityType);
+        }
+
+        if (request.FromDate.HasValue)
+        {
+            query = query.Where(log => log.CreatedAt >= request.FromDate.Value);
+        }
+
+        if (request.ToDate.HasValue)
+        {
+            query = query.Where(log => log.CreatedAt <= request.ToDate.Value);
+        }
+
+        var totalCount = await query.CountAsync();
+        var items = await query
+            .OrderByDescending(log => log.CreatedAt)
+            .Skip((request.Page - 1) * request.PageSize)
+            .Take(request.PageSize)
+            .Select(log => new Response.AdminAuditLogItem
+            {
+                Id = log.Id,
+                AdminUsername = log.Account.Username,
+                ActionType = log.ActionType,
+                EntityType = log.EntityType,
+                Description = log.Description,
+                CreatedAt = log.CreatedAt
+            })
+            .ToListAsync();
+
+        return new Page<Response.AdminAuditLogItem>
+        {
+            Items = items,
+            Pagination = new PaginationMetadata
+            {
+                PageIndex = request.Page,
+                PageSize = request.PageSize,
+                TotalCount = totalCount
+            }
+        };
+    }
+
+    public async Task<string> UpdateRole(Guid userId, AccountRole role)
+    {
+        var adminId = _httpContextAccessor.HttpContext.User.Claims.FirstOrDefault(x => x.Type == "id")?.Value;
+        if (string.IsNullOrEmpty(adminId))
+            throw new UnauthorizedAccessException("AdminId not found in token");
+        var user = await _dbContext.Accounts.FirstOrDefaultAsync(x => x.Id == userId);
+        if (user == null)
+        {
+            throw new Exception("User not found");
+        }
+
+        var roleCode = role.ToString();
+        var roleEntities = await _dbContext.Roles.FirstOrDefaultAsync(x => x.Code == roleCode);
+        if (roleEntities == null)
+        {
+            throw new Exception("Role not found");
+        }
+        user.RoleId = roleEntities.Id;
+        user.UpdatedAt = DateTimeOffset.UtcNow;
+        await _dbContext.SaveChangesAsync();
+        return "User role updated successfully";
+    }
+
+    private async Task<List<Response.TransactionTrendItem>> BuildTransactionTrend(
+        IQueryable<Repository.Entity.Transaction> transactionQuery,
+        TrendRange trendRange,
+        string timeframe)
+    {
+        if (timeframe == DashboardTimeframe.Day)
+        {
+            var dailyData = await transactionQuery
+                .GroupBy(transaction => transaction.TransactionDate.Date)
+                .Select(group => new
+                {
+                    Date = group.Key,
+                    Amount = group.Sum(item => Math.Abs(item.TransactionsAmount)),
+                    Count = group.Count()
+                })
+                .ToListAsync();
+
+            var dailyMap = dailyData.ToDictionary(item => item.Date, item => item);
+
+            return trendRange.Buckets
+                .Select(bucket =>
+                {
+                    var key = bucket.Start.UtcDateTime.Date;
+                    if (dailyMap.TryGetValue(key, out var value))
+                    {
+                        return new Response.TransactionTrendItem
+                        {
+                            Label = bucket.Label,
+                            Amount = value.Amount,
+                            Count = value.Count
+                        };
+                    }
+
+                    return new Response.TransactionTrendItem
+                    {
+                        Label = bucket.Label,
+                        Amount = 0,
+                        Count = 0
+                    };
+                })
+                .ToList();
+        }
+
+        if (timeframe == DashboardTimeframe.Month)
+        {
+            var monthlyData = await transactionQuery
+                .GroupBy(transaction => new { transaction.TransactionDate.Year, transaction.TransactionDate.Month })
+                .Select(group => new
+                {
+                    group.Key.Year,
+                    group.Key.Month,
+                    Amount = group.Sum(item => Math.Abs(item.TransactionsAmount)),
+                    Count = group.Count()
+                })
+                .ToListAsync();
+
+            var monthlyMap = monthlyData
+                .ToDictionary(item => (item.Year, item.Month), item => item);
+
+            return trendRange.Buckets
+                .Select(bucket =>
+                {
+                    var key = (bucket.Start.Year, bucket.Start.Month);
+                    if (monthlyMap.TryGetValue(key, out var value))
+                    {
+                        return new Response.TransactionTrendItem
+                        {
+                            Label = bucket.Label,
+                            Amount = value.Amount,
+                            Count = value.Count
+                        };
+                    }
+
+                    return new Response.TransactionTrendItem
+                    {
+                        Label = bucket.Label,
+                        Amount = 0,
+                        Count = 0
+                    };
+                })
+                .ToList();
+        }
+
+        var yearlyData = await transactionQuery
+            .GroupBy(transaction => transaction.TransactionDate.Year)
+            .Select(group => new
+            {
+                Year = group.Key,
+                Amount = group.Sum(item => Math.Abs(item.TransactionsAmount)),
+                Count = group.Count()
+            })
+            .ToListAsync();
+
+        var yearlyMap = yearlyData.ToDictionary(item => item.Year, item => item);
+
+        return trendRange.Buckets
+            .Select(bucket =>
+            {
+                var key = bucket.Start.Year;
+                if (yearlyMap.TryGetValue(key, out var value))
+                {
+                    return new Response.TransactionTrendItem
+                    {
+                        Label = bucket.Label,
+                        Amount = value.Amount,
+                        Count = value.Count
+                    };
+                }
+
+                return new Response.TransactionTrendItem
+                {
+                    Label = bucket.Label,
+                    Amount = 0,
+                    Count = 0
+                };
+            })
+            .ToList();
+    }
+
+    private async Task<List<Response.TopCategoryItem>> GetTopSpendingCategories(
+        DateTimeOffset start,
+        DateTimeOffset end)
+    {
+        var expenseQuery = _dbContext.Transactions.AsNoTracking()
+            .ActiveTransactions()
+            .Expenses()
+            .InDateRange(start, end);
+
+        var grouped = await expenseQuery
+            .GroupBy(transaction => transaction.Category != null ? transaction.Category.Name : null)
+            .Select(group => new
+            {
+                CategoryName = group.Key,
+                Amount = group.Sum(item => Math.Abs(item.TransactionsAmount))
+            })
+            .ToListAsync();
+
+        var totalAmount = grouped.Sum(item => item.Amount);
+
+        var topCategories = grouped
+            .Where(item => item.CategoryName != null)
+            .OrderByDescending(item => item.Amount)
+            .Take(TopCategoryLimit)
+            .Select(item => new Response.TopCategoryItem
+            {
+                Label = item.CategoryName!,
+                Value = item.Amount
+            })
+            .ToList();
+
+        var topAmount = topCategories.Sum(item => item.Value);
+        var remainder = totalAmount - topAmount;
+
+        if (remainder > 0)
+        {
+            topCategories.Add(new Response.TopCategoryItem
+            {
+                Label = "Khac",
+                Value = remainder
+            });
+        }
+
+        return topCategories;
+    }
+
+    private async Task<List<Response.RetentionTrendItem>> BuildRetentionTrend()
+    {
+        var periods = new[] { 0, 7, 14, 21, 30 };
+        var cohorts = new[]
+        {
+            new CohortDefinition(
+                "A",
+                new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero),
+                new DateTimeOffset(2026, 4, 1, 0, 0, 0, TimeSpan.Zero)),
+            new CohortDefinition(
+                "B",
+                new DateTimeOffset(2025, 4, 1, 0, 0, 0, TimeSpan.Zero),
+                new DateTimeOffset(2025, 7, 1, 0, 0, 0, TimeSpan.Zero)),
+            new CohortDefinition(
+                "C",
+                new DateTimeOffset(2025, 7, 1, 0, 0, 0, TimeSpan.Zero),
+                new DateTimeOffset(2025, 10, 1, 0, 0, 0, TimeSpan.Zero)),
+            new CohortDefinition(
+                "D",
+                new DateTimeOffset(2025, 10, 1, 0, 0, 0, TimeSpan.Zero),
+                new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero))
+        };
+
+        var cohortResults = new Dictionary<string, int[]>();
+
+        foreach (var cohort in cohorts)
+        {
+            var profiles = await _dbContext.OnboardingProfiles.AsNoTracking()
+                .Where(profile => profile.CompletedAt >= cohort.Start
+                                  && profile.CompletedAt < cohort.End)
+                .Select(profile => new { profile.CompletedAt, profile.User.LastLoginAt })
+                .ToListAsync();
+
+            var total = profiles.Count;
+            var percents = new int[periods.Length];
+
+            for (var i = 0; i < periods.Length; i++)
+            {
+                var days = periods[i];
+                if (days == 0)
+                {
+                    percents[i] = total > 0 ? 100 : 0;
+                    continue;
+                }
+
+                var active = profiles.Count(profile => profile.LastLoginAt.HasValue
+                                                       && profile.LastLoginAt.Value >=
+                                                       profile.CompletedAt.AddDays(days));
+                percents[i] = CalculatePercent(active, total);
+            }
+
+            cohortResults[cohort.Code] = percents;
+        }
+
+        var result = new List<Response.RetentionTrendItem>();
+        for (var i = 0; i < periods.Length; i++)
+        {
+            result.Add(new Response.RetentionTrendItem
+            {
+                PeriodLabel = $"D{periods[i]}",
+                CohortA = cohortResults["A"][i],
+                CohortB = cohortResults["B"][i],
+                CohortC = cohortResults["C"][i],
+                CohortD = cohortResults["D"][i]
+            });
+        }
+
+        return result;
+    }
+
+    private static int CalculatePercent(int part, int total)
+    {
+        if (total <= 0)
+        {
+            return 0;
+        }
+
+        return (int)Math.Round((decimal)part / total * 100, MidpointRounding.AwayFromZero);
+    }
+
+    private static decimal CalculatePercentDelta(int current, int previous)
+    {
+        if (previous <= 0)
+        {
+            return 0;
+        }
+
+        return Math.Round(
+            (decimal)(current - previous) / previous * 100,
+            2,
+            MidpointRounding.AwayFromZero);
+    }
+
+    private static string GetSystemHealthStatus(decimal errorRatePercent)
+    {
+        if (errorRatePercent >= 20)
+        {
+            return "Bad";
+        }
+
+        if (errorRatePercent >= 5)
+        {
+            return "Warning";
+        }
+
+        return "Good";
+    }
+
+    private sealed record CohortDefinition(
+        string Code,
+        DateTimeOffset Start,
+        DateTimeOffset End);
+}

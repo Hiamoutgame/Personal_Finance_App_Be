@@ -20,10 +20,9 @@ public class Response
     public class UpdateUserResponse
     {
         public Guid Id { get; set; }
-        public string firstName { get; set; } = string.Empty;
-        public string lastName { get; set; } = string.Empty;
-        public string? phone { get; set; }
-        public string? avatarUrl { get; set; }
+        public string fullName { get; set; }
+        public string phone { get; set; }
+        public string avatarUrl { get; set; }
     }
 
     public class ViewSetupResponse

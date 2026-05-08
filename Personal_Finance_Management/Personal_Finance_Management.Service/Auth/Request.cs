@@ -32,4 +32,5 @@ public class Request
         [Required]
         public required string Password { get; set; }
     }
+
 }
