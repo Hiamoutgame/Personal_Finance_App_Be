@@ -160,7 +160,7 @@ public class Service : IService
             .FirstOrDefaultAsync(g => g.Id == id && g.UserId == userId);
 
         if (goal == null)
-            throw new KeyNotFoundException("Goal not found");
+            throw new ("Goal not found");
         
         if (request.Title != null) goal.Title = request.Title;
         if (request.TargetAmount.HasValue) goal.TargetAmount = request.TargetAmount.Value;
@@ -190,7 +190,7 @@ public class Service : IService
             .FirstOrDefaultAsync(g => g.Id == id && g.UserId == userId);
 
         if (goal == null)
-            throw new KeyNotFoundException("Goal not found");
+            throw new ("Goal not found");
         
         goal.Status = "Deleted";
         await _appDbContext.SaveChangesAsync();
