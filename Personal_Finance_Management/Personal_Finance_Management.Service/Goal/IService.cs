@@ -1,0 +1,10 @@
+﻿using Personal_Finance_Management.Service.Goal;
+
+namespace Personal_Finance_Management.Service.goal;
+
+public interface IService
+{
+    public Task<Response.GetGoalsResponse> GetGoals();
+    
+    public Task<Response.GoalDetail> GetGoalById(Guid id);
+}

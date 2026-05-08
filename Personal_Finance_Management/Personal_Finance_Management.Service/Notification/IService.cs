@@ -2,8 +2,6 @@
 
 public interface IService
 {
-    
-    Task<Response.GetNotificationsResponse> GetNotifications(string? type, string? status, int page, int pageSize);
-    
-    Task<Response.UpdateStatusResponse> UpdateStatus(Request.UpdateStatusRequest request);
+    public Task<Response.GetNotificationsResponse> GetNotifications(string? type, string? status, int page, int pageSize);
+    public Task<Response.UpdateStatusResponse> UpdateStatus(Request.UpdateStatusRequest request);
 }

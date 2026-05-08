@@ -6,9 +6,7 @@ public class Request
     {
         
         public List<Guid>? Ids { get; set; } 
-        
         public required bool IsRead { get; set; } 
-        
         public bool MarkAll { get; set; } = false;
     }
 }
