@@ -89,11 +89,11 @@ Danh sách dưới đây là các REST APIs chính cho MVP. Chi tiết request/r
 
 | Method | Endpoint                                  | Mục đích                      |
 | ------ | ----------------------------------------- | ----------------------------- |
-| GET    | `/api/v1/financial-accounts`              | Danh sách nguồn tiền          |
-| POST   | `/api/v1/financial-accounts`              | Tạo nguồn tiền                |
-| PATCH  | `/api/v1/financial-accounts/{id}`         | Sửa thông tin nguồn tiền      |
-| PATCH  | `/api/v1/financial-accounts/{id}/balance` | Điều chỉnh số dư              |
-| DELETE | `/api/v1/financial-accounts/{id}`         | Xóa/ngưng theo dõi nguồn tiền |
+| GET    | `/FinancialAccount`              | Danh sách nguồn tiền |
+| POST   | `/FinancialAccount/Manual`       | Tạo nguồn tiền thủ công |
+| POST   | `/FinancialAccount/LinkApi`      | Tạo tài khoản ngân hàng liên kết Casso |
+| PATCH  | `/FinancialAccount/{id}`         | Sửa thông tin nguồn tiền |
+| DELETE | `/FinancialAccount/{id}`         | Xóa/ngưng theo dõi nguồn tiền |
 
 #### Categories
 
@@ -120,6 +120,8 @@ Danh sách dưới đây là các REST APIs chính cho MVP. Chi tiết request/r
 | ------ | --------------------------- | ------------------- |
 | GET    | `/api/v1/transactions`      | Danh sách giao dịch |
 | POST   | `/api/v1/transactions`      | Tạo giao dịch       |
+| GET    | `/Transactions/Casso`       | Sync giao dịch từ Casso |
+| POST   | `/Transactions/Casso`       | Webhook Casso tạo giao dịch tự động |
 | PATCH  | `/api/v1/transactions/{id}` | Cập nhật giao dịch  |
 | DELETE | `/api/v1/transactions/{id}` | Xóa giao dịch       |
 
@@ -414,7 +416,7 @@ Response `200 OK`
 }
 ```
 
-### `GET /api/v1/financial-accounts`
+### `GET /FinancialAccount`
 
 - **Auth**: Bearer
 - **Mục đích**: lấy danh sách nguồn tiền user đang theo dõi, bao gồm tiền mặt thủ công và tài khoản liên kết nếu có
@@ -441,10 +443,10 @@ Response `200 OK`
 }
 ```
 
-### `POST /api/v1/financial-accounts`
+### `POST /FinancialAccount/Manual`
 
 - **Auth**: Bearer
-- **Mục đích**: tạo nguồn tiền thủ công, ví dụ tiền mặt hoặc một tài khoản user muốn tự theo dõi
+- **Mục đích**: tạo nguồn tiền thủ công cho user, ví dụ tiền mặt, ví tự theo dõi hoặc tài khoản bank user tự nhập số dư.
 
 **Request**
 
@@ -458,7 +460,7 @@ Response `200 OK`
 }
 ```
 
-**Response `201 Created`**
+**Response `200 OK`**
 
 ```json
 {
@@ -475,11 +477,55 @@ Response `200 OK`
 
 **Notes**
 
-- API này chỉ tạo record `financial_accounts` ở `connectionMode = Manual`.
-- Record `LinkedApi` được tạo bởi flow bank-link/provider ở phase sau.
-- `financial_accounts` là nguồn tiền để theo dõi, không phải ví do FinJar phát hành.
+- `currency` là optional; nếu FE không gửi thì backend mặc định `VND`.
+- Backend tự set `connectionMode = Manual`.
+- Backend không nhận hoặc lưu các field provider/external cho manual account.
+- `accountType` hợp lệ: `Cash`, `Bank`, `EWallet`, `Other`.
 
-### `PATCH /api/v1/financial-accounts/{id}`
+### `POST /FinancialAccount/LinkApi`
+
+- **Auth**: Bearer
+- **Mục đích**: tạo tài khoản ngân hàng liên kết Casso để backend map webhook/sync giao dịch ngân hàng.
+
+**Request**
+
+```json
+{
+  "bankName": "Vietcombank",
+  "bankCode": "VCB",
+  "accountNumber": "123456789",
+  "accountHolderName": "Nguyen Van A",
+  "isDefault": false
+}
+```
+
+**Response `200 OK`**
+
+```json
+{
+  "id": "guid",
+  "name": "Vietcombank",
+  "accountType": "Bank",
+  "connectionMode": "LinkedApi",
+  "providerName": "Casso",
+  "maskedAccountNumber": "*****6789",
+  "currentBalance": 0,
+  "currency": "VND",
+  "syncStatus": "NeverSynced",
+  "isDefault": false,
+  "isActive": true
+}
+```
+
+**Notes**
+
+- FE không gửi `currentBalance`, `currency`, `providerCode`, `providerName`, `externalAccountId`, `externalAccountRef`, `maskedAccountNumber`.
+- Backend tự set `accountType = Bank`, `connectionMode = LinkedApi`, `providerCode = casso`, `providerName = Casso`, `currency = VND`, `currentBalance = 0`, `syncStatus = NeverSynced`.
+- `accountNumber` được lưu vào `externalAccountId` và `externalAccountRef`; webhook/sync Casso dùng field này để map giao dịch về đúng `FinancialAccount`.
+- `maskedAccountNumber` được backend tự tạo từ `accountNumber`.
+- Đây là flow MVP để FE dễ thao tác. Flow tương lai có thể dùng Casso OAuth/accounts API để backend tự lấy account list từ provider response.
+
+### `PATCH /FinancialAccount/{id}`
 
 - **Auth**: Bearer
 
@@ -507,38 +553,12 @@ Response `200 OK`
 **Notes**
 
 - Chỉ cho user cập nhật nguồn tiền thuộc sở hữu của chính họ.
-- Điều chỉnh số dư dùng endpoint riêng `PATCH /api/v1/financial-accounts/{id}/balance`.
-- Với `connectionMode = LinkedApi`, backend có thể giới hạn field được sửa thủ công để tránh lệch dữ liệu sync.
+- Với `connectionMode = LinkedApi`, không cho sửa `currentBalance` thủ công.
+- Balance của `LinkedApi` chỉ được cập nhật qua Casso webhook/sync.
+- Endpoint `POST /FinancialAccount` cũ đã bị gỡ khỏi code để tránh FE gửi request dài và sai domain.
+- Endpoint balance riêng hiện không dùng trong code hiện tại.
 
-### `PATCH /api/v1/financial-accounts/{id}/balance`
-
-- **Auth**: Bearer
-- **Mục đích**: điều chỉnh số dư thủ công của nguồn tiền user đang theo dõi
-
-**Request**
-
-```json
-{
-  "newBalance": 6500000,
-  "note": "Điều chỉnh số dư đầu kỳ"
-}
-```
-
-**Response `200 OK`**
-
-```json
-{
-  "id": "guid",
-  "currentBalance": 6500000
-}
-```
-
-**Notes**
-
-- Chỉ cho phép điều chỉnh nguồn tiền thuộc sở hữu của chính user.
-- Backend có thể tạo audit/transaction điều chỉnh số dư nội bộ nếu cần truy vết.
-
-### `DELETE /api/v1/financial-accounts/{id}`
+### `DELETE /FinancialAccount/{id}`
 
 - **Auth**: Bearer
 - **Mục đích**: ngưng theo dõi một nguồn tiền
@@ -948,6 +968,92 @@ Response `200 OK`
   "message": "Transaction deleted"
 }
 ```
+
+### `GET /Transactions/Casso`
+
+- **Auth**: Bearer
+- **Mục đích**: user/app chủ động sync giao dịch từ Casso về một tài khoản `LinkedApi`.
+
+Query Params
+
+- `financialAccountId=guid` required
+- `fromDate=2026-05-01` optional
+- `toDate=2026-05-08` optional
+- `page=1` optional, default `1`
+- `pageSize=20` optional, default `20`
+- `sort=ASC|DESC` optional, default `ASC`
+
+Response `200 OK`
+
+```json
+{
+  "receivedCount": 20,
+  "createdCount": 12,
+  "skippedCount": 8,
+  "message": "Casso transactions synced."
+}
+```
+
+**Notes**
+
+- `financialAccountId` phải thuộc user hiện tại, `isActive = true`, `connectionMode = LinkedApi`.
+- Backend gọi Casso transactions API bằng config `CasooOptions:ApiKey`.
+- Giao dịch trùng `externalTransactionId` sẽ được skip.
+- Khi sync thành công, backend cập nhật `syncStatus`, `lastSyncedAt`, `lastSyncError` của financial account.
+
+### `POST /Transactions/Casso`
+
+- **Auth**: None từ phía Casso webhook. Endpoint dùng `AllowAnonymous` vì request không có JWT user.
+- **Mục đích**: Casso gọi webhook vào backend khi có giao dịch ngân hàng mới.
+
+Headers
+
+- `secure-token`: token webhook Casso, so với config `CasooOptions:SecureToken`
+- `X-Casso-Signature`: signature Casso nếu provider gửi
+
+Request mẫu
+
+```json
+{
+  "error": 0,
+  "data": [
+    {
+      "id": "casso-tx-001",
+      "reference": "casso-tx-001",
+      "description": "Thanh toan an uong",
+      "amount": -50000,
+      "runningBalance": 950000,
+      "transactionDateTime": "2026-05-08T10:00:00+07:00",
+      "accountNumber": "123456789",
+      "bankName": "Vietcombank",
+      "bankAbbreviation": "VCB"
+    }
+  ]
+}
+```
+
+Response `200 OK`
+
+```json
+{
+  "receivedCount": 1,
+  "createdCount": 1,
+  "skippedCount": 0,
+  "message": "Casso webhook processed."
+}
+```
+
+**Mapping rules**
+
+- `amount > 0` -> `type = Income`.
+- `amount < 0` -> `type = Expense`.
+- `transactionsAmount` lưu số dương.
+- `sourceType = Imported`.
+- `externalTransactionId` lấy từ `reference`, `tid` hoặc `id`.
+- `rawPayloadJson` lưu payload gốc từ Casso để debug.
+- Backend map `accountNumber/subAccId/bankSubAccId` với `FinancialAccount.externalAccountRef`, `maskedAccountNumber` hoặc `externalAccountId`.
+- Nếu Casso gửi `runningBalance`, backend dùng nó để cập nhật `FinancialAccount.currentBalance`; nếu không có thì cộng/trừ theo amount.
+- FE không gọi endpoint này trong flow bình thường; FE chỉ xem kết quả qua `GET /Transactions`.
 
 ### `POST /api/v1/imports`
 
