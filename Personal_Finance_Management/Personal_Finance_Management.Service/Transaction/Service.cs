@@ -1,7 +1,11 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Personal_Finance_Management.Repository;
 using Personal_Finance_Management.Repository.Entity;
+using Personal_Finance_Management.Service.Validations;
+using System.Net.Http.Headers;
+using System.Text.Json;
 
 namespace Personal_Finance_Management.Service.Transaction;
 
@@ -9,11 +13,13 @@ public class Service : IService
 {
     private readonly AppDbContext _dbContext;
     private readonly IHttpContextAccessor _httpContext;
+    private readonly IConfiguration _configuration;
 
-    public Service(AppDbContext dbContext, IHttpContextAccessor httpContext)
+    public Service(AppDbContext dbContext, IHttpContextAccessor httpContext, IConfiguration configuration)
     {
         _dbContext = dbContext;
         _httpContext = httpContext;
+        _configuration = configuration;
     }
     
     public async Task<Response.GetTransactionsResult> GetTransactions(Request.GetTransactionsRequest request)
@@ -166,6 +172,24 @@ public class Service : IService
             .FirstOrDefaultAsync(x => x.Id == userIdGuid);
         if (user == null)
             throw new Exception("User not found");
+        if (request.financialAccountId.HasValue)
+        {
+            var financialAccount = await _dbContext.FinancialAccounts
+                .FirstOrDefaultAsync(x => x.Id == request.financialAccountId.Value && x.UserId == userIdGuid && x.IsActive);
+            if (financialAccount == null)
+            {
+                throw AppValidationException.NotFound("Financial account not found.", "financialAccountId", "FINANCIAL_ACCOUNT_NOT_FOUND");
+            }
+
+            if (financialAccount.ConnectionMode == "LinkedApi")
+            {
+                throw AppValidationException.BadRequest(
+                    "Manual transaction cannot be created for linked bank account.",
+                    "financialAccountId",
+                    "LINKED_ACCOUNT_MANUAL_TRANSACTION_NOT_ALLOWED");
+            }
+        }
+
         var transaction = new Repository.Entity.Transaction()
         {
             // Identity
@@ -319,6 +343,19 @@ public class Service : IService
         {
             throw new Exception("Transaction not found");
         }
+        if (transaction.UserId != userIdGuid)
+        {
+            throw AppValidationException.NotFound("Transaction not found.", "id", "TRANSACTION_NOT_FOUND");
+        }
+
+        if (transaction.SourceType != "Manual")
+        {
+            throw AppValidationException.BadRequest(
+                "Linked bank transaction cannot be updated manually.",
+                "id",
+                "LINKED_TRANSACTION_UPDATE_NOT_ALLOWED");
+        }
+
         // transaction.FinancialAccountId = request.financialAccountId ?? transaction.FinancialAccountId;
         // transaction.FromJarId = request.fromJarId ?? transaction.FromJarId;
         // transaction.ToJarId = request.toJarId ?? transaction.ToJarId;
@@ -416,6 +453,19 @@ public class Service : IService
         {
             throw new Exception("Transaction not found");
         }
+        if (transaction.UserId != userIdGuid)
+        {
+            throw AppValidationException.NotFound("Transaction not found.", "id", "TRANSACTION_NOT_FOUND");
+        }
+
+        if (transaction.SourceType != "Manual")
+        {
+            throw AppValidationException.BadRequest(
+                "Linked bank transaction cannot be deleted manually.",
+                "id",
+                "LINKED_TRANSACTION_DELETE_NOT_ALLOWED");
+        }
+
         transaction.IsDeleted = true;
         await _dbContext.SaveChangesAsync();
 
@@ -471,5 +521,543 @@ public class Service : IService
         }
 
         await _dbContext.SaveChangesAsync();
+    }
+}
+    public async Task<Response.CassoTransactionsResponse> ProcessCassoWebhook(
+        Request.CassoWebhookRequest request,
+        string? secureToken,
+        string? cassoSignature)
+    {
+        if (request is null)
+        {
+            throw AppValidationException.BadRequest("Request body is required.", "body", "REQUIRED");
+        }
+
+        var configuredSecureToken = _configuration["CasooOptions:SecureToken"]
+                                    ?? _configuration["CasooOptions:WebhookSecureToken"]
+                                    ?? _configuration["Casso:SecureToken"]
+                                    ?? _configuration["Casso:WebhookSecureToken"];
+        if (!string.IsNullOrWhiteSpace(configuredSecureToken)
+            && secureToken?.Trim() != configuredSecureToken.Trim())
+        {
+            throw AppValidationException.BadRequest("Invalid Casso secure token.", "secure-token", "CASSO_WEBHOOK_UNAUTHORIZED");
+        }
+
+        if (string.IsNullOrWhiteSpace(configuredSecureToken) && string.IsNullOrWhiteSpace(cassoSignature))
+        {
+            throw AppValidationException.BadRequest("Casso webhook verification header is required.", "secure-token", "CASSO_WEBHOOK_UNAUTHORIZED");
+        }
+
+        if (request.error != 0)
+        {
+            return new Response.CassoTransactionsResponse
+            {
+                receivedCount = 0,
+                createdCount = 0,
+                skippedCount = 0,
+                message = "Casso webhook ignored because error is not zero."
+            };
+        }
+
+        var cassoTransactions = new List<JsonElement>();
+        if (request.data.ValueKind == JsonValueKind.Object)
+        {
+            cassoTransactions.Add(request.data);
+        }
+        else if (request.data.ValueKind == JsonValueKind.Array)
+        {
+            foreach (var item in request.data.EnumerateArray())
+            {
+                cassoTransactions.Add(item);
+            }
+        }
+        else
+        {
+            throw AppValidationException.BadRequest("Casso webhook data is invalid.", "data", "CASSO_WEBHOOK_INVALID");
+        }
+
+        var createdCount = 0;
+        var skippedCount = 0;
+        await using var databaseTransaction = await _dbContext.Database.BeginTransactionAsync();
+
+        foreach (var item in cassoTransactions)
+        {
+            decimal amount;
+            if (item.TryGetProperty("amount", out var amountElement) && amountElement.ValueKind == JsonValueKind.Number)
+            {
+                amount = amountElement.GetDecimal();
+            }
+            else
+            {
+                skippedCount++;
+                continue;
+            }
+
+            if (amount == 0)
+            {
+                skippedCount++;
+                continue;
+            }
+
+            string? externalTransactionId = null;
+            if (item.TryGetProperty("reference", out var referenceElement))
+            {
+                externalTransactionId = referenceElement.GetString();
+            }
+            if (string.IsNullOrWhiteSpace(externalTransactionId) && item.TryGetProperty("tid", out var tidElement))
+            {
+                externalTransactionId = tidElement.GetString();
+            }
+            if (string.IsNullOrWhiteSpace(externalTransactionId) && item.TryGetProperty("id", out var idElement))
+            {
+                externalTransactionId = idElement.ValueKind == JsonValueKind.String
+                    ? idElement.GetString()
+                    : idElement.GetRawText();
+            }
+
+            if (string.IsNullOrWhiteSpace(externalTransactionId))
+            {
+                skippedCount++;
+                continue;
+            }
+
+            string? accountRef = null;
+            if (item.TryGetProperty("accountNumber", out var accountNumberElement))
+            {
+                accountRef = accountNumberElement.GetString();
+            }
+            if (string.IsNullOrWhiteSpace(accountRef) && item.TryGetProperty("subAccId", out var subAccIdElement))
+            {
+                accountRef = subAccIdElement.GetString();
+            }
+            if (string.IsNullOrWhiteSpace(accountRef) && item.TryGetProperty("bank_sub_acc_id", out var bankSubAccIdElement))
+            {
+                accountRef = bankSubAccIdElement.GetString();
+            }
+            if (string.IsNullOrWhiteSpace(accountRef) && item.TryGetProperty("bankSubAccId", out var bankSubAccIdCamelElement))
+            {
+                accountRef = bankSubAccIdCamelElement.GetString();
+            }
+
+            if (string.IsNullOrWhiteSpace(accountRef))
+            {
+                skippedCount++;
+                continue;
+            }
+
+            var matchedAccounts = await _dbContext.FinancialAccounts
+                .Where(x => x.ConnectionMode == "LinkedApi"
+                            && x.IsActive
+                            && (x.ExternalAccountRef == accountRef
+                                || x.MaskedAccountNumber == accountRef
+                                || x.ExternalAccountId == accountRef))
+                .ToListAsync();
+
+            if (matchedAccounts.Count > 1)
+            {
+                throw AppValidationException.Conflict("Multiple linked financial accounts match Casso account.", "accountNumber", "CASSO_ACCOUNT_CONFLICT");
+            }
+
+            if (matchedAccounts.Count == 0)
+            {
+                skippedCount++;
+                continue;
+            }
+
+            var financialAccount = matchedAccounts[0];
+            var existedTransaction = await _dbContext.Transactions.AnyAsync(x =>
+                x.FinancialAccountId == financialAccount.Id
+                && x.ExternalTransactionId == externalTransactionId
+                && !x.IsDeleted);
+            if (existedTransaction)
+            {
+                skippedCount++;
+                continue;
+            }
+
+            var transactionDate = DateTimeOffset.UtcNow;
+            if (item.TryGetProperty("transactionDateTime", out var transactionDateTimeElement)
+                && DateTimeOffset.TryParse(transactionDateTimeElement.GetString(), out var parsedTransactionDateTime))
+            {
+                transactionDate = parsedTransactionDateTime;
+            }
+            else if (item.TryGetProperty("when", out var whenElement)
+                     && DateTimeOffset.TryParse(whenElement.GetString(), out var parsedWhen))
+            {
+                transactionDate = parsedWhen;
+            }
+
+            string? description = null;
+            if (item.TryGetProperty("description", out var descriptionElement))
+            {
+                description = descriptionElement.GetString();
+            }
+
+            decimal? runningBalance = null;
+            if (item.TryGetProperty("runningBalance", out var runningBalanceElement)
+                && runningBalanceElement.ValueKind == JsonValueKind.Number)
+            {
+                runningBalance = runningBalanceElement.GetDecimal();
+            }
+            else if (item.TryGetProperty("cusum_balance", out var cusumBalanceElement)
+                     && cusumBalanceElement.ValueKind == JsonValueKind.Number)
+            {
+                runningBalance = cusumBalanceElement.GetDecimal();
+            }
+
+            _dbContext.Transactions.Add(new Repository.Entity.Transaction
+            {
+                Id = Guid.NewGuid(),
+                UserId = financialAccount.UserId,
+                FinancialAccountId = financialAccount.Id,
+                CategoryId = null,
+                FromJarId = null,
+                ToJarId = null,
+                Type = amount > 0 ? "Income" : "Expense",
+                TransactionsAmount = Math.Abs(amount),
+                Note = description,
+                RawDescription = description,
+                TransactionDate = transactionDate,
+                SourceType = "Imported",
+                ExternalTransactionId = externalTransactionId,
+                RawPayloadJson = item.GetRawText(),
+                PostedAt = DateTimeOffset.UtcNow,
+                ImportJobId = null,
+                IsDeleted = false,
+                DeletedAt = null,
+                CreatedAt = DateTimeOffset.UtcNow,
+                UpdatedAt = DateTimeOffset.UtcNow
+            });
+
+            if (runningBalance.HasValue)
+            {
+                financialAccount.CurrentBalance = runningBalance.Value;
+            }
+            else if (amount > 0)
+            {
+                financialAccount.CurrentBalance += Math.Abs(amount);
+            }
+            else
+            {
+                financialAccount.CurrentBalance -= Math.Abs(amount);
+            }
+
+            financialAccount.SyncStatus = "Synced";
+            financialAccount.LastSyncedAt = DateTimeOffset.UtcNow;
+            financialAccount.LastSyncError = null;
+            financialAccount.LastSyncCursor = externalTransactionId;
+            financialAccount.UpdatedAt = DateTimeOffset.UtcNow;
+            createdCount++;
+        }
+
+        await _dbContext.SaveChangesAsync();
+        await databaseTransaction.CommitAsync();
+
+        return new Response.CassoTransactionsResponse
+        {
+            receivedCount = cassoTransactions.Count,
+            createdCount = createdCount,
+            skippedCount = skippedCount,
+            message = "Casso webhook processed."
+        };
+    }
+
+    public async Task<Response.CassoTransactionsResponse> SyncCassoTransactions(Request.CassoSyncTransactionsRequest request)
+    {
+        if (request is null)
+        {
+            throw AppValidationException.BadRequest("Request body is required.", "body", "REQUIRED");
+        }
+
+        var userId = _httpContext.HttpContext.User.Claims.FirstOrDefault(x => x.Type == "id")?.Value;
+        if (string.IsNullOrEmpty(userId))
+            throw new UnauthorizedAccessException("UserId not found in token");
+
+        var userIdGuid = Guid.Parse(userId);
+        if (request.financialAccountId == Guid.Empty)
+        {
+            throw AppValidationException.BadRequest("Financial account is required.", "financialAccountId", "REQUIRED");
+        }
+
+        if (request.page <= 0)
+        {
+            throw AppValidationException.BadRequest("Page must be greater than zero.", "page", "CASSO_SYNC_INVALID");
+        }
+
+        if (request.pageSize <= 0 || request.pageSize > 100)
+        {
+            throw AppValidationException.BadRequest("Page size must be between 1 and 100.", "pageSize", "CASSO_SYNC_INVALID");
+        }
+
+        var financialAccount = await _dbContext.FinancialAccounts
+            .FirstOrDefaultAsync(x => x.Id == request.financialAccountId && x.UserId == userIdGuid && x.IsActive);
+        if (financialAccount == null)
+        {
+            throw AppValidationException.NotFound("Financial account not found.", "financialAccountId", "FINANCIAL_ACCOUNT_NOT_FOUND");
+        }
+
+        if (financialAccount.ConnectionMode != "LinkedApi")
+        {
+            throw AppValidationException.BadRequest("Only linked bank account can sync Casso transactions.", "financialAccountId", "CASSO_SYNC_LINKED_ACCOUNT_REQUIRED");
+        }
+
+        var apiKey = _configuration["CasooOptions:ApiKey"] ?? _configuration["Casso:ApiKey"];
+        if (string.IsNullOrWhiteSpace(apiKey))
+        {
+            throw AppValidationException.BadRequest("Casso API key is not configured.", "CasooOptions:ApiKey", "CASSO_CONFIG_MISSING");
+        }
+
+        var baseUrlTransactions = _configuration["CasooOptions:BaseUrlTransactions"] ?? _configuration["Casso:BaseUrlTransactions"];
+        if (string.IsNullOrWhiteSpace(baseUrlTransactions))
+        {
+            throw AppValidationException.BadRequest("Casso transactions URL is not configured.", "CasooOptions:BaseUrlTransactions", "CASSO_CONFIG_MISSING");
+        }
+
+        var queryParams = new List<string>
+        {
+            $"page={request.page}",
+            $"pageSize={request.pageSize}",
+            $"sort={Uri.EscapeDataString(string.IsNullOrWhiteSpace(request.sort) ? "ASC" : request.sort.Trim().ToUpperInvariant())}"
+        };
+        if (request.fromDate.HasValue)
+        {
+            queryParams.Add($"fromDate={request.fromDate.Value:yyyy-MM-dd}");
+        }
+        if (request.toDate.HasValue)
+        {
+            queryParams.Add($"toDate={request.toDate.Value:yyyy-MM-dd}");
+        }
+
+        var requestUri = baseUrlTransactions
+                         + (baseUrlTransactions.Contains('?') ? "&" : "?")
+                         + string.Join("&", queryParams);
+
+        using var httpClient = new HttpClient
+        {
+            Timeout = TimeSpan.FromSeconds(_configuration.GetValue("CasooOptions:TimeoutSeconds", 30))
+        };
+        var authorizationValue = apiKey.Trim();
+        if (!authorizationValue.StartsWith("Apikey ", StringComparison.OrdinalIgnoreCase)
+            && !authorizationValue.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
+        {
+            authorizationValue = $"Apikey {authorizationValue}";
+        }
+        httpClient.DefaultRequestHeaders.Authorization = AuthenticationHeaderValue.Parse(authorizationValue);
+
+        using var cassoResponse = await httpClient.GetAsync(requestUri);
+        if (!cassoResponse.IsSuccessStatusCode)
+        {
+            financialAccount.SyncStatus = "Error";
+            financialAccount.LastSyncError = $"Casso request failed with status {(int)cassoResponse.StatusCode}.";
+            financialAccount.UpdatedAt = DateTimeOffset.UtcNow;
+            await _dbContext.SaveChangesAsync();
+            throw AppValidationException.BadRequest("Casso transaction sync failed.", "casso", "CASSO_SYNC_FAILED");
+        }
+
+        await using var responseStream = await cassoResponse.Content.ReadAsStreamAsync();
+        using var json = await JsonDocument.ParseAsync(responseStream);
+        if (!json.RootElement.TryGetProperty("error", out var errorElement)
+            || errorElement.GetInt32() != 0)
+        {
+            financialAccount.SyncStatus = "Error";
+            financialAccount.LastSyncError = "Casso response error is not zero.";
+            financialAccount.UpdatedAt = DateTimeOffset.UtcNow;
+            await _dbContext.SaveChangesAsync();
+            throw AppValidationException.BadRequest("Casso response is invalid.", "casso", "CASSO_RESPONSE_INVALID");
+        }
+
+        var records = new List<JsonElement>();
+        if (json.RootElement.TryGetProperty("data", out var dataElement)
+            && dataElement.ValueKind == JsonValueKind.Object
+            && dataElement.TryGetProperty("records", out var recordsElement)
+            && recordsElement.ValueKind == JsonValueKind.Array)
+        {
+            foreach (var record in recordsElement.EnumerateArray())
+            {
+                records.Add(record);
+            }
+        }
+        else if (json.RootElement.TryGetProperty("data", out var dataArrayElement)
+                 && dataArrayElement.ValueKind == JsonValueKind.Array)
+        {
+            foreach (var record in dataArrayElement.EnumerateArray())
+            {
+                records.Add(record);
+            }
+        }
+
+        var createdCount = 0;
+        var skippedCount = 0;
+        await using var databaseTransaction = await _dbContext.Database.BeginTransactionAsync();
+
+        foreach (var record in records)
+        {
+            decimal amount;
+            if (record.TryGetProperty("amount", out var amountElement) && amountElement.ValueKind == JsonValueKind.Number)
+            {
+                amount = amountElement.GetDecimal();
+            }
+            else
+            {
+                skippedCount++;
+                continue;
+            }
+
+            if (amount == 0)
+            {
+                skippedCount++;
+                continue;
+            }
+
+            string? recordAccountRef = null;
+            if (record.TryGetProperty("bankSubAccId", out var bankSubAccIdElement))
+            {
+                recordAccountRef = bankSubAccIdElement.GetString();
+            }
+            if (string.IsNullOrWhiteSpace(recordAccountRef) && record.TryGetProperty("bank_sub_acc_id", out var bankSubAccIdSnakeElement))
+            {
+                recordAccountRef = bankSubAccIdSnakeElement.GetString();
+            }
+            if (string.IsNullOrWhiteSpace(recordAccountRef) && record.TryGetProperty("accountNumber", out var accountNumberElement))
+            {
+                recordAccountRef = accountNumberElement.GetString();
+            }
+
+            if (!string.IsNullOrWhiteSpace(recordAccountRef)
+                && !string.IsNullOrWhiteSpace(financialAccount.ExternalAccountRef)
+                && recordAccountRef != financialAccount.ExternalAccountRef)
+            {
+                skippedCount++;
+                continue;
+            }
+
+            string? externalTransactionId = null;
+            if (record.TryGetProperty("reference", out var referenceElement))
+            {
+                externalTransactionId = referenceElement.GetString();
+            }
+            if (string.IsNullOrWhiteSpace(externalTransactionId) && record.TryGetProperty("tid", out var tidElement))
+            {
+                externalTransactionId = tidElement.GetString();
+            }
+            if (string.IsNullOrWhiteSpace(externalTransactionId) && record.TryGetProperty("id", out var idElement))
+            {
+                externalTransactionId = idElement.ValueKind == JsonValueKind.String
+                    ? idElement.GetString()
+                    : idElement.GetRawText();
+            }
+            if (string.IsNullOrWhiteSpace(externalTransactionId) && record.TryGetProperty("privateId", out var privateIdElement))
+            {
+                externalTransactionId = privateIdElement.ValueKind == JsonValueKind.String
+                    ? privateIdElement.GetString()
+                    : privateIdElement.GetRawText();
+            }
+
+            if (string.IsNullOrWhiteSpace(externalTransactionId))
+            {
+                skippedCount++;
+                continue;
+            }
+
+            var existedTransaction = await _dbContext.Transactions.AnyAsync(x =>
+                x.FinancialAccountId == financialAccount.Id
+                && x.ExternalTransactionId == externalTransactionId
+                && !x.IsDeleted);
+            if (existedTransaction)
+            {
+                skippedCount++;
+                continue;
+            }
+
+            var transactionDate = DateTimeOffset.UtcNow;
+            if (record.TryGetProperty("transactionDateTime", out var transactionDateTimeElement)
+                && DateTimeOffset.TryParse(transactionDateTimeElement.GetString(), out var parsedTransactionDateTime))
+            {
+                transactionDate = parsedTransactionDateTime;
+            }
+            else if (record.TryGetProperty("when", out var whenElement)
+                     && DateTimeOffset.TryParse(whenElement.GetString(), out var parsedWhen))
+            {
+                transactionDate = parsedWhen;
+            }
+            else if (record.TryGetProperty("transactionDate", out var transactionDateElement)
+                     && DateTimeOffset.TryParse(transactionDateElement.GetString(), out var parsedTransactionDate))
+            {
+                transactionDate = parsedTransactionDate;
+            }
+
+            string? description = null;
+            if (record.TryGetProperty("description", out var descriptionElement))
+            {
+                description = descriptionElement.GetString();
+            }
+
+            decimal? runningBalance = null;
+            if (record.TryGetProperty("runningBalance", out var runningBalanceElement)
+                && runningBalanceElement.ValueKind == JsonValueKind.Number)
+            {
+                runningBalance = runningBalanceElement.GetDecimal();
+            }
+            else if (record.TryGetProperty("cusum_balance", out var cusumBalanceElement)
+                     && cusumBalanceElement.ValueKind == JsonValueKind.Number)
+            {
+                runningBalance = cusumBalanceElement.GetDecimal();
+            }
+
+            _dbContext.Transactions.Add(new Repository.Entity.Transaction
+            {
+                Id = Guid.NewGuid(),
+                UserId = userIdGuid,
+                FinancialAccountId = financialAccount.Id,
+                CategoryId = null,
+                FromJarId = null,
+                ToJarId = null,
+                Type = amount > 0 ? "Income" : "Expense",
+                TransactionsAmount = Math.Abs(amount),
+                Note = description,
+                RawDescription = description,
+                TransactionDate = transactionDate,
+                SourceType = "Imported",
+                ExternalTransactionId = externalTransactionId,
+                RawPayloadJson = record.GetRawText(),
+                PostedAt = DateTimeOffset.UtcNow,
+                ImportJobId = null,
+                IsDeleted = false,
+                DeletedAt = null,
+                CreatedAt = DateTimeOffset.UtcNow,
+                UpdatedAt = DateTimeOffset.UtcNow
+            });
+
+            if (runningBalance.HasValue)
+            {
+                financialAccount.CurrentBalance = runningBalance.Value;
+            }
+            else if (amount > 0)
+            {
+                financialAccount.CurrentBalance += Math.Abs(amount);
+            }
+            else
+            {
+                financialAccount.CurrentBalance -= Math.Abs(amount);
+            }
+
+            financialAccount.SyncStatus = "Synced";
+            financialAccount.LastSyncedAt = DateTimeOffset.UtcNow;
+            financialAccount.LastSyncError = null;
+            financialAccount.LastSyncCursor = externalTransactionId;
+            financialAccount.UpdatedAt = DateTimeOffset.UtcNow;
+            createdCount++;
+        }
+
+        await _dbContext.SaveChangesAsync();
+        await databaseTransaction.CommitAsync();
+
+        return new Response.CassoTransactionsResponse
+        {
+            receivedCount = records.Count,
+            createdCount = createdCount,
+            skippedCount = skippedCount,
+            message = "Casso transactions synced."
+        };
     }
 }

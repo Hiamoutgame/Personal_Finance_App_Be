@@ -1179,7 +1179,7 @@ namespace Personal_Finance_Management.Repository.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
-                    b.Property<decimal?>("Amount")
+                    b.Property<decimal>("Amount")
                         .HasColumnType("numeric(18,2)")
                         .HasColumnName("amount");
 

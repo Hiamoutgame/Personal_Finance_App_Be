@@ -304,7 +304,7 @@ namespace Personal_Finance_Management.Repository.Migrations
                 {
                     id = table.Column<Guid>(type: "uuid", nullable: false),
                     title = table.Column<string>(type: "character varying(150)", maxLength: 150, nullable: false),
-                    amount = table.Column<decimal>(type: "numeric(18,2)", nullable: true),
+                    amount = table.Column<decimal>(type: "numeric(18,2)", nullable: false),
                     frequency = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: true),
                     day_of_month = table.Column<short>(type: "smallint", nullable: true),
                     start_date = table.Column<DateTime>(type: "date", nullable: false, defaultValueSql: "CURRENT_DATE"),
@@ -555,7 +555,7 @@ namespace Personal_Finance_Management.Repository.Migrations
                     is_deleted = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false),
                     deleted_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true),
                     user_id = table.Column<Guid>(type: "uuid", nullable: false),
-                    financial_account_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    financial_account_id = table.Column<Guid>(type: "uuid", nullable: true),
                     category_id = table.Column<Guid>(type: "uuid", nullable: true),
                     import_job_id = table.Column<Guid>(type: "uuid", nullable: true),
                     created_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false, defaultValueSql: "NOW()"),
@@ -564,10 +564,10 @@ namespace Personal_Finance_Management.Repository.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("pk_transactions", x => x.id);
-                    table.CheckConstraint("chk_transactions_amount_by_type", "(\"type\" = 'Income' AND \"transactions_amount\" > 0) OR (\"type\" = 'Expense' AND \"transactions_amount\" < 0)");
+                    table.CheckConstraint("chk_transactions_amount_by_type", "(\"type\" = 'Income' AND \"transactions_amount\" > 0) OR (\"type\" = 'Expense' AND \"transactions_amount\" > 0) OR (\"type\" = 'Transfer' AND \"transactions_amount\" <> 0)");
                     table.CheckConstraint("chk_transactions_jar_direction", "\"from_jar_id\" IS NULL OR \"to_jar_id\" IS NULL OR \"from_jar_id\" <> \"to_jar_id\"");
                     table.CheckConstraint("chk_transactions_source_type", "\"source_type\" IN ('Manual','Imported','OCR','Jar','System')");
-                    table.CheckConstraint("chk_transactions_type", "\"type\" IN ('Income','Expense')");
+                    table.CheckConstraint("chk_transactions_type", "\"type\" IN ('Income','Expense', 'Transfer')");
                     table.ForeignKey(
                         name: "fk_transactions_accounts_user_id",
                         column: x => x.user_id,
