@@ -184,15 +184,14 @@ public class Service : IService
     public async Task DeleteGoal(Guid id)
     {
         var userId = GetCurrentUserId();
-
-       
+        
         var goal = await _appDbContext.Goals
             .FirstOrDefaultAsync(g => g.Id == id && g.UserId == userId);
 
         if (goal == null)
             throw new ("Goal not found");
         
-        goal.Status = "Deleted";
+        goal.Status = "Cancelled";
         await _appDbContext.SaveChangesAsync();
         
     }
