@@ -1,4 +1,4 @@
-﻿namespace Personal_Finance_Management.Service.goal;
+namespace Personal_Finance_Management.Service.goal;
 
 public class Response
 {
@@ -32,14 +32,6 @@ public class Response
         public required string Status { get; set; }
         public decimal SuggestedMonthlyContribution { get; set; }
         public Guid? LinkedJarId { get; set; }
-        public List<RecentContributionItem> RecentContributions { get; set; } = new();
-    }
-
-    public class RecentContributionItem
-    {
-        public Guid Id { get; set; }
-        public decimal Amount { get; set; }
-        public DateTimeOffset Date { get; set; }
     }
 
 

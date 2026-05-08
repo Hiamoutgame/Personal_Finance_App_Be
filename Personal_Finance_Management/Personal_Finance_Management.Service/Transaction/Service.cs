@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Personal_Finance_Management.Repository;
+using Personal_Finance_Management.Repository.Entity;
 
 namespace Personal_Finance_Management.Service.Transaction;
 
@@ -278,6 +279,17 @@ public class Service : IService
         }
         
         await _dbContext.SaveChangesAsync();
+
+        // Evaluate goals for affected jars
+        if (transaction.ToJarId != null)
+        {
+            await CheckAndCompleteGoals(transaction.ToJarId.Value);
+        }
+        if (transaction.FromJarId != null)
+        {
+            await CheckAndCompleteGoals(transaction.FromJarId.Value);
+        }
+
         var result = new Response.CreateTransactionResponse
         {
             id = transaction.Id,
@@ -365,6 +377,17 @@ public class Service : IService
         
         // Nguồn = Tiền cũ + (KHoảng mới -Tiền cũ)
         await _dbContext.SaveChangesAsync();
+
+        // Evaluate goals for affected jars
+        if (transaction.ToJarId != null)
+        {
+            await CheckAndCompleteGoals(transaction.ToJarId.Value);
+        }
+        if (transaction.FromJarId != null)
+        {
+            await CheckAndCompleteGoals(transaction.FromJarId.Value);
+        }
+
         var result = new Response.UpdateTransactionResponse
         {
             id = id,
@@ -395,10 +418,58 @@ public class Service : IService
         }
         transaction.IsDeleted = true;
         await _dbContext.SaveChangesAsync();
+
+        // Evaluate goals for affected jars (deletion might refund money if it was an expense)
+        if (transaction.ToJarId != null)
+        {
+            await CheckAndCompleteGoals(transaction.ToJarId.Value);
+        }
+        if (transaction.FromJarId != null)
+        {
+            await CheckAndCompleteGoals(transaction.FromJarId.Value);
+        }
         var result = new Response.DeleteTransactionResponse
         {
             message = "Transaction deleted"
         };
         return result;
+    }
+
+    private async Task CheckAndCompleteGoals(Guid jarId)
+    {
+        var jar = await _dbContext.Jars.FirstOrDefaultAsync(j => j.Id == jarId);
+        if (jar == null) return;
+
+        // Tìm các Goal đang Active gắn với Jar này
+        var activeGoals = await _dbContext.Goals
+            .Where(g => g.LinkedJarId == jarId && g.Status == "Active")
+            .ToListAsync();
+
+        foreach (var goal in activeGoals)
+        {
+            // Kiểm tra điều kiện hoàn thành: Số dư hũ >= Target Amount
+            // Theo Option B: Chấp nhận hoàn thành cả khi đã quá hạn (DueDate)
+            if (jar.Balance >= goal.TargetAmount)
+            {
+                goal.Status = "Completed";
+                goal.UpdatedAt = DateTimeOffset.UtcNow;
+
+                // Tạo thông báo cho người dùng
+                var notification = new Notification
+                {
+                    UserId = goal.UserId,
+                    Type = "GoalUpdate",
+                    Title = "Chúc mừng! Bạn đã hoàn thành mục tiêu",
+                    Body = $"Mục tiêu '{goal.Title}' đã đạt được mức {goal.TargetAmount:N0}đ trong hũ {jar.Name}.",
+                    IsRead = false,
+                    CreatedAt = DateTimeOffset.UtcNow,
+                    MetadataJson = $"{{\"goalId\": \"{goal.Id}\", \"jarId\": \"{jar.Id}\"}}"
+                };
+
+                _dbContext.Notifications.Add(notification);
+            }
+        }
+
+        await _dbContext.SaveChangesAsync();
     }
 }
