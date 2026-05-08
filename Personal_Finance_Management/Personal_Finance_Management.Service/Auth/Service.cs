@@ -1,7 +1,9 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
+using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Personal_Finance_Management.Repository;
+using Personal_Finance_Management.Repository.Constants;
 using Personal_Finance_Management.Repository.Entity;
 using Personal_Finance_Management.Repository.Enum;
 using ValidationService = Personal_Finance_Management.Service.Validations;
@@ -11,21 +13,24 @@ namespace Personal_Finance_Management.Service.Auth;
 
 public class Service : IService
 {
-    private static readonly Guid DefaultRoleId = Guid.Parse("00000000-0000-0000-0000-000000000001");
-    private const string DefaultRoleCode = "User";
+    private static readonly Guid DefaultRoleId = AppRoles.Ids.User;
+    private static readonly string DefaultRoleCode = AppRoles.Codes.User;
 
     private readonly AppDbContext _dbContext;
     private readonly JwtService.IService _jwtService;
     private readonly ValidationService.IServices _validationServices;
+    private readonly IHttpContextAccessor _httpContext;
 
     public Service(
         AppDbContext dbContext,
         JwtService.IService jwtService,
-        ValidationService.IServices validationServices)
+        ValidationService.IServices validationServices,
+        IHttpContextAccessor httpContext)
     {
         _dbContext = dbContext;
         _jwtService = jwtService;
         _validationServices = validationServices;
+        _httpContext = httpContext;
     }
 
     public async Task<Response.RegisterResponse> Register(Request.RegisterRequest request)
@@ -135,5 +140,15 @@ public class Service : IService
             Email = user.Email,
             AccessToken = token
         });
+    }
+
+    public async Task<string> Logout()
+    {
+        var userId = _httpContext.HttpContext.User.Claims.FirstOrDefault(x => x.Type == "id")?.Value;
+        if (string.IsNullOrEmpty(userId))
+        {
+            throw new Exception("Invalid user id.");
+        }
+        return await Task.FromResult("Logout successful.");
     }
 }

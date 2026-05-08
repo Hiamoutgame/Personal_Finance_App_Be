@@ -112,33 +112,27 @@ public class Service : IService
             {
                 new Response.Jar()
                 {
-                    name = "Food & Dining",
-                    percentage = 25
+                    name = "Food & Dining"
                 },
                 new Response.Jar()
                 {
-                    name = "Shopping",
-                    percentage = 15
+                    name = "Shopping"
                 },
                 new Response.Jar()
                 {
-                    name = "Transportation",
-                    percentage = 10
+                    name = "Transportation"
                 },
                 new Response.Jar()
                 {
-                    name = "Savings",
-                    percentage = 20
+                    name = "Savings"
                 },
                 new Response.Jar()
                 {
-                    name = "Essentials",
-                    percentage = 20
+                    name = "Essentials"
                 },
                 new Response.Jar()
                 {
-                    name = "Entertainment",
-                    percentage = 10
+                    name = "Entertainment"
                 }
             },
             defaultFinancialAccount = new Response.defaultFAccount()
@@ -172,6 +166,14 @@ public class Service : IService
             UpdatedAt = now
         });
         _dbContext.Categories.AddRange(savedCategory);
+
+        var jarSetup = new Repository.Entity.JarSetup()
+        {
+            UserId = userIdGuid,
+            MethodType = request.budgetMethodPreference,
+        };
+        _dbContext.JarSetups.Add(jarSetup);
+        await _dbContext.SaveChangesAsync();
         var savedJar = response.recommendedJars.Select(x => new Repository.Entity.Jar()
         {
             UserId = userIdGuid,
@@ -180,10 +182,10 @@ public class Service : IService
             Balance = 0m,
             Currency = "VND",
             Status = "Active",
+            JarSetupId =  jarSetup.Id,
             CreatedAt = now,
             UpdatedAt = now
         });
-
         _dbContext.Jars.AddRange(savedJar);
         user.IsOnboardingCompleted = true;
         await _dbContext.SaveChangesAsync();

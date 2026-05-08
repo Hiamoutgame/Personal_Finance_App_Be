@@ -1,12 +1,13 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Personal_Finance_Management.Api.Extensions;
 using Personal_Finance_Management.Service.User;
 
 namespace Personal_Finance_Management.Api.Controllers;
 
 [ApiController]
 [Route("[controller]")]
-[Authorize]
+[Authorize(Policy = AuthorizationExtension.Policies.User)]
 public class UserController : ControllerBase
 {
     private readonly IService _service;
@@ -23,7 +24,7 @@ public class UserController : ControllerBase
     }
 
     [HttpPatch("me")]
-    public async Task<IActionResult> UpdateMe(Request.UpdateUserRequest request)
+    public async Task<IActionResult> UpdateMe([FromBody] Request.UpdateUserRequest request)
     {
         var result = await _service.UpdateUserProfile(request);
         return Ok(result);

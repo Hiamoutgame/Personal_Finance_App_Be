@@ -519,13 +519,13 @@ public class AppDbContext : DbContext
             {
                 t.HasCheckConstraint(
                     "chk_transactions_type",
-                    "\"type\" IN ('Income','Expense')");
+                    "\"type\" IN ('Income','Expense', 'Transfer')");
                 t.HasCheckConstraint(
                     "chk_transactions_source_type",
                     "\"source_type\" IN ('Manual','Imported','OCR','Jar','System')");
                 t.HasCheckConstraint(
                     "chk_transactions_amount_by_type",
-                    "(\"type\" = 'Income' AND \"transactions_amount\" > 0) OR (\"type\" = 'Expense' AND \"transactions_amount\" < 0)");
+                    "(\"type\" = 'Income' AND \"transactions_amount\" > 0) OR (\"type\" = 'Expense' AND \"transactions_amount\" > 0) OR (\"type\" = 'Transfer' AND \"transactions_amount\" <> 0)");
                 t.HasCheckConstraint(
                     "chk_transactions_jar_direction",
                     "\"from_jar_id\" IS NULL OR \"to_jar_id\" IS NULL OR \"from_jar_id\" <> \"to_jar_id\"");
