@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Personal_Finance_Management.Repository;
 using Personal_Finance_Management.Repository.Entity;
@@ -32,6 +32,7 @@ public class Service : IService
         var userId = GetCurrentUserId();
         
         var goals = await _appDbContext.Goals
+            .Include(g => g.LinkedJar)
             .Where(g => g.UserId == userId && g.Status == "Active")
             .OrderBy(g => g.Title)
             .ToListAsync();
@@ -41,23 +42,20 @@ public class Service : IService
 
         foreach (var goal in goals)
         {
-            // Tính % tiến độ: đã tiết kiệm được á / mục tiêu * 100 ra tỉ lệ %
+            decimal savedAmount = goal.LinkedJar?.Balance ?? 0;
             double progress = 0;
             if (goal.TargetAmount > 0)
-                progress = (double)(goal.SavedAmount / goal.TargetAmount) * 100;
+                progress = (double)(savedAmount / goal.TargetAmount) * 100;
 
-            // Tính số tiền cần đóng mỗi tháng để đạt mục tiêu đúng hạn 
-            //Cái này sài lại nên tách riêng ra để tính luôn 
-            //Mà tôi rối quá rồi nên để tiếng việt cho đỡ lộn
-            decimal suggested = TinhSoTienGoiYMoiThang(goal, today);
+            decimal suggested = TinhSoTienGoiYMoiThang(goal, savedAmount, today);
 
             items.Add(new Response.GetGoalItem
             {
                 Id = goal.Id,
                 Title = goal.Title,
                 TargetAmount = goal.TargetAmount,
-                SavedAmount = goal.SavedAmount,
-                ProgressPercentage = progress,
+                SavedAmount = savedAmount,
+                ProgressPercentage = Math.Round(progress, 1),
                 DueDate = goal.DueDate,
                 Status = goal.Status,
                 SuggestedMonthlyContribution = suggested
@@ -67,61 +65,46 @@ public class Service : IService
         return new Response.GetGoalsResponse { Data = items };
     }
 
-    
     public async Task<Response.GetGoalByIdResponse> GetGoalById(Guid id)
     {
         var userId = GetCurrentUserId();
         var today = DateTime.UtcNow;
         
         var goal = await _appDbContext.Goals
-            .Include(g => g.Contributions)
+            .Include(g => g.LinkedJar)
             .FirstOrDefaultAsync(g => g.Id == id && g.UserId == userId);
 
         if (goal == null)
             throw new Exception("Goal not found");
         
+        decimal savedAmount = goal.LinkedJar?.Balance ?? 0;
         double progress = 0;
         if (goal.TargetAmount > 0)
-            progress = (double)(goal.SavedAmount / goal.TargetAmount) * 100;
+            progress = (double)(savedAmount / goal.TargetAmount) * 100;
         
         int daysRemaining = (int)(goal.DueDate - today).TotalDays;
         if (daysRemaining < 0) daysRemaining = 0;
         
-        decimal suggested = TinhSoTienGoiYMoiThang(goal, today);
-
-        // 5. Lấy 5 lần đóng góp gần nhất
-        var recentContributions = goal.Contributions
-            .OrderByDescending(c => c.CreatedAt)
-            .Take(5)
-            .Select(c => new Response.RecentContributionItem
-            {
-                Id = c.Id,
-                Amount = c.Amount,
-                Date = c.CreatedAt
-            })
-            .ToList();
+        decimal suggested = TinhSoTienGoiYMoiThang(goal, savedAmount, today);
 
         return new Response.GetGoalByIdResponse
         {
             Id = goal.Id,
             Title = goal.Title,
             TargetAmount = goal.TargetAmount,
-            SavedAmount = goal.SavedAmount,
+            SavedAmount = savedAmount,
             ProgressPercentage = Math.Round(progress, 1),
             DueDate = goal.DueDate,
             DaysRemaining = daysRemaining,
             Status = goal.Status,
             SuggestedMonthlyContribution = suggested,
-            LinkedJarId = goal.LinkedJarId,
-            RecentContributions = recentContributions
+            LinkedJarId = goal.LinkedJarId
         };
     }
 
-    
     public async Task<Response.CreateGoalResponse> CreateGoal(Request.CreateGoalRequest request)
     {
         var userId = GetCurrentUserId();
-
         
         var goal = new Goal
         {
@@ -135,18 +118,28 @@ public class Service : IService
             LinkedJarId = request.LinkedJarId
         };
 
-       
         _appDbContext.Goals.Add(goal);
         await _appDbContext.SaveChangesAsync();
 
-      
+        // Get saved amount from jar if linked
+        decimal savedAmount = 0;
+        if (goal.LinkedJarId.HasValue)
+        {
+            var jar = await _appDbContext.Jars.FindAsync(goal.LinkedJarId.Value);
+            savedAmount = jar?.Balance ?? 0;
+        }
+
+        double progress = 0;
+        if (goal.TargetAmount > 0)
+            progress = (double)(savedAmount / goal.TargetAmount) * 100;
+
         return new Response.CreateGoalResponse
         {
             Id = goal.Id,
             Title = goal.Title,
             TargetAmount = goal.TargetAmount,
-            SavedAmount = 0,
-            ProgressPercentage = 0,     
+            SavedAmount = savedAmount,
+            ProgressPercentage = Math.Round(progress, 1),     
             Status = goal.Status,
             DueDate = goal.DueDate
         };
@@ -170,7 +163,6 @@ public class Service : IService
         
         await _appDbContext.SaveChangesAsync();
 
-        
         return new Response.UpdateGoalResponse
         {
             Id = goal.Id,
@@ -193,14 +185,12 @@ public class Service : IService
         
         goal.Status = "Cancelled";
         await _appDbContext.SaveChangesAsync();
-        
     }
     
-    private static decimal TinhSoTienGoiYMoiThang(Goal goal, DateTime today)
+    private static decimal TinhSoTienGoiYMoiThang(Goal goal, decimal currentSaved, DateTime today)
     {
-        decimal conThieu = goal.TargetAmount - goal.SavedAmount;
+        decimal conThieu = goal.TargetAmount - currentSaved;
 
-       //Nó trừ ra âm là mik để giành vượt mức
         if (conThieu <= 0) return 0;
 
         int soThangConLai = ((goal.DueDate.Year - today.Year) * 12)

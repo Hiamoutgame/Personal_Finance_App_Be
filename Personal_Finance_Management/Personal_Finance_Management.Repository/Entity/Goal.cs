@@ -1,4 +1,4 @@
-﻿using Personal_Finance_Management.Repository.Abtraction;
+using Personal_Finance_Management.Repository.Abtraction;
 
 namespace Personal_Finance_Management.Repository.Entity;
 
@@ -18,9 +18,6 @@ public class Goal : BaseEntity, IAudictableEntity
     //Nối với Jar
     public Guid? LinkedJarId { get; set; }
     public Jar? LinkedJar { get; set; }
-
-    //Nối với GoalContribution
-    public ICollection<GoalContribution> Contributions { get; set; } = new List<GoalContribution>();
 
     public DateTimeOffset CreatedAt { get; set; }
     public DateTimeOffset UpdatedAt { get; set; }
