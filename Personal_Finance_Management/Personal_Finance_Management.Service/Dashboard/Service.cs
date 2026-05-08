@@ -29,10 +29,10 @@ public class Service : IService
             throw new Exception("User not found");
 
         // ===============================BalanceSummaryResponse===============================
-        var totalJar = _dbContext.Jars.Where(x => x.UserId == userIdGuid).Sum(x => x.Balance);
-        var totalAccount = _dbContext.FinancialAccounts.Where(x => x.UserId == userIdGuid).Sum(x => x.CurrentBalance);
-        var totalIncome = _dbContext.Transactions.Where(x => x.Type == "Income").Sum(x => x.TransactionsAmount);
-        var totalExpense = _dbContext.Transactions.Where(x => x.Type == "Expense").Sum(x => x.TransactionsAmount);
+        var totalJar = await _dbContext.Jars.Where(x => x.UserId == userIdGuid).SumAsync(x => x.Balance);
+        var totalAccount = await _dbContext.FinancialAccounts.Where(x => x.UserId == userIdGuid).SumAsync(x => x.CurrentBalance);
+        var totalIncome = await _dbContext.Transactions.Where(x => x.Type == "Income").SumAsync(x => x.TransactionsAmount);
+        var totalExpense = await _dbContext.Transactions.Where(x => x.Type == "Expense").SumAsync(x => x.TransactionsAmount);
         var BalanceSummaryResponse = new Response.BalanceSummaryResponse
         {
             totalBalance = totalJar + totalAccount,
