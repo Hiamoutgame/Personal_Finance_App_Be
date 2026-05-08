@@ -57,90 +57,235 @@ public class Service : IService
             UpdatedAt = now
         };
         _dbContext.OnboardingProfiles.Add(onboardingDetail);
-        var response = new Response.OnboardingResponse()
+        var response = new Response.OnboardingResponse();
+        if (request.budgetMethodPreference == "SixJars")
         {
-            recommendedMethod = request.budgetMethodPreference,
-            recommendedCategories = new List<Response.Category>()
+            var result = new Response.OnboardingResponse()
             {
-                new Response.Category()
+                recommendedMethod = request.budgetMethodPreference,
+                recommendedCategories = new List<Response.Category>()
                 {
-                    name = "Bills & Housing",
-                    icon = "bill"
+                    new Response.Category()
+                    {
+                        name = "Bills & Housing",
+                        icon = "bill"
+                    },
+                    new Response.Category()
+                    {
+                        name = "Food & Dining",
+                        icon = "food"
+                    },
+                    new Response.Category()
+                    {
+                        name = "Transportation",
+                        icon = "car"
+                    },
+                    new Response.Category()
+                    {
+                        name = "Shopping",
+                        icon = "cart"
+                    },
+                    new Response.Category()
+                    {
+                        name = "Entertainment",
+                        icon = "game"
+                    },
+                    new Response.Category()
+                    {
+                        name = "Health",
+                        icon = "medicine"
+                    },
+                    new Response.Category()
+                    {
+                        name = "Education",
+                        icon = "book"
+                    },
+                    new Response.Category()
+                    {
+                        name = "Savings & Investment",
+                        icon = "bank"
+                    },
+                    new Response.Category()
+                    {
+                        name = "Other",
+                        icon = "?"
+                    }
                 },
-                new Response.Category()
+                recommendedJars = new List<Response.Jar>()
                 {
-                    name = "Food & Dining",
-                    icon = "food"
+                    new Response.Jar()
+                    {
+                        name = "Food & Dining"
+                    },
+                    new Response.Jar()
+                    {
+                        name = "Shopping"
+                    },
+                    new Response.Jar()
+                    {
+                        name = "Transportation"
+                    },
+                    new Response.Jar()
+                    {
+                        name = "Savings"
+                    },
+                    new Response.Jar()
+                    {
+                        name = "Essentials"
+                    },
+                    new Response.Jar()
+                    {
+                        name = "Entertainment"
+                    }
                 },
-                new Response.Category()
+                defaultFinancialAccount = new Response.defaultFAccount()
                 {
-                    name = "Transportation",
-                    icon = "car"
-                },
-                new Response.Category()
-                {
-                    name = "Shopping",
-                    icon = "cart"
-                },
-                new Response.Category()
-                {
-                    name = "Entertainment",
-                    icon = "game"
-                },
-                new Response.Category()
-                {
-                    name = "Health",
-                    icon = "medicine"
-                },
-                new Response.Category()
-                {
-                    name = "Education",
-                    icon = "book"
-                },
-                new Response.Category()
-                {
-                    name = "Savings & Investment",
-                    icon = "bank"
-                },
-                new Response.Category()
-                {
-                    name = "Other",
-                    icon = "?"
+                    name = "Cash",
+                    accountType = "Cash",
                 }
-            },
-            recommendedJars = new List<Response.Jar>()
+            };
+            response = result;
+        }else if (request.budgetMethodPreference == "Rule503020")
+        {
+            var result = new Response.OnboardingResponse()
             {
-                new Response.Jar()
+                recommendedMethod = request.budgetMethodPreference,
+                recommendedCategories = new List<Response.Category>()
                 {
-                    name = "Food & Dining"
+                    new Response.Category()
+                    {
+                        name = "Bills & Housing",
+                        icon = "bill"
+                    },
+                    new Response.Category()
+                    {
+                        name = "Food & Dining",
+                        icon = "food"
+                    },
+                    new Response.Category()
+                    {
+                        name = "Transportation",
+                        icon = "car"
+                    },
+                    new Response.Category()
+                    {
+                        name = "Shopping",
+                        icon = "cart"
+                    },
+                    new Response.Category()
+                    {
+                        name = "Entertainment",
+                        icon = "game"
+                    },
+                    new Response.Category()
+                    {
+                        name = "Health",
+                        icon = "medicine"
+                    },
+                    new Response.Category()
+                    {
+                        name = "Education",
+                        icon = "book"
+                    },
+                    new Response.Category()
+                    {
+                        name = "Savings & Investment",
+                        icon = "bank"
+                    },
+                    new Response.Category()
+                    {
+                        name = "Other",
+                        icon = "?"
+                    }
                 },
-                new Response.Jar()
+                recommendedJars = new List<Response.Jar>()
                 {
-                    name = "Shopping"
+                    new Response.Jar()
+                    {
+                        name = "Needs"
+                    },
+                    new Response.Jar()
+                    {
+                        name = "Wants"
+                    },
+                    new Response.Jar()
+                    {
+                        name = "Savings/Investments"
+                    }
                 },
-                new Response.Jar()
+                defaultFinancialAccount = new Response.defaultFAccount()
                 {
-                    name = "Transportation"
-                },
-                new Response.Jar()
-                {
-                    name = "Savings"
-                },
-                new Response.Jar()
-                {
-                    name = "Essentials"
-                },
-                new Response.Jar()
-                {
-                    name = "Entertainment"
+                    name = "Cash",
+                    accountType = "Cash",
                 }
-            },
-            defaultFinancialAccount = new Response.defaultFAccount()
+            };
+            response = result;
+        }else if (request.budgetMethodPreference == "Custom")
+        {
+            var result = new Response.OnboardingResponse()
             {
-                name = "Cash",
-                accountType = "Cash",
-            }
-        };
+                recommendedMethod = request.budgetMethodPreference,
+                recommendedCategories = new List<Response.Category>()
+                {
+                    new Response.Category()
+                    {
+                        name = "Bills & Housing",
+                        icon = "bill"
+                    },
+                    new Response.Category()
+                    {
+                        name = "Food & Dining",
+                        icon = "food"
+                    },
+                    new Response.Category()
+                    {
+                        name = "Transportation",
+                        icon = "car"
+                    },
+                    new Response.Category()
+                    {
+                        name = "Shopping",
+                        icon = "cart"
+                    },
+                    new Response.Category()
+                    {
+                        name = "Entertainment",
+                        icon = "game"
+                    },
+                    new Response.Category()
+                    {
+                        name = "Health",
+                        icon = "medicine"
+                    },
+                    new Response.Category()
+                    {
+                        name = "Education",
+                        icon = "book"
+                    },
+                    new Response.Category()
+                    {
+                        name = "Savings & Investment",
+                        icon = "bank"
+                    },
+                    new Response.Category()
+                    {
+                        name = "Other",
+                        icon = "?"
+                    }
+                },
+                recommendedJars = null,
+                defaultFinancialAccount = new Response.defaultFAccount()
+                {
+                    name = "Cash",
+                    accountType = "Cash",
+                }
+            };
+            response = result;
+        }
+        else
+        {
+            throw new Exception("budgetMethodPreference is invalid");
+        }
         var savedFinancialAccount = new Repository.Entity.FinancialAccount
         {
             UserId = userIdGuid,
@@ -174,19 +319,22 @@ public class Service : IService
         };
         _dbContext.JarSetups.Add(jarSetup);
         await _dbContext.SaveChangesAsync();
-        var savedJar = response.recommendedJars.Select(x => new Repository.Entity.Jar()
+        if(request.budgetMethodPreference != "Custom")
         {
-            UserId = userIdGuid,
-            Name = x.name,
-            IsDefault = true,
-            Balance = 0m,
-            Currency = "VND",
-            Status = "Active",
-            JarSetupId =  jarSetup.Id,
-            CreatedAt = now,
-            UpdatedAt = now
-        });
-        _dbContext.Jars.AddRange(savedJar);
+            var savedJar = response.recommendedJars.Select(x => new Repository.Entity.Jar()
+            {
+                UserId = userIdGuid,
+                Name = x.name,
+                IsDefault = true,
+                Balance = 0m,
+                Currency = "VND",
+                Status = "Active",
+                JarSetupId = jarSetup.Id,
+                CreatedAt = now,
+                UpdatedAt = now
+            });
+            _dbContext.Jars.AddRange(savedJar);
+        }
         user.IsOnboardingCompleted = true;
         await _dbContext.SaveChangesAsync();
         return response;
