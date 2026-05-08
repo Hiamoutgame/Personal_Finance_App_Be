@@ -6,7 +6,7 @@ public class Response
     {
         public string recommendedMethod { get; set; }
         public List<Category> recommendedCategories { get; set; }
-        public List<Jar> recommendedJars { get; set; }
+        public List<Jar>? recommendedJars { get; set; }
         public defaultFAccount defaultFinancialAccount  { get; set; }
     }
 
