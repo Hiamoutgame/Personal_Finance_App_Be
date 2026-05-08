@@ -2,8 +2,8 @@
 
 public interface IService
 {
-    Task<Response.GetLimitsResponse> GetLimits();
-    Task<Response.CreateLimitResponse> CreateLimit(Request.CreateLimitRequest request);
-    Task<Response.UpdateLimitResponse> UpdateLimit(Guid id, Request.UpdateLimitRequest request);
-    Task DeleteLimit(Guid id);
+    public Task<Response.GetLimitsResponse> GetLimits();
+    public Task<Response.CreateLimitResponse> CreateLimit(Request.CreateLimitRequest request);
+    public Task<Response.UpdateLimitResponse> UpdateLimit(Guid id, Request.UpdateLimitRequest request);
+    public Task DeleteLimit(Guid id);
 }

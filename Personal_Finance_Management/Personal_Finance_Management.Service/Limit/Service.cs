@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Personal_Finance_Management.Repository;
 using Personal_Finance_Management.Repository.Entity;
 
+
 namespace Personal_Finance_Management.Service.limit;
 
 public class Service : IService
@@ -28,14 +29,69 @@ public class Service : IService
     }
 
 
-    public Task<Response.GetLimitsResponse> GetLimits()
-    {
-        throw new NotImplementedException();
+    
+        public async Task<Response.GetLimitsResponse> GetLimits()
+        {
+            var userId = GetCurrentUserId();
+            
+            var limits = await _appDbContext.SpendingLimits
+                .Where(l => l.UserId == userId && l.IsActive)
+                .ToListAsync();
+
+
+            var items = new List<Response.GetLimitItem>();
+
+            foreach (var limit in limits)
+            {
+                string targetName = "";
+                Guid targetId = Guid.Empty;
+                
+              
+                var item = new Response.GetLimitItem
+                {
+                    Id = limit.Id,
+                    TargetId = targetId,
+                    TargetName = targetName,
+                    LimitAmount = limit.LimitAmount,
+                    Period = limit.Period,
+                    AlertAtPercentage = limit.AlertAtPercentage,
+                    CurrentSpent = 0,       
+                    CurrentPercentage = 0, 
+                    Status = "Active" 
+                };
+
+                items.Add(item);
+            }
+            return new Response.GetLimitsResponse { Data = items };
     }
 
-    public Task<Response.CreateLimitResponse> CreateLimit(Request.CreateLimitRequest request)
+    public async Task<Response.CreateLimitResponse> CreateLimit(Request.CreateLimitRequest request)
     {
-        throw new NotImplementedException();
+        var userId = GetCurrentUserId();
+
+       
+        var limit = new SpendingLimit()
+        {
+            LimitAmount = request.LimitAmount,
+            Period = request.Period,
+            AlertAtPercentage = request.AlertAtPercentage,
+            IsActive = true,
+            UserId = userId,
+            CategoryId = null,
+            JarId = null
+        };
+        
+        _appDbContext.SpendingLimits.Add(limit);
+        await _appDbContext.SaveChangesAsync();
+        
+        return new Response.CreateLimitResponse
+        {
+            Id = limit.Id,
+            TargetId = request.TargetId,
+            LimitAmount = limit.LimitAmount,
+            Period = limit.Period,
+            AlertAtPercentage = limit.AlertAtPercentage
+        };
     }
 
     public async Task<Response.UpdateLimitResponse> UpdateLimit(Guid id, Request.UpdateLimitRequest request)
