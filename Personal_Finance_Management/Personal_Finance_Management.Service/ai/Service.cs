@@ -26,7 +26,7 @@ public class Service : IService
         _httpContextAccessor = httpContextAccessor;
     }
 
-    
+
 
     public async Task<Response.AnswerResponse> ChatBot(Request.ChatBoxRequest request)
     {
@@ -43,17 +43,31 @@ public class Service : IService
             .AsNoTracking()
             .OrderByDescending(ai => ai.UpdatedAt)
             .FirstOrDefaultAsync();
+        var effectiveSetting = setting ?? new AiSetting
+        {
+            Id = Guid.Empty,
+            ModelName = _configuration["GoogleAI:DefaultModel"]!,
+            SystemPrompt = _configuration["GoogleAI:SystemPrompt"] ?? "",
+            Temperature = _configuration.GetValue("GoogleAI:Temperature", 0.7m),
+            MaxTokens = _configuration.GetValue("GoogleAI:MaxTokens", 1000),
+            IsEnabled = _configuration.GetValue("GoogleAI:IsEnabled", true),
+            UpdatedAt = DateTimeOffset.UtcNow
+        };
 
-        var apiKey = _configuration["GoogleAI:ApiKey"]?.Trim();
-        if (setting is null || !setting.IsEnabled || string.IsNullOrWhiteSpace(apiKey))
+        var apiKey = (_configuration["GoogleAI:ApiKey"])?.Trim();
+        if (!effectiveSetting.IsEnabled || string.IsNullOrWhiteSpace(apiKey))
         {
             return BuildRuleBasedFallback();
         }
 
         try
         {
-            var prompt = await BuildChatPrompt(userId, message, request.RecentMessages, setting);
-            var answer = await CallGoogleAi(setting, apiKey, prompt);
+            var prompt = await BuildChatPrompt(userId, message, request.RecentMessages, effectiveSetting);
+            var answer = await CallGoogleAi(
+                effectiveSetting,
+                apiKey,
+                prompt,
+                _configuration.GetValue("GoogleAI:TimeoutSeconds", 30));
 
             if (string.IsNullOrWhiteSpace(answer))
             {
@@ -65,9 +79,9 @@ public class Service : IService
                 Answer = answer.Trim(),
                 Suggestions =
                 [
-                    "Xem lai cac giao dich gan day.",
-                    "Kiem tra cac han muc dang gan nguong canh bao.",
-                    "Dieu chinh hu chi tieu neu can."
+                    "Xem lại các giao dịch chi tiêu gần đây để tìm nguyên nhân.",
+                    "Kiểm tra các hạn mức đang gần ngưỡng cảnh báo.",
+                    "Điều chỉnh nhu cầu chi tiêu nếu cần."
                 ],
                 Source = "AI"
             };
@@ -84,17 +98,18 @@ public class Service : IService
             .AsNoTracking()
             .OrderByDescending(ai => ai.UpdatedAt)
             .FirstOrDefaultAsync();
+        var apiKey = (_configuration["GoogleAI:ApiKey"])?.Trim();
 
         if (setting is null)
         {
             return new Response.AdminAiSettingsResponse
             {
-                ModelName = GetDefaultModelName(),
-                SystemPrompt = "",
-                Temperature = 0.7m,
-                MaxTokens = 1000,
-                IsEnabled = false,
-                ApiKeyMasked = MaskApiKey(_configuration["GoogleAI:ApiKey"])
+                ModelName = _configuration["GoogleAI:DefaultModel"]!,
+                SystemPrompt = _configuration["GoogleAI:SystemPrompt"] ?? "",
+                Temperature = _configuration.GetValue("GoogleAI:Temperature", 0.7m),
+                MaxTokens = _configuration.GetValue("GoogleAI:MaxTokens", 1000),
+                IsEnabled = _configuration.GetValue("GoogleAI:IsEnabled", true),
+                ApiKeyMasked = MaskApiKey(apiKey)
             };
         }
 
@@ -105,7 +120,7 @@ public class Service : IService
             Temperature = setting.Temperature,
             MaxTokens = setting.MaxTokens,
             IsEnabled = setting.IsEnabled,
-            ApiKeyMasked = MaskApiKey(_configuration["GoogleAI:ApiKey"])
+            ApiKeyMasked = MaskApiKey(apiKey)
         };
     }
 
@@ -128,11 +143,11 @@ public class Service : IService
             setting = new AiSetting
             {
                 Id = Guid.NewGuid(),
-                ModelName = GetDefaultModelName(),
-                SystemPrompt = "",
-                Temperature = 0.7m,
-                MaxTokens = 1000,
-                IsEnabled = false
+                ModelName = _configuration["GoogleAI:DefaultModel"]!,
+                SystemPrompt = _configuration["GoogleAI:SystemPrompt"] ?? "",
+                Temperature = _configuration.GetValue("GoogleAI:Temperature", 0.7m),
+                MaxTokens = _configuration.GetValue("GoogleAI:MaxTokens", 1000),
+                IsEnabled = _configuration.GetValue("GoogleAI:IsEnabled", true)
             };
             _dbContext.AiSettings.Add(setting);
         }
@@ -221,7 +236,6 @@ public class Service : IService
             Source = "RuleBased"
         };
     }
-
     private async Task<string> BuildChatPrompt(
         Guid userId,
         string message,
@@ -344,16 +358,18 @@ public class Service : IService
                + JsonSerializer.Serialize(context);
     }
 
-    private static async Task<string?> CallGoogleAi(AiSetting setting, string apiKey, string prompt)
+    private static async Task<string?> CallGoogleAi(
+        AiSetting setting,
+        string apiKey,
+        string prompt,
+        int timeoutSeconds)
     {
         using var httpClient = new HttpClient
         {
-            Timeout = TimeSpan.FromSeconds(30)
+            Timeout = TimeSpan.FromSeconds(timeoutSeconds)
         };
 
-        var modelName = string.IsNullOrWhiteSpace(setting.ModelName)
-            ? "gemini-2.0-flash"
-            : setting.ModelName.Trim();
+        var modelName = setting.ModelName.Trim();
 
         var requestUri =
             $"https://generativelanguage.googleapis.com/v1beta/models/{Uri.EscapeDataString(modelName)}:generateContent?key={Uri.EscapeDataString(apiKey)}";
@@ -406,11 +422,6 @@ public class Service : IService
         return parts[0].TryGetProperty("text", out var text)
             ? text.GetString()
             : null;
-    }
-
-    private string GetDefaultModelName()
-    {
-        return _configuration["GoogleAI:DefaultModel"]?.Trim() ?? "gemini-2.0-flash";
     }
 
     private Guid GetCurrentAdminId()
@@ -501,6 +512,6 @@ public class Service : IService
 
         return $"{trimmedKey[..4]}...{trimmedKey[^4..]}";
     }
-    
-    
+
+
 }
