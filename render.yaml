@@ -42,3 +42,17 @@ services:
         value: smtp.gmail.com
       - key: MailOptions__Port
         value: "587"
+      - key: GoogleAI__ApiKey
+        value: "AIzaSyD0usprLEaMdr6SIbml6iH1PkIhjh6DQCM"
+      - key: GoogleAI__DefaultModel
+        value: "gemini-3.1-flash-lite"
+      - key: GoogleAI__IsEnabled
+        value: "true"
+      - key: GoogleAI__Temperature
+        value: "0.7"
+      - key: GoogleAI__MaxTokens
+        value: "1000"
+      - key: GoogleAI__TimeoutSeconds
+        value: "30"
+      - key: GoogleAI__SystemPrompt
+        value: "Bạn là trợ lý tài chính cá nhân của FinJar. Trả lời ngắn gọn, thực tế, không đưa lời khuyên đầu tư rủi ro."
