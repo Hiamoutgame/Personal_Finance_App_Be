@@ -138,6 +138,7 @@ public class Service : IService
             FirstName = user.FirstName,
             LastName = user.LastName,
             Email = user.Email,
+            Role = user.Role.Code,
             AccessToken = token
         });
     }
