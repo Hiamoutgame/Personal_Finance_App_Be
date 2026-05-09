@@ -71,6 +71,7 @@ public class Service : IService
             new Claim(ClaimTypes.Email, user.Email),
             new Claim("firstName", user.FirstName),
             new Claim("lastName", user.LastName),
+            new Claim("isOnboardingCompleted", user.IsOnboardingCompleted ? "true" : "false"),
             new Claim(ClaimTypes.Role, role.Code)
         });
 
@@ -81,6 +82,7 @@ public class Service : IService
             FirstName = user.FirstName,
             LastName = user.LastName,
             Email = user.Email,
+            IsOnboardingCompleted = user.IsOnboardingCompleted,
             AccessToken = token
         };
     }
@@ -128,6 +130,7 @@ public class Service : IService
             new Claim(ClaimTypes.Email, user.Email),
             new Claim("firstName", user.FirstName),
             new Claim("lastName", user.LastName),
+            new Claim("isOnboardingCompleted", user.IsOnboardingCompleted ? "true" : "false"),
             new Claim(ClaimTypes.Role, user.Role.Code)
         });
 
@@ -139,6 +142,7 @@ public class Service : IService
             LastName = user.LastName,
             Email = user.Email,
             Role = user.Role.Code,
+            IsOnboardingCompleted = user.IsOnboardingCompleted,
             AccessToken = token
         });
     }
