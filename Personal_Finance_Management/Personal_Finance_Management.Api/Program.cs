@@ -13,7 +13,7 @@ using OcrService = Personal_Finance_Management.Service.ocr;
 using OnboardingService = Personal_Finance_Management.Service.Onboarding;
 using UserService = Personal_Finance_Management.Service.User;
 using validationService = Personal_Finance_Management.Service.Validations;
-using ReminderService =  Personal_Finance_Management.Service.Reminder;
+using ReminderService = Personal_Finance_Management.Service.Reminder;
 using GoalService = Personal_Finance_Management.Service.goal;
 using LimitService = Personal_Finance_Management.Service.limit;
 using NotificationService = Personal_Finance_Management.Service.notification;
@@ -26,6 +26,20 @@ using jarsService = Personal_Finance_Management.Service.Jar;
 using transactionService = Personal_Finance_Management.Service.Transaction;
 using dashboardService = Personal_Finance_Management.Service.Dashboard;
 var builder = WebApplication.CreateBuilder(args);
+const string FrontendCorsPolicy = "FrontendCorsPolicy";
+
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy(FrontendCorsPolicy, policy =>
+    {
+        policy
+            .WithOrigins(
+                "http://localhost:5173"
+            )
+            .AllowAnyHeader()
+            .AllowAnyMethod();
+    });
+});
 
 builder.Services.AddControllers();
 builder.Services.AddHttpContextAccessor();
@@ -94,6 +108,8 @@ if (enableSwagger)
 {
     app.UseSwaggerAPI();
 }
+
+app.UseCors(FrontendCorsPolicy);
 
 app.UseAuthentication();
 app.UseAuthorization();
