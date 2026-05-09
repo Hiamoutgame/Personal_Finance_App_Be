@@ -307,12 +307,11 @@ public class Service : IService
         if (transaction.ToJarId != null)
         {
             await CheckAndCompleteGoals(transaction.ToJarId.Value);
-            await CheckLimit(transaction.ToJarId.Value);
         }
-        // if (transaction.FromJarId != null)
-        // {
-        //     await CheckAndCompleteGoals(transaction.FromJarId.Value);
-        // }
+        if (transaction.FromJarId != null)
+        {
+            await CheckLimit(transaction.FromJarId.Value);
+        }
 
         var result = new Response.CreateTransactionResponse
         {
@@ -528,27 +527,123 @@ public class Service : IService
         var jar = await _dbContext.Jars.FirstOrDefaultAsync(j => j.Id == jarId);
         if (jar == null) return;
 
-        var activeLimit = await _dbContext.SpendingLimits.Where(x => x.JarId == jarId && x.IsActive == true).ToListAsync();
+        var activeLimit = await _dbContext.SpendingLimits
+            .Where(x => x.JarId == jarId && x.IsActive == true)
+            .ToListAsync();
+
         foreach (var item in activeLimit)
         {
-            if (jar.Balance >= item.LimitAmount)
+            var currentSpent = await GetCurrentSpentByJar(jarId, item.UserId);
+            var alertThreshold = (item.AlertAtPercentage * 100) / item.LimitAmount;
+
+            // Business rule:
+            // - Alert threshold only creates warning notification and keeps limit active.
+            // - Exceeded limit creates exceeded notification and deactivates the limit.
+            // Exceeded has priority, so a transaction crossing directly to limit amount only creates exceeded notification.
+            if (currentSpent >= item.LimitAmount)
             {
-                item.IsActive = false;
-                item.UpdatedAt = DateTimeOffset.UtcNow;
-                var notification = new Notification
+               
+                var notification = new Repository.Entity.Notification()
                 {
                     UserId = item.UserId,
                     Type = "SpendingAlert",
-                    Title = "Xin thông báo! bạn đã chạm giới hạn chi tiêu",
-                    Body = $"Bạn đã bị vượt mức {item.LimitAmount:N0}đ trong hũ {jar.Name}.",
+                    Title = "Thông báo vượt ngưỡng!",
+                    Body = $"Xin thông báo! bạn đã chạm ngưỡng {item.LimitAmount}đ giới hạn chi tiêu ở hũ {item.Jar.Name}",
+                    IsRead = false,
+                    CreatedAt = DateTimeOffset.UtcNow,
+                    MetadataJson = $"{{\"limitId\": \"{item.Id}\", \"jarId\": \"{jar.Id}\"}}"
+
+                };
+                if (await HasLimitNotification(item.UserId, item.Id, jar.Id, notification.Body)) return;
+                item.IsActive = false;
+                item.UpdatedAt = DateTimeOffset.UtcNow;
+                _dbContext.Notifications.Add(notification);
+            }
+            else if (currentSpent >= alertThreshold)
+            {
+                var notification = new Repository.Entity.Notification()
+                {
+                    UserId = item.UserId,
+                    Type = "SpendingAlert",
+                    Title = "Thông báo vượt ngưỡng!",
+                    Body = $"Xin thông báo! bạn đã chạm ngưỡng thông báo {item.AlertAtPercentage}% giới hạn chi tiêu ở hũ {item.Jar.Name}",
                     IsRead = false,
                     CreatedAt = DateTimeOffset.UtcNow,
                     MetadataJson = $"{{\"limitId\": \"{item.Id}\", \"jarId\": \"{jar.Id}\"}}"
                 };
+                if (await HasLimitNotification(item.UserId, item.Id, jar.Id, notification.Body)) return;
                 _dbContext.Notifications.Add(notification);
             }
         }
+
         await _dbContext.SaveChangesAsync();
+    }
+
+    private async Task<decimal> GetCurrentSpentByJar(Guid jarId, Guid userId)
+    {
+        return (await _dbContext.Transactions
+            .Where(t => t.UserId == userId
+                        && !t.IsDeleted
+                        && t.Type == "Expense"
+                        && t.FromJarId == jarId
+                        && t.ToJarId == null
+                        && t.FinancialAccountId == null)
+            .SumAsync(t => (decimal?)t.TransactionsAmount)) ?? 0m;
+    }
+
+    private async Task AddLimitNotificationIfNotExists(
+        SpendingLimit limit,
+        Repository.Entity.Jar jar,
+        string title,
+        string body)
+    {
+        if (await HasLimitNotification(limit.UserId, limit.Id, jar.Id, body))
+            return;
+
+        var notification = new Notification
+        {
+            UserId = limit.UserId,
+            Type = "SpendingAlert",
+            Title = title,
+            Body = body,
+            IsRead = false,
+            CreatedAt = DateTimeOffset.UtcNow,
+            MetadataJson = $"{{\"limitId\": \"{limit.Id}\", \"jarId\": \"{jar.Id}\"}}"
+        };
+
+        _dbContext.Notifications.Add(notification);
+        await _dbContext.SaveChangesAsync();
+    }
+
+    private async Task<bool> HasLimitNotification(Guid userId, Guid limitId, Guid jarId, string body)
+    {
+        var limitIdMarker = $"\"limitId\": \"{limitId}\"";
+        var jarIdMarker = $"\"jarId\": \"{jarId}\"";
+
+        var pendingExists = _dbContext.ChangeTracker
+            .Entries<Notification>()
+            .Any(entry => entry.State == EntityState.Added
+                          && entry.Entity.UserId == userId
+                          && entry.Entity.Type == "SpendingAlert"
+                          && entry.Entity.Body == body
+                          && entry.Entity.MetadataJson != null
+                          && entry.Entity.MetadataJson.Contains(limitIdMarker)
+                          && entry.Entity.MetadataJson.Contains(jarIdMarker));
+
+        if (pendingExists)
+            return true;
+
+        var metadataList = await _dbContext.Notifications
+            .Where(n => n.UserId == userId
+                        && n.Type == "SpendingAlert"
+                        && n.Body == body)
+            .Select(n => n.MetadataJson)
+            .ToListAsync();
+
+        return metadataList.Any(metadata =>
+            metadata != null
+            && metadata.Contains(limitIdMarker)
+            && metadata.Contains(jarIdMarker));
     }
     
     public async Task<Response.CassoTransactionsResponse> ProcessCassoWebhook(

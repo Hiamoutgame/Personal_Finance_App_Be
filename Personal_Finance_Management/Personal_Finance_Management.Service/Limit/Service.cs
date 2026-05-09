@@ -40,6 +40,29 @@ public class Service : IService
                 .Where(l => l.UserId == userId && l.IsActive)
                 .ToListAsync();
 
+            var jarIds = limits
+                .Where(l => l.JarId.HasValue)
+                .Select(l => l.JarId!.Value)
+                .Distinct()
+                .ToList();
+
+            var spentByJarId = jarIds.Count == 0
+                ? new Dictionary<Guid, decimal>()
+                : await _appDbContext.Transactions
+                    .Where(t => t.UserId == userId
+                                && !t.IsDeleted
+                                && t.Type == "Expense"
+                                && t.FromJarId.HasValue
+                                && jarIds.Contains(t.FromJarId.Value)
+                                && t.ToJarId == null
+                                && t.FinancialAccountId == null)
+                    .GroupBy(t => t.FromJarId!.Value)
+                    .Select(g => new
+                    {
+                        JarId = g.Key,
+                        CurrentSpent = g.Sum(t => t.TransactionsAmount)
+                    })
+                    .ToDictionaryAsync(x => x.JarId, x => x.CurrentSpent);
 
             var items = new List<Response.GetLimitItem>();
 
@@ -48,14 +71,18 @@ public class Service : IService
                 string targetName = "Unknow";
                 Guid targetId = Guid.Empty;
                 string targetType = "Jar";
-                
-                decimal currentSpent = limit.Jar?.Balance ?? 0;
+
+                decimal currentSpent = 0m;
                 
                 if (limit.Jar != null && limit.JarId.HasValue)
                 {
                     targetId = limit.JarId.Value;
                     targetName = limit.Jar.Name;
                     targetType = "Jar";
+
+                    currentSpent = spentByJarId.TryGetValue(limit.JarId.Value, out var spent)
+                        ? spent
+                        : 0m;
                 }
                 if (limit.Category != null && limit.CategoryId.HasValue)
                 {
@@ -95,7 +122,9 @@ public class Service : IService
             IsActive = true,
             UserId = userId,
             CategoryId = null,
-            JarId = null
+            JarId = null,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow,
         };
         if (request.TargetType == "Category")
         {
