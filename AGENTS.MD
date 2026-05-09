@@ -188,7 +188,7 @@ Nếu code hoặc docs cũ nhắc các endpoint jar setup/allocate/transfer ho�
 
 ## 8. Schema Cốt Lõi
 
-Schema mục tiêu gồm 18 entity chính:
+Schema mục tiêu gồm 17 entity chính:
 
 - `Role`
 - `Account`
@@ -202,7 +202,6 @@ Schema mục tiêu gồm 18 entity chính:
 - `Transaction`
 - `SpendingLimit`
 - `Goal`
-- `GoalContribution`
 - `Reminder`
 - `Broadcast`
 - `Notification`
@@ -224,7 +223,7 @@ Không đưa lại các field cũ:
 - `Transaction.Amount`; dùng `TransactionsAmount`.
 - `Transaction.JarId`; dùng `FromJarId` và `ToJarId`.
 - `ImportTransactionDraft.SuggestedNote`, `SuggestedCategoryId`, `SuggestedJarId`; dùng `Edited*`.
-- `GoalContribution.SourceFinancialAccountId`.
+- `GoalContribution`; đóng góp mục tiêu đi qua `Transaction`, không dùng bảng/model contribution riêng.
 - `Reminder.NextDueDate`; tính trong service/job khi trả response.
 
 ## 9. Enum Chuẩn
@@ -351,7 +350,7 @@ Không hard delete transaction; dùng `IsDeleted` và `DeletedAt`.
 
 `SpendingLimit` target theo `JarId` hoặc `CategoryId`. Schema hiện yêu cầu ít nhất một trong hai có giá trị.
 
-`GoalContribution` chỉ có optional `SourceJarId`. Nếu đóng góp từ nguồn tiền thật, service nên tạo transaction tương ứng thay vì thêm `SourceFinancialAccountId`.
+Không dùng `GoalContribution` hoặc endpoint contribution riêng. Flow đóng góp mục tiêu được gộp vào `Transaction`; service transaction chịu trách nhiệm cập nhật balance, jar liên quan và trạng thái/progress của goal nếu giao dịch đó được dùng để đóng góp mục tiêu.
 
 `Reminder` không lưu `NextDueDate`; tính từ `StartDate`, `Frequency`, `DayOfMonth`, `NotifyDaysBefore`.
 
@@ -474,7 +473,7 @@ When implementing a feature:
 3. Check current controller route and service pattern.
 4. Add/update DTOs in `Request.cs` and `Response.cs`.
 5. Put validation, ownership checks and financial logic in service.
-6. Use EF database transaction for money movement, import confirm, goal contribution, broadcast dispatch and admin audit-sensitive operations.
+6. Use EF database transaction for money movement, import confirm, goal-related transaction updates, broadcast dispatch and admin audit-sensitive operations.
 7. Do not return EF entities directly.
 8. Keep response fields aligned with docs; avoid `createdAt/updatedAt` in write responses unless docs require it.
 9. Run `dotnet build Personal_Finance_Management/Personal_Finance_Management.sln` after C# edits when feasible.
