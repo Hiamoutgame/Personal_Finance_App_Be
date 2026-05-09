@@ -6,7 +6,7 @@ using Personal_Finance_Management.Service.Onboarding;
 namespace Personal_Finance_Management.Api.Controllers;
 
 [ApiController]
-[Route("[controller]")]
+[Route("api/v1/onboarding")]
 [Authorize(Policy = AuthorizationExtension.Policies.User)]
 public class OnboardingController : ControllerBase
 {

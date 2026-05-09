@@ -606,42 +606,6 @@ namespace Personal_Finance_Management.Repository.Migrations
                         onDelete: ReferentialAction.Restrict);
                 });
 
-            migrationBuilder.CreateTable(
-                name: "goal_contributions",
-                columns: table => new
-                {
-                    id = table.Column<Guid>(type: "uuid", nullable: false),
-                    amount = table.Column<decimal>(type: "numeric(18,2)", nullable: false),
-                    note = table.Column<string>(type: "text", nullable: true),
-                    goal_id = table.Column<Guid>(type: "uuid", nullable: false),
-                    user_id = table.Column<Guid>(type: "uuid", nullable: false),
-                    source_jar_id = table.Column<Guid>(type: "uuid", nullable: true),
-                    created_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false, defaultValueSql: "NOW()")
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("pk_goal_contributions", x => x.id);
-                    table.CheckConstraint("chk_goal_contributions_amount", "\"amount\" > 0");
-                    table.ForeignKey(
-                        name: "fk_goal_contributions_accounts_user_id",
-                        column: x => x.user_id,
-                        principalTable: "accounts",
-                        principalColumn: "id",
-                        onDelete: ReferentialAction.Restrict);
-                    table.ForeignKey(
-                        name: "fk_goal_contributions_goals_goal_id",
-                        column: x => x.goal_id,
-                        principalTable: "goals",
-                        principalColumn: "id",
-                        onDelete: ReferentialAction.Restrict);
-                    table.ForeignKey(
-                        name: "fk_goal_contributions_jars_source_jar_id",
-                        column: x => x.source_jar_id,
-                        principalTable: "jars",
-                        principalColumn: "id",
-                        onDelete: ReferentialAction.Restrict);
-                });
-
             migrationBuilder.CreateIndex(
                 name: "ix_accounts_email",
                 table: "accounts",
@@ -708,21 +672,6 @@ namespace Personal_Finance_Management.Repository.Migrations
                 name: "ix_financial_accounts_user_id",
                 table: "financial_accounts",
                 column: "user_id");
-
-            migrationBuilder.CreateIndex(
-                name: "ix_goal_contributions_goal_created_at",
-                table: "goal_contributions",
-                columns: new[] { "goal_id", "created_at" });
-
-            migrationBuilder.CreateIndex(
-                name: "ix_goal_contributions_source_jar_id",
-                table: "goal_contributions",
-                column: "source_jar_id");
-
-            migrationBuilder.CreateIndex(
-                name: "ix_goal_contributions_user_created_at",
-                table: "goal_contributions",
-                columns: new[] { "user_id", "created_at" });
 
             migrationBuilder.CreateIndex(
                 name: "ix_goals_linked_jar_id",
@@ -888,7 +837,7 @@ namespace Personal_Finance_Management.Repository.Migrations
                 name: "audit_logs");
 
             migrationBuilder.DropTable(
-                name: "goal_contributions");
+                name: "goals");
 
             migrationBuilder.DropTable(
                 name: "import_transaction_drafts");
@@ -907,9 +856,6 @@ namespace Personal_Finance_Management.Repository.Migrations
 
             migrationBuilder.DropTable(
                 name: "transactions");
-
-            migrationBuilder.DropTable(
-                name: "goals");
 
             migrationBuilder.DropTable(
                 name: "broadcasts");

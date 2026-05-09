@@ -5,7 +5,7 @@ using Personal_Finance_Management.Service.Dashboard;
 namespace Personal_Finance_Management.Api.Controllers;
 
 [ApiController]
-[Route("[controller]")]
+[Route("api/v1/dashboard")]
 [Authorize]
 public class DashboardController : ControllerBase
 {
@@ -15,11 +15,11 @@ public class DashboardController : ControllerBase
         _service = service;
     }
 
-    [HttpGet("/user/dashboard")]
+    [HttpGet]
     public async Task<IActionResult> GetDashboard()
     {
         var result = await _service.GetDashboard();
         return Ok(result);
     }
-    
+
 }

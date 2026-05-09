@@ -1,538 +1,1514 @@
-# Luồng nghiệp vụ tổng thể - Personal Finance App
+# Flow FE tích hợp API - Personal Finance App
 
-## 1) Mục tiêu tài liệu
+Tài liệu này viết cho FE đọc để biết nên dựng màn hình nào, user thao tác ra sao, click nút nào thì gọi API nào, và sau response thì điều hướng/cập nhật UI thế nào.
 
-Tài liệu này chốt lại luồng nghiệp vụ cho hệ thống quản lý tài chính cá nhân theo phương pháp nhiều hũ chi tiêu, bám theo context hiện tại của nhóm:
+Nguồn route và DTO hiện tại: `docs/API V2.md`.
 
-- Trọng tâm là `Chi tiêu + Tiết kiệm + Cảnh báo + Gợi ý`.
-- MVP triển khai trong `1 tháng`.
-- Hệ thống phục vụ `2 actor người dùng chính`: `User` và `Admin`.
-- `System` được xem là actor tự động hóa trong flowchart, không chỉ là tập hợp service phụ trợ.
+Lưu ý quan trọng:
 
-Mục tiêu của tài liệu:
-
-- Chuẩn hóa core flow để FE và BE cùng bám vào khi implement.
-- Loại bỏ các góc nhìn cũ không còn phù hợp với context mới của dự án.
-- Xác định rõ phần nào là `core MVP`, phần nào là `optional/phase sau`.
+- Route trong file này bám theo backend hiện tại. Một số route chưa nằm dưới `/api/v1`, ví dụ `/User/me`, `/Onboarding`, `/FinancialAccount`, `/Jar`, `/Transactions`, `/user/dashboard`.
+- Các API có ghi `Bearer` phải gửi header `Authorization: Bearer <accessToken>`.
+- FE gửi `transactionsAmount` là số dương cho cả `Income` và `Expense`.
+- App không giữ tiền thật. `FinancialAccount` và `Jar` chỉ là sổ theo dõi nội bộ.
+- Admin dùng chung API login với user, sau đó phân quyền bằng role trong JWT.
 
 ---
 
-## 2) Phạm vi MVP và các giả định đã chốt
+## 1. Cách FE nên tổ chức navigation
 
-### 2.1 Quyết định nghiệp vụ cho MVP
+### 1.1 Public routes
 
-| Câu hỏi | Chốt cho MVP |
+| Route UI gợi ý | Mục đích | API chính |
+| --- | --- | --- |
+| `/register` | Đăng ký user mới | `POST /api/v1/auth/register` |
+| `/login` | Đăng nhập user/admin | `POST /api/v1/auth/login` |
+
+### 1.2 User routes sau khi đăng nhập
+
+| Route UI gợi ý | Mục đích | API chính |
+| --- | --- | --- |
+| `/setup-check` | Gate kiểm tra onboarding | `GET /User/me/setup` |
+| `/onboarding` | User hoàn tất hồ sơ ban đầu | `POST /Onboarding` |
+| `/dashboard` | Tổng quan tài chính cá nhân | `GET /user/dashboard` |
+| `/accounts` | Nguồn tiền | `/FinancialAccount...` |
+| `/jars` | Hũ chi tiêu | `/Jar...` |
+| `/categories` | Danh mục | `/api/v1/categories...` |
+| `/transactions` | Giao dịch | `/Transactions...` |
+| `/imports/ocr` | Upload ảnh hóa đơn/OCR | `POST /api/v1/imports/image` |
+| `/limits` | Hạn mức chi tiêu | `/api/v1/limits...` |
+| `/goals` | Mục tiêu tiết kiệm | `/api/v1/goals...` |
+| `/reminders` | Nhắc lịch thanh toán | `/api/v1/reminders...` |
+| `/notifications` | Inbox thông báo | `/api/v1/notifications...` |
+| `/ai-chat` | Chat tư vấn AI | `POST /api/v1/ai/chat` |
+| `/profile` | Hồ sơ user | `/User/me...` |
+
+### 1.3 Admin routes sau khi đăng nhập
+
+| Route UI gợi ý | Mục đích | API chính |
+| --- | --- | --- |
+| `/admin/dashboard` | Dashboard vận hành | `GET /api/v1/admin/dashboard` |
+| `/admin/users` | Quản lý user | `/api/v1/admin/users...` |
+| `/admin/categories` | Quản lý default category | `/api/v1/admin/categories...` |
+| `/admin/broadcasts` | Gửi thông báo toàn hệ thống | `/api/v1/admin/broadcasts...` |
+| `/admin/audit-logs` | Xem audit log | `GET /api/v1/admin/audit-logs` |
+| `/admin/ai-settings` | Cấu hình AI | `/api/v1/admin/ai-settings...` |
+
+---
+
+## 2. App boot và auth guard
+
+### 2.1 Khi mở app
+
+1. FE kiểm tra local storage/session storage có `accessToken` không.
+2. Nếu không có token: đưa user về `/login`.
+3. Nếu có token:
+   - decode JWT để đọc role nếu FE cần phân route admin/user;
+   - với user thường, gọi `GET /User/me/setup`;
+   - nếu token lỗi/401 thì clear token và quay về `/login`.
+
+### 2.2 Điều hướng sau khi có token
+
+| Điều kiện | Điều hướng |
 | --- | --- |
-| Actor chính của hệ thống là ai? | `User`, `Admin`; ngoài ra có `System` là actor tự động hóa trong flow |
-| Nền tảng triển khai? | `Web app`, UI thiết kế theo hướng dễ dùng và có thể mở rộng `PWA-friendly` |
-| App có giữ tiền của user không? | `Không`. App chỉ quản lý sổ cái nội bộ, phân bổ ngân sách và mục tiêu |
-| Hũ trong hệ thống là gì? | `Hũ` là đơn vị phân bổ ngân sách/tiết kiệm nội bộ, không phải ví ngân hàng thật |
-| Nguồn số dư ban đầu lấy từ đâu? | User tự khai báo `tài khoản/nguồn tiền`; bank-link là hướng mở rộng, không phải dependency của core flow |
-| Giá trị cốt lõi của MVP là gì? | Onboarding nhanh, quản lý nhiều hũ, nhập giao dịch, cảnh báo ngưỡng, nhắc thanh toán, gợi ý tiết kiệm |
-| Có AI không? | Có. AI dùng để sinh lời khuyên chi tiêu; khi AI lỗi thì fallback về rule-based |
-| Có OCR hóa đơn không? | Có, đây là một input channel quan trọng của giao dịch |
-| Có ví chung / mời bạn bè không? | Có thể làm `optional`, không đưa vào core flow của MVP |
-| Có CSKH/chat trong app không? | Không xem là core flow của MVP hiện tại |
-| App có tự động thanh toán hộ user không? | Không |
+| JWT role là `Admin` | `/admin/dashboard` |
+| JWT role là `User` và `isOnboardingCompleted = false` | `/onboarding` |
+| JWT role là `User` và `isOnboardingCompleted = true` | `/dashboard` |
 
-### 2.2 Những điểm cần hiểu đúng trong dự án
+Ghi chú FE:
 
-1. `App không giữ tiền`, nên mọi thao tác "chuyển tiền giữa các hũ" chỉ là `chuyển phân bổ ngân sách nội bộ`, không phải chuyển khoản ngân hàng thật.
-2. `System` không chỉ là OCR hay Notification service. Trong flow thực tế, `System` còn chịu trách nhiệm:
-   - Sinh cấu hình mặc định sau onboarding.
-   - Phân loại giao dịch.
-   - Tính số dư, hạn mức, tiến độ mục tiêu.
-   - Kiểm tra ngưỡng cảnh báo.
-   - Sinh gợi ý AI/rule-based.
-3. `Bank sync` không nên nằm ở trung tâm của MVP. Core flow phải chạy ổn định chỉ với:
-   - Khai báo số dư ban đầu.
-   - Nhập tay giao dịch.
-   - OCR hóa đơn.
-4. `Ví chung`, `CSKH/chat`, `auto payment` là hướng mở rộng, không nên kéo vào flowchart chính nếu nhóm đang ưu tiên hoàn thiện core domain trong 1 tháng.
+- Response login/register hiện không trả role riêng trong body. Nếu cần phân biệt Admin/User ngay sau login, FE nên decode claim role từ JWT.
+- Sau mọi mutation lớn như tạo transaction, xóa account, tạo goal, nên refresh màn hình hiện tại và dashboard nếu user đang ở dashboard.
 
 ---
 
-## 3) Core của từng actor
+## 3. Auth flow
 
-### 3.1 User core
+### 3.1 Đăng ký user mới
 
-`User` là actor tạo dữ liệu nghiệp vụ và ra quyết định tài chính hằng ngày.
+UI `/register`:
 
-Core responsibility:
+| Field | Input |
+| --- | --- |
+| Username | text input |
+| Email | email input |
+| Password | password input |
+| First name | text input |
+| Last name | text input |
 
-- Khởi tạo hồ sơ tài chính ban đầu.
-- Chọn phương pháp/quy tắc quản lý chi tiêu phù hợp.
-- Tạo và quản lý hũ chi tiêu, mục tiêu tiết kiệm, hạn mức.
-- Ghi nhận giao dịch bằng tay hoặc qua OCR.
-- Xác nhận lại dữ liệu khi hệ thống phân loại chưa chắc chắn.
-- Theo dõi dashboard, cảnh báo, nhắc thanh toán, gợi ý.
-- Điều chỉnh kế hoạch chi tiêu khi hệ thống phát hiện rủi ro.
+Flow:
 
-### 3.2 Admin core
+1. User nhập `username`, `email`, `password`, `firstName`, `lastName`.
+2. User click nút `Đăng ký`.
+3. FE validate cơ bản: required fields, email format, password không rỗng.
+4. FE gọi:
 
-`Admin` là actor quản trị vận hành và cấu hình hệ thống.
-
-Core responsibility:
-
-- Quản lý người dùng: xem, tìm kiếm, khóa/mở khóa tài khoản.
-- Quản lý dữ liệu nền: category mặc định, template hũ, ngưỡng mặc định.
-- Cấu hình AI: `system prompt`, `model`, `API key`, trạng thái bật/tắt AI.
-- Quản lý thông báo toàn hệ thống.
-- Theo dõi dashboard vận hành, log lỗi OCR/AI/notification/job.
-
-### 3.3 System core
-
-`System` là actor tự động hóa, đứng giữa hành vi của `User` và năng lực kiểm soát của `Admin`.
-
-Core responsibility:
-
-- Tạo bộ cấu hình khởi tạo sau onboarding.
-- Chuẩn hóa và phân loại giao dịch.
-- Cập nhật số dư hũ, ngân sách, mục tiêu, dashboard.
-- Kiểm tra cảnh báo ngưỡng chi tiêu và cảnh báo số dư thấp.
-- Theo dõi lịch thanh toán định kỳ và sinh nhắc việc.
-- Tạo lời khuyên bằng AI hoặc fallback rule-based.
-- Ghi audit log và integration log để admin theo dõi.
-
-### 3.4 Tóm tắt core theo một câu
-
-- `User`: lập kế hoạch, ghi nhận chi tiêu, phản ứng với cảnh báo.
-- `Admin`: cấu hình hệ thống và giữ cho hệ thống vận hành đúng.
-- `System`: tự động hóa phân tích, nhắc nhở và gợi ý.
-
----
-
-## 4) Luồng tổng thể end-to-end
-
-### 4.1 Luồng mức cao
-
-1. User đăng ký/đăng nhập và hoàn tất onboarding.
-2. System sinh cấu hình ban đầu dựa trên hồ sơ, phương pháp quản lý và template mặc định.
-3. User xác nhận hoặc chỉnh sửa hũ, hạn mức, mục tiêu, lịch nhắc thanh toán.
-4. User phát sinh giao dịch bằng nhập tay hoặc OCR hóa đơn.
-5. System chuẩn hóa dữ liệu, dedupe, phân loại category/hũ.
-6. Nếu độ tin cậy thấp, System yêu cầu User xác nhận trước khi ghi sổ.
-7. Khi giao dịch hợp lệ, System cập nhật số dư hũ, ngân sách, mục tiêu và dashboard.
-8. System kiểm tra:
-   - Có chạm ngưỡng cảnh báo không?
-   - Có sắp đến hạn thanh toán định kỳ không?
-9. Nếu có, System gửi notification cho user.
-10. System cập nhật lời khuyên theo `event` hoặc theo `lịch định kỳ`, dùng AI nếu khả dụng và fallback sang rule-based khi cần.
-11. User xem dashboard, nhận cảnh báo và điều chỉnh kế hoạch chi tiêu.
-12. Admin cấu hình dữ liệu nền, AI và theo dõi log để đảm bảo vòng lặp trên vận hành ổn định.
-
-### 4.2 Flowchart hoàn chỉnh cho 3 actor
-
-```mermaid
-flowchart LR
-    classDef user fill:#173b6d,stroke:#7fb3ff,color:#ffffff,stroke-width:1.2px;
-    classDef system fill:#1f4d3b,stroke:#71d3a8,color:#ffffff,stroke-width:1.2px;
-    classDef admin fill:#5a3818,stroke:#f0c27b,color:#ffffff,stroke-width:1.2px;
-    classDef decision fill:#4d2f63,stroke:#c7a6ff,color:#ffffff,stroke-width:1.3px;
-    classDef loop fill:#2f2f2f,stroke:#b8b8b8,color:#ffffff,stroke-width:1.1px;
-
-    subgraph U[User]
-        direction TB
-        U1([Đăng ký / Đăng nhập])
-        U2[Onboarding<br/>Thu nhập - số dư - mục tiêu - phương pháp quản lý]
-        U3[Xác nhận cấu hình<br/>Hũ - budget - cảnh báo - lịch nhắc]
-        U4[Nhập giao dịch<br/>Manual hoặc OCR]
-        U5[Xác nhận lại giao dịch<br/>nếu hệ thống phân loại chưa chắc chắn]
-        U6[Xem dashboard<br/>cảnh báo - gợi ý - tiến độ mục tiêu]
-        U7[Điều chỉnh kế hoạch<br/>budget - hũ - mục tiêu]
-    end
-
-    subgraph S[System]
-        direction TB
-        S1[Tạo cấu hình mặc định<br/>Category - jar template - alert rule]
-        S2[Chuẩn hóa dữ liệu<br/>OCR - dedupe - gợi ý category/hũ]
-        D1{Confidence đủ cao?}
-        S3[Ghi sổ nội bộ và cập nhật<br/>số dư hũ - budget - goal - dashboard]
-        D2{Chạm ngưỡng cảnh báo<br/>hoặc đến hạn thanh toán?}
-        S4[Gửi thông báo<br/>in-app - email - push]
-        S5[Sinh lời khuyên<br/>AI hoặc rule-based fallback]
-        S6[Ghi audit log<br/>job log - integration log]
-    end
-
-    subgraph A[Admin]
-        direction TB
-        A1[Quản lý user<br/>khóa - mở khóa]
-        A2[Quản lý dữ liệu nền<br/>category - template hũ - ngưỡng mặc định]
-        A3[Cấu hình AI<br/>prompt - model - API key]
-        A4[Theo dõi vận hành<br/>dashboard - log lỗi - metrics]
-        A5[Gửi broadcast<br/>hoặc can thiệp khi có sự cố]
-    end
-
-    U1 --> U2 --> S1 --> U3 --> U4 --> S2 --> D1
-    D1 -- Không --> U5 --> S2
-    D1 -- Có --> S3
-    S3 --> D2
-    D2 -- Có --> S4 --> S5 --> U6
-    D2 -- Không --> S5 --> U6
-    U6 --> U7 --> S3
-    U6 --> U4
-    S3 --> S6
-    S4 --> S6
-    S5 --> S6
-
-    A2 --> S1
-    A3 --> S5
-    S6 --> A4
-    A4 --> A5
-    A1 --> A5
-
-    class U1,U2,U3,U4,U5,U6,U7 user;
-    class S1,S2,S3,S4,S5,S6 system;
-    class A1,A2,A3,A4,A5 admin;
-    class D1,D2 decision;
+```http
+POST /api/v1/auth/register
 ```
 
-### 4.3 Ý nghĩa của flowchart mới
+Body:
 
-- Flowchart này xem `System` là actor trung tâm của automation, đúng với context mới của dự án.
-- `Admin` không đi vào flow chi tiêu hằng ngày của user, mà đứng ở lớp `governance/configuration/monitoring`.
-- `User` chỉ cần làm những hành động thật sự có giá trị: khai báo, xác nhận, theo dõi, điều chỉnh.
-
----
-
-## 5) Luồng chi tiết theo phân hệ core
-
-### 5.1 Onboarding và khởi tạo cấu hình tài chính
-
-Input user cung cấp:
-
-- Thu nhập dự kiến.
-- Số dư ban đầu theo từng nguồn tiền.
-- Mục tiêu tài chính ngắn hạn.
-- Phương pháp quản lý mong muốn:
-  - Dùng template nhiều hũ mặc định.
-  - Dùng template tối giản.
-  - Tự cấu hình.
-
-System xử lý:
-
-- Tạo category mặc định.
-- Gợi ý bộ hũ phù hợp theo profile.
-- Gợi ý tỷ lệ phân bổ ban đầu.
-- Gán ngưỡng cảnh báo mặc định.
-- Tạo lịch nhắc thanh toán mẫu nếu user có nhu cầu.
-
-Output:
-
-- Một workspace tài chính ban đầu để user chỉnh sửa và bắt đầu dùng ngay.
-
-### 5.2 Quản lý tài khoản nguồn tiền và hũ
-
-Phân biệt rõ:
-
-- `FinancialAccount`: tài khoản/nguồn tiền do user khai báo hoặc liên kết.
-- `Jar`: hũ ngân sách nội bộ để quản lý mục tiêu chi tiêu/tiết kiệm.
-
-User có thể:
-
-- CRUD tài khoản nguồn tiền.
-- CRUD hũ chi tiêu.
-- Chuyển phân bổ giữa các hũ.
-- Đặt hạn mức theo ngày/tháng hoặc theo hũ.
-
-Ràng buộc:
-
-- Không được phân bổ vượt quá số dư khả dụng của user.
-- Chuyển hũ là thao tác logic nội bộ, không phải giao dịch ngân hàng thật.
-- Mọi thay đổi số dư/hạn mức quan trọng phải được ghi audit log.
-
-### 5.3 Nhập liệu giao dịch
-
-Nguồn giao dịch trong core MVP:
-
-- Nhập tay.
-- OCR hóa đơn.
-
-Nguồn giao dịch optional:
-
-- Import/sync từ bank-link nếu nhóm kịp tích hợp.
-
-System xử lý:
-
-- Chuẩn hóa dữ liệu.
-- Dedupe giao dịch nghi trùng.
-- Gợi ý category.
-- Gợi ý hũ phù hợp.
-- Yêu cầu user xác nhận nếu confidence thấp.
-
-Kết quả:
-
-- Giao dịch được ghi sổ đúng, cập nhật được vào dashboard và engine cảnh báo.
-
-### 5.4 Dashboard, hạn mức và cảnh báo
-
-Dashboard cần thể hiện:
-
-- Tổng số dư theo nguồn tiền.
-- Số dư phân bổ theo từng hũ.
-- Tổng thu/chi theo ngày, tuần, tháng.
-- Danh mục đang vượt tốc độ chi.
-- Giao dịch gần đây.
-- Tiến độ mục tiêu tiết kiệm.
-
-Cảnh báo cốt lõi:
-
-- Chạm `80%` hạn mức.
-- Vượt `100%` hạn mức.
-- Tổng số dư khả dụng xuống dưới ngưỡng an toàn.
-- Sắp đến hạn thanh toán định kỳ.
-
-Kênh gửi:
-
-- In-app là bắt buộc.
-- Email/push là tùy chọn nếu hạ tầng đã sẵn sàng.
-
-### 5.5 Gợi ý AI và fallback rule-based
-
-Mục tiêu của module này:
-
-- Không chỉ cảnh báo "đã vượt", mà còn đưa ra "nên làm gì tiếp theo".
-
-Luồng xử lý:
-
-1. System kích hoạt module gợi ý theo `giao dịch mới`, `thay đổi kế hoạch` hoặc `lịch chạy định kỳ`.
-2. System nhận dữ liệu chi tiêu gần đây, trạng thái hũ và mục tiêu tiết kiệm.
-3. Nếu AI đang bật và provider hoạt động bình thường:
-   - Sinh lời khuyên cá nhân hóa.
-4. Nếu AI lỗi hoặc bị tắt:
-   - Fallback sang rule-based insight.
-
-Ví dụ khuyến nghị:
-
-- Hũ ăn uống đang vượt tiến độ chi 3 ngày liên tiếp.
-- Hũ hóa đơn có xu hướng thiếu ngân sách vào cuối tháng.
-- Tỷ lệ tiết kiệm thấp hơn mục tiêu tuần.
-
-### 5.6 Nhắc thanh toán định kỳ
-
-User có thể tạo các mốc nhắc như:
-
-- Tiền điện nước mỗi 30 ngày.
-- Học phí mỗi 90 ngày.
-- Các khoản thu cố định theo tháng.
-
-System xử lý:
-
-- Tạo lịch nhắc.
-- Chạy scheduler mỗi ngày.
-- Sinh notification trước hạn hoặc đúng hạn.
-
-### 5.7 Luồng nghiệp vụ Admin
-
-Flow lõi của admin:
-
-1. Đăng nhập trang quản trị.
-2. Theo dõi dashboard vận hành.
-3. Thực hiện các nhóm tác vụ:
-   - Quản lý user.
-   - Quản lý dữ liệu nền.
-   - Cấu hình AI.
-   - Gửi broadcast notification.
-   - Theo dõi log lỗi.
-4. Nếu phát hiện bất thường:
-   - Khóa tạm tài khoản.
-   - Tắt AI hoặc đổi model.
-   - Chuyển notification sang kênh fallback.
-   - Kiểm tra job lỗi để xử lý.
-
-```mermaid
-flowchart TD
-    A1([Admin đăng nhập]) --> A2[Dashboard vận hành]
-    A2 --> A3[Quản lý user]
-    A2 --> A4[Quản lý category - template hũ - ngưỡng]
-    A2 --> A5[Cấu hình AI]
-    A2 --> A6[Broadcast notification]
-    A2 --> A7[Theo dõi log OCR - AI - notification]
-    A3 --> A8[Audit log]
-    A4 --> A8
-    A5 --> A8
-    A6 --> A8
-    A7 --> A8
+```json
+{
+  "username": "string",
+  "email": "string",
+  "password": "string",
+  "firstName": "string",
+  "lastName": "string"
+}
 ```
 
+5. Nếu thành công `201 Created`:
+   - lưu `accessToken`;
+   - gọi `GET /User/me/setup` hoặc chuyển thẳng `/onboarding`;
+   - khuyến nghị vẫn gọi `/User/me/setup` để dùng chung logic gate.
+6. Nếu lỗi:
+   - hiển thị lỗi ở form;
+   - giữ user ở `/register`;
+   - không clear input trừ password nếu muốn an toàn hơn.
+
+UX mong muốn:
+
+- Nút `Đăng ký` disabled khi đang submit.
+- Có link sang `/login`.
+- Sau đăng ký thành công không bắt user login lại.
+
+### 3.2 Đăng nhập
+
+UI `/login`:
+
+| Field | Input |
+| --- | --- |
+| Email | email input |
+| Password | password input |
+
+Flow:
+
+1. User nhập `email`, `password`.
+2. User click `Đăng nhập`.
+3. FE gọi:
+
+```http
+POST /api/v1/auth/login
+```
+
+Body:
+
+```json
+{
+  "email": "string",
+  "password": "string"
+}
+```
+
+4. Nếu thành công:
+   - lưu `accessToken`;
+   - decode JWT để lấy role.
+5. Nếu role là `Admin`: chuyển `/admin/dashboard`.
+6. Nếu role là `User`: gọi `GET /User/me/setup`.
+7. Nếu `isOnboardingCompleted = false`: chuyển `/onboarding`.
+8. Nếu `isOnboardingCompleted = true`: chuyển `/dashboard`.
+9. Nếu lỗi login: show message `Email hoặc mật khẩu không đúng`.
+
+### 3.3 Logout
+
+UI:
+
+- Có nút logout trong user menu/sidebar.
+
+Flow:
+
+1. User click `Đăng xuất`.
+2. FE gọi nếu đang có token:
+
+```http
+POST /api/v1/auth/logout
+```
+
+3. Dù API thành công hay lỗi, FE có thể clear token local và chuyển `/login`.
+
 ---
 
-## 6) Những phần không nên xem là core của MVP hiện tại
+## 4. Setup gate và onboarding
 
-Các phần sau có thể giữ ở backlog hoặc ghi chú phase sau:
+### 4.1 Setup gate
 
-- Ví chung / hũ chung / mời bạn bè cộng tác.
-- CSKH, ticket, chat trong app.
-- Đồng bộ ngân hàng toàn diện và đối soát tự động.
-- App giữ tiền hoặc thực thi thanh toán tự động.
-- Social features giữa user với user.
+API:
+
+```http
+GET /User/me/setup
+Authorization: Bearer <token>
+```
+
+FE dùng response để điều hướng:
+
+| Field response | FE dùng để làm gì |
+| --- | --- |
+| `isOnboardingCompleted` | quyết định vào onboarding hay dashboard |
+| `monthlyIncome` | hiển thị lại nếu có setup summary |
+| `budgetMethod` | hiển thị method hiện tại |
+| `defaultFinancialAccountId` | chọn default account khi tạo transaction |
+| `jarCount` | cảnh báo user chưa có hũ |
+| `financialAccountCount` | cảnh báo user chưa có nguồn tiền |
+| `limitCount` | gợi ý tạo limit |
+| `activeGoalCount` | gợi ý tạo goal |
+
+Flow:
+
+1. Sau login/register, FE gọi setup.
+2. Nếu chưa onboarding: `/onboarding`.
+3. Nếu đã onboarding: `/dashboard`.
+
+### 4.2 Onboarding
+
+UI `/onboarding` nên là wizard 3-5 bước:
+
+| Step | UI |
+| --- | --- |
+| Thu nhập | input `monthlyIncome` |
+| Nghề nghiệp | select/input `occupationType` |
+| Mục tiêu tài chính | multi-select `financialGoalTypes` |
+| Phương pháp ngân sách | segmented control `SixJars`, `Rule503020`, `Custom` |
+| Độ tuổi và khó khăn chi tiêu | select `ageRange`, multi-select `spendingChallenges` |
+
+Submit:
+
+```http
+POST /Onboarding
+Authorization: Bearer <token>
+```
+
+Body:
+
+```json
+{
+  "monthlyIncome": 0,
+  "occupationType": "string",
+  "financialGoalTypes": ["string"],
+  "budgetMethodPreference": "SixJars",
+  "ageRange": "string",
+  "spendingChallenges": ["string"]
+}
+```
+
+Sau response:
+
+1. FE có thể hiển thị màn hình `Onboarding result`:
+   - recommended method;
+   - recommended categories;
+   - recommended jars;
+   - default financial account.
+2. User click `Vào dashboard`.
+3. FE chuyển `/dashboard`.
+4. Dashboard gọi `GET /user/dashboard`.
+
+UX:
+
+- Nếu user chọn `Custom`, nói rõ họ sẽ tự tạo hũ ở màn `/jars`.
+- Không cần màn hình tạo Cash account riêng vì backend tạo default Cash sau onboarding.
+
+---
+
+## 5. Dashboard flow
+
+UI `/dashboard`:
+
+Gọi khi vào màn:
+
+```http
+GET /user/dashboard
+Authorization: Bearer <token>
+```
+
+Render các vùng:
+
+| Vùng UI | Data |
+| --- | --- |
+| Tổng quan số dư | `balanceSummary.totalBalance`, `allocatedBalance`, `unallocatedBalance` |
+| Thu/chi | `totalIncome`, `totalExpense`, `netChange` |
+| Nguồn tiền | `financialAccounts` |
+| Hũ | `jarSummary` |
+| Chi theo category | `categoryBreakdown` |
+| Giao dịch gần đây | `recentTransactions` |
+| Mục tiêu | `goalProgress` |
+
+CTA nên có trên dashboard:
+
+- `Thêm giao dịch` -> mở modal transaction hoặc `/transactions/new`.
+- `Thêm nguồn tiền` -> `/accounts`.
+- `Tạo hũ` -> `/jars`.
+- `Tạo hạn mức` -> `/limits`.
+- `Tạo mục tiêu` -> `/goals`.
+
+Empty state:
+
+- Nếu `financialAccounts` rỗng: CTA `Tạo nguồn tiền`.
+- Nếu `jarSummary` rỗng: CTA `Tạo hũ`.
+- Nếu `recentTransactions` rỗng: CTA `Thêm giao dịch đầu tiên`.
+
+---
+
+## 6. Profile flow
+
+### 6.1 Xem profile
+
+UI `/profile` gọi:
+
+```http
+GET /User/me
+Authorization: Bearer <token>
+```
+
+Render:
+
+- username;
+- first name;
+- last name;
+- email;
+- phone;
+- avatar;
+- preferred currency;
+- onboarding status.
+
+### 6.2 Cập nhật profile
+
+Form edit:
+
+| Field | API field |
+| --- | --- |
+| First name | `firstName` |
+| Last name | `lastName` |
+| Phone | `phone` |
+| Avatar URL | `avatarUrl` |
+
+Submit:
+
+```http
+PATCH /User/me
+Authorization: Bearer <token>
+```
+
+Sau response:
+
+- update UI profile header/avatar;
+- show toast thành công;
+- không cần logout/login lại.
+
+---
+
+## 7. Financial account flow
+
+### 7.1 Màn danh sách nguồn tiền
+
+UI `/accounts` gọi:
+
+```http
+GET /FinancialAccount
+Authorization: Bearer <token>
+```
+
+Render mỗi item:
+
+- name;
+- account type;
+- connection mode;
+- provider/masked account number nếu linked;
+- current balance;
+- sync status;
+- default badge;
+- active/inactive badge.
+
+CTA:
+
+- `Thêm nguồn tiền thủ công`.
+- `Liên kết ngân hàng qua Casso`.
+- `Sửa`.
+- `Xóa/Ngừng theo dõi`.
+- `Sync Casso` nếu account là `LinkedApi`.
+
+### 7.2 Tạo nguồn tiền thủ công
+
+Modal/form:
+
+| Field | UI |
+| --- | --- |
+| `name` | text |
+| `accountType` | select `Cash`, `Bank`, `EWallet`, `Other` |
+| `currentBalance` | money input |
+| `currency` | default `VND` |
+| `isDefault` | checkbox |
+
+Submit:
+
+```http
+POST /FinancialAccount/Manual
+Authorization: Bearer <token>
+```
+
+Sau response:
+
+- đóng modal;
+- refresh `GET /FinancialAccount`;
+- nếu đang ở dashboard thì refresh dashboard.
+
+### 7.3 Liên kết ngân hàng/Casso
+
+Modal/form:
+
+| Field | UI |
+| --- | --- |
+| `bankName` | text |
+| `bankCode` | optional text |
+| `accountNumber` | text |
+| `accountHolderName` | optional text |
+| `isDefault` | checkbox |
+
+Submit:
+
+```http
+POST /FinancialAccount/LinkApi
+Authorization: Bearer <token>
+```
+
+Sau response:
+
+- hiển thị account với `providerName`, `maskedAccountNumber`, `syncStatus`;
+- refresh list.
+
+UX:
+
+- Không cho nhập/sửa balance thủ công đối với linked account.
+- Gắn nút `Sync Casso` để kéo giao dịch.
+
+### 7.4 Sửa nguồn tiền
+
+Form:
+
+| Field | Ghi chú |
+| --- | --- |
+| `name` | optional |
+| `currentBalance` | chỉ cho manual account |
+| `isDefault` | optional |
+
+Submit:
+
+```http
+PATCH /FinancialAccount/{id}
+Authorization: Bearer <token>
+```
+
+Sau response:
+
+- update row/card;
+- refresh dashboard nếu balance đổi.
+
+### 7.5 Xóa/ngừng theo dõi nguồn tiền
+
+UX:
+
+1. User click `Xóa`.
+2. FE mở confirm dialog: `Nguồn tiền sẽ được ngừng theo dõi, dữ liệu cũ không bị xóa vĩnh viễn.`
+3. User confirm.
+
+API:
+
+```http
+DELETE /FinancialAccount/{id}
+Authorization: Bearer <token>
+```
+
+Sau response:
+
+- refresh list;
+- show toast.
+
+---
+
+## 8. Category flow
+
+### 8.1 Màn danh mục
+
+UI `/categories` gọi:
+
+```http
+GET /api/v1/categories
+Authorization: Bearer <token>
+```
+
+Render 2 section:
+
+| Section | Quyền FE |
+| --- | --- |
+| Default categories | chỉ xem |
+| Custom categories | tạo/sửa/xóa |
+
+### 8.2 Tạo custom category
+
+Form:
+
+| Field | UI |
+| --- | --- |
+| `name` | text |
+| `icon` | icon picker/text |
+| `color` | color picker |
+
+Submit:
+
+```http
+POST /api/v1/categories
+Authorization: Bearer <token>
+```
+
+Sau response:
+
+- thêm item vào custom list hoặc refresh list.
+
+### 8.3 Sửa custom category
+
+```http
+PATCH /api/v1/categories/{id}
+Authorization: Bearer <token>
+```
+
+Sau response:
+
+- update item trong list;
+- transaction cũ dùng category này vẫn hiển thị tên mới.
+
+### 8.4 Xóa custom category
+
+```http
+DELETE /api/v1/categories/{id}
+Authorization: Bearer <token>
+```
+
+UX:
+
+- Confirm trước khi xóa.
+- Sau xóa refresh category list.
+
+---
+
+## 9. Jar flow
+
+### 9.1 Màn danh sách hũ
+
+UI `/jars` gọi:
+
+```http
+GET /Jar
+Authorization: Bearer <token>
+```
+
+Render:
+
+- method type;
+- total jar balance;
+- unallocated balance;
+- list jars: name, balance, color, icon, status.
+
+CTA:
+
+- `Tạo hũ`;
+- `Sửa hũ`;
+- `Lưu trữ hũ`.
+
+### 9.2 Tạo hũ
+
+Form:
+
+| Field | UI |
+| --- | --- |
+| `name` | text |
+| `color` | color picker |
+| `icon` | icon picker/text |
+
+Submit:
+
+```http
+POST /Jar
+Authorization: Bearer <token>
+```
+
+Sau response:
+
+- refresh `GET /Jar`;
+- nếu goal/transaction form đang mở, refresh jar dropdown.
+
+### 9.3 Sửa hũ
+
+```http
+PATCH /Jar/{id}
+Authorization: Bearer <token>
+```
+
+Body:
+
+```json
+{
+  "name": "string",
+  "color": "string",
+  "icon": "string"
+}
+```
+
+### 9.4 Lưu trữ hũ
+
+```http
+DELETE /Jar/{id}
+Authorization: Bearer <token>
+```
+
+UX:
+
+- Label nên là `Lưu trữ` thay vì `Xóa vĩnh viễn`, vì backend chuyển status `Archived`.
+- Không có API chỉnh balance hũ trực tiếp. Balance thay đổi qua transaction.
+
+---
+
+## 10. Transaction flow
+
+### 10.1 Màn danh sách giao dịch
+
+Khi vào `/transactions`, FE nên gọi song song:
+
+```http
+GET /Transactions?pageIndex=1&pageSize=20
+GET /FinancialAccount
+GET /Jar
+GET /api/v1/categories
+```
 
 Lý do:
 
-- Không trực tiếp giải quyết pain point cốt lõi nhanh bằng `1 tháng`.
-- Dễ làm loãng phạm vi implement của FE và BE.
-- Tăng mạnh độ phức tạp về state, permission, external integration và pháp lý.
+- transaction list cần filter;
+- form tạo/sửa transaction cần dropdown account/jar/category.
+
+Filter UI:
+
+| Filter | Query |
+| --- | --- |
+| Page | `pageIndex`, `pageSize` |
+| Nguồn tiền | `financialAccountId` |
+| Loại | `type` |
+| Hũ | `jarId` |
+| Category | `categoryId` |
+| Khoảng ngày | `fromDate`, `toDate` |
+| Search note/raw description | `keyword` |
+| Sort | `sortBy`, `sortDir` |
+
+### 10.2 Tạo giao dịch thu nhập
+
+UI `/transactions/new` hoặc modal:
+
+| Field | UI |
+| --- | --- |
+| Type | select `Income` |
+| Amount | money input, số dương |
+| Financial account | dropdown manual account |
+| Category | optional dropdown |
+| Note | optional textarea |
+| Date | date/time picker |
+
+Submit:
+
+```http
+POST /Transactions
+Authorization: Bearer <token>
+```
+
+Body gợi ý:
+
+```json
+{
+  "financialAccountId": "guid",
+  "type": "Income",
+  "transactionsAmount": 100000,
+  "categoryId": "guid",
+  "fromJarId": null,
+  "toJarId": null,
+  "note": "string",
+  "date": "datetimeOffset"
+}
+```
+
+Sau response:
+
+- đóng modal;
+- refresh transaction list;
+- refresh account list/dashboard.
+
+### 10.3 Tạo giao dịch chi tiêu từ hũ
+
+Theo code hiện tại, flow expense rõ nhất là chi từ hũ.
+
+UI:
+
+| Field | UI |
+| --- | --- |
+| Type | select `Expense` |
+| Amount | money input, số dương |
+| From jar | dropdown jar |
+| Category | dropdown |
+| Note | optional textarea |
+| Date | date/time picker |
+
+Submit:
+
+```http
+POST /Transactions
+Authorization: Bearer <token>
+```
+
+Body gợi ý:
+
+```json
+{
+  "financialAccountId": null,
+  "type": "Expense",
+  "transactionsAmount": 50000,
+  "categoryId": "guid",
+  "fromJarId": "guid",
+  "toJarId": null,
+  "note": "string",
+  "date": "datetimeOffset"
+}
+```
+
+Sau response:
+
+- refresh transaction list;
+- refresh jars;
+- refresh limits nếu expense liên quan limit;
+- refresh notifications badge vì backend có thể tạo `SpendingAlert`.
+
+UX:
+
+- Nếu backend trả lỗi không đủ tiền, show lỗi ngay dưới amount/jar.
+- Không gửi amount âm.
+
+### 10.4 Transfer/internal jar movement
+
+Code service hiện có nhánh `Transfer`, nhưng public contract MVP không khuyến nghị dựng UI transfer chính. FE chỉ nên dựng màn transfer nếu team chốt dùng capability này.
+
+Nếu chưa chốt, không đưa `Transfer` vào dropdown type chính; chỉ hiển thị `Income` và `Expense`.
+
+### 10.5 Sửa giao dịch
+
+UI:
+
+- mở edit modal từ row transaction.
+- chỉ cho sửa amount, category, note.
+- không cho đổi type/account/jar/date theo API hiện tại.
+
+API:
+
+```http
+PATCH /Transactions/{id}
+Authorization: Bearer <token>
+```
+
+Body:
+
+```json
+{
+  "transactionsAmount": 50000,
+  "categoryId": "guid",
+  "note": "string"
+}
+```
+
+Sau response:
+
+- refresh row/list;
+- refresh dashboard/jars/accounts nếu amount đổi.
+
+### 10.6 Xóa giao dịch
+
+UX:
+
+1. User click `Xóa`.
+2. Confirm dialog.
+3. Gọi API.
+
+```http
+DELETE /Transactions/{id}
+Authorization: Bearer <token>
+```
+
+Sau response:
+
+- remove row hoặc refresh list;
+- refresh dashboard/jars/accounts.
+
+Ghi chú:
+
+- Imported/linked transaction có thể không được sửa/xóa manual.
 
 ---
 
-## 7) Ngoại lệ, rollback và quản trị rủi ro
+## 11. Casso sync flow
 
-### 7.1 Phân bổ giữa các hũ thất bại
+### 11.1 User bấm sync linked account
 
-- Điều kiện: lỗi DB, timeout, conflict khi cập nhật song song.
-- Xử lý:
-  1. Dùng transaction DB.
-  2. Nếu lỗi giữa chừng thì rollback về trạng thái cũ.
-  3. Ghi audit log và báo lỗi rõ ràng cho user.
+Màn dùng: `/accounts` hoặc account detail.
 
-### 7.2 User nhập hoặc phân bổ vượt quá số dư khả dụng
+Điều kiện hiển thị nút:
 
-- Chặn ở tầng validation.
-- Trả message giải thích rõ:
-  - Số dư khả dụng hiện tại.
-  - Số tối đa có thể nhập/phân bổ.
+- account `connectionMode = LinkedApi`;
+- account active.
 
-### 7.3 OCR trả dữ liệu sai hoặc confidence thấp
+API:
 
-- Tạo bản nháp giao dịch.
-- Bắt buộc user xác nhận/chỉnh sửa trước khi commit chính thức.
+```http
+GET /Transactions/Casso?financialAccountId={id}&page=1&pageSize=50&sort=ASC
+Authorization: Bearer <token>
+```
 
-### 7.4 Không gửi được notification
+Optional query:
 
-- In-app là kênh fallback bắt buộc.
-- Email/push cần retry theo queue.
-- Nếu vượt số lần retry thì ghi log để admin theo dõi.
+- `fromDate`;
+- `toDate`.
 
-### 7.5 AI không phản hồi hoặc trả lời không phù hợp
+Sau response:
 
-- Timeout thì fallback sang rule-based insight.
-- Nội dung AI cần lưu log tóm tắt để admin kiểm tra khi cần.
-- Admin có quyền đổi prompt/model hoặc tắt AI tạm thời.
+- show toast: `Đã nhận X, tạo Y, bỏ qua Z`.
+- refresh transactions;
+- refresh account balance;
+- refresh dashboard.
 
-### 7.6 Trùng giao dịch
+### 11.2 Webhook Casso
 
-- Chạy dedupe trước khi ghi transaction chính thức.
-- Nếu nghi ngờ trùng thì chuyển trạng thái `NeedConfirm`.
+Endpoint:
 
-### 7.7 Xung đột dữ liệu đa thiết bị
+```http
+POST /Transactions/Casso
+```
 
-- Dùng optimistic concurrency hoặc version field.
-- Ưu tiên bản ghi mới nhất nhưng phải lưu lịch sử thay đổi cho audit.
+FE không gọi API này. Đây là endpoint để Casso/server ngoài gọi vào backend.
 
 ---
 
-## 8) Mô hình dữ liệu cốt lõi
+## 12. OCR/import flow
 
-Entity chính đề xuất:
+### 12.1 Upload ảnh hóa đơn
 
-- `User`
-- `AdminUser`
-- `UserProfile`
-- `OnboardingSurvey`
-- `FinancialAccount`
-- `Jar`
-- `JarAllocationTransfer`
-- `Category`
-- `Transaction`
-- `ReceiptScan`
-- `BudgetLimit`
-- `AlertRule`
-- `Notification`
-- `RecurringPaymentReminder`
-- `FinancialGoal`
-- `AIAdvice`
-- `AIProviderConfig`
-- `SystemConfig`
-- `AuditLog`
-- `IntegrationJobLog`
+UI `/imports/ocr`:
 
-Quan hệ quan trọng:
+| Field | UI |
+| --- | --- |
+| `file` | file picker |
+| `layout` | optional select/input |
+| `runOcr` | toggle |
 
-- `User 1-N FinancialAccount`
-- `User 1-N Jar`
-- `Jar 1-N Transaction`
-- `User 1-N BudgetLimit`
-- `User 1-N FinancialGoal`
-- `User 1-N RecurringPaymentReminder`
-- `Transaction 0..1 - 1 ReceiptScan`
-- `AdminUser 1-N Broadcast/ConfigChange`
+Submit:
 
----
+```http
+POST /api/v1/imports/image
+Authorization: Bearer <token>
+Content-Type: multipart/form-data
+```
 
-## 9) Nhóm API cần có để FE/BE tách việc
+Form data:
 
-1. `Auth/Profile APIs`: register, login, JWT access token, profile.
-2. `Onboarding APIs`: khảo sát, chọn template quản lý, tạo cấu hình mặc định.
-3. `Financial Account APIs`: CRUD nguồn tiền, cập nhật số dư khai báo.
-4. `Jar APIs`: CRUD hũ, chuyển phân bổ giữa các hũ, lịch sử thay đổi.
-5. `Category APIs`: category mặc định và category tự tạo.
-6. `Transaction APIs`: create/update/delete/list, OCR import, confirm draft transaction.
-7. `Budget/Alert APIs`: CRUD hạn mức, ngưỡng cảnh báo, trạng thái cảnh báo.
-8. `Goal/Reminder APIs`: CRUD mục tiêu và lịch nhắc thanh toán định kỳ.
-9. `Dashboard/Report APIs`: overview, chart, recent transaction, progress.
-10. `AI Advice APIs`: lấy gợi ý, lịch sử gợi ý, feedback cho lời khuyên.
-11. `Notification APIs`: danh sách thông báo, đánh dấu đã đọc, broadcast.
-12. `Admin APIs`: user management, AI config, master data config, operational metrics, job logs.
+- `file`;
+- `layout`;
+- `runOcr`.
 
-Optional nếu nhóm còn thời gian:
+Sau response:
 
-- `Bank Link APIs`
-- `Shared Wallet APIs`
+1. Nếu `ocrResult.isSuccess = true`:
+   - show extracted text/raw OCR section;
+   - cho user copy hoặc bấm `Tạo giao dịch từ kết quả OCR`.
+2. Nếu OCR lỗi nhưng upload thành công:
+   - show file uploaded;
+   - show OCR error;
+   - cho user nhập transaction thủ công.
+
+Giới hạn hiện tại:
+
+- Chưa có API preview/confirm import statement.
+- Chưa có API biến OCR result thành transaction tự động.
+- FE muốn ghi sổ vẫn phải gọi `POST /Transactions` sau khi user xác nhận thông tin.
 
 ---
 
-## 10) Mapping theo timeline triển khai
+## 13. Limit flow
 
-### 15/4 - 19/4
+### 13.1 Màn hạn mức
 
-- Chốt API contract giả định cho FE và BE.
-- Setup repo, auth skeleton, base entity.
-- Dựng schema DB ban đầu.
-- Chốt flow onboarding, jar, transaction, alert.
+Khi vào `/limits`, FE gọi:
 
-### 19/4 - 23/4
+```http
+GET /api/v1/limits
+GET /Jar
+GET /api/v1/categories
+```
 
-- Hoàn thiện entity chính và migration.
-- Dựng UI khung cho onboarding, dashboard, quản lý hũ.
-- Làm transaction draft flow cho manual/OCR.
+Render mỗi limit:
 
-### 23/4 - 7/5
+- target type;
+- target name;
+- limit amount;
+- period;
+- alert percentage;
+- current spent;
+- current percentage;
+- status.
 
-- Implement nghiệp vụ core:
-  - CRUD tài khoản nguồn tiền, hũ, category.
-  - Transaction + OCR + confirm flow.
-  - Budget + alert + recurring reminder.
-  - Goal tracking.
-  - AI advice + admin AI config.
+### 13.2 Tạo hạn mức
 
-### 7/5 - 15/5
+UI form:
 
-- Test tích hợp.
-- Soát lỗi đồng bộ, retry notification, fallback AI.
-- Tối ưu dashboard và đóng gói Docker deploy.
+| Field | UI |
+| --- | --- |
+| Target type | segmented `Jar` / `Category` |
+| Target | dropdown jars/categories |
+| Limit amount | money input |
+| Period | select `Daily`, `Monthly` |
+| Alert at percentage | number/slider 1-100 |
+
+Submit:
+
+```http
+POST /api/v1/limits
+Authorization: Bearer <token>
+```
+
+Body:
+
+```json
+{
+  "targetType": "Jar",
+  "targetId": "guid",
+  "limitAmount": 1000000,
+  "period": "Monthly",
+  "alertAtPercentage": 80
+}
+```
+
+Sau response:
+
+- refresh limit list;
+- show toast.
+
+### 13.3 Sửa hạn mức
+
+API chỉ sửa amount và alert percentage:
+
+```http
+PATCH /api/v1/limits/{id}
+Authorization: Bearer <token>
+```
+
+Body:
+
+```json
+{
+  "limitAmount": 1200000,
+  "alertAtPercentage": 80
+}
+```
+
+### 13.4 Xóa hạn mức
+
+```http
+DELETE /api/v1/limits/{id}
+Authorization: Bearer <token>
+```
+
+Sau response:
+
+- refresh list.
 
 ---
 
-## 11) Tiêu chí nghiệm thu MVP
+## 14. Goal flow
 
-- User hoàn tất onboarding và tạo được bộ hũ chi tiêu ban đầu.
-- User ghi nhận giao dịch bằng manual và OCR.
-- System tự phân loại được ở mức cơ bản và có luồng confirm khi chưa chắc chắn.
-- Dashboard cập nhật đúng sau giao dịch.
-- Alert hoạt động đúng theo hạn mức và lịch nhắc.
-- AI advice hoạt động; nếu AI lỗi thì vẫn có fallback rule-based.
-- Admin quản lý được user, dữ liệu nền và cấu hình AI.
-- Các flow lỗi quan trọng có rollback hoặc thông báo rõ ràng.
-- Hệ thống chạy ổn định trên Docker với Postgres.
+### 14.1 Màn mục tiêu
+
+Khi vào `/goals`, FE gọi:
+
+```http
+GET /api/v1/goals
+GET /Jar
+```
+
+Render:
+
+- title;
+- target amount;
+- saved amount;
+- progress percentage;
+- due date;
+- status;
+- suggested monthly contribution.
+
+### 14.2 Xem chi tiết goal
+
+Khi user click một goal:
+
+```http
+GET /api/v1/goals/{id}
+Authorization: Bearer <token>
+```
+
+Render thêm:
+
+- days remaining;
+- linked jar;
+- suggested monthly contribution.
+
+### 14.3 Tạo goal
+
+Form:
+
+| Field | UI |
+| --- | --- |
+| `title` | text |
+| `targetAmount` | money input |
+| `dueDate` | date picker |
+| `linkedJarId` | optional jar dropdown |
+| `note` | optional textarea |
+
+Submit:
+
+```http
+POST /api/v1/goals
+Authorization: Bearer <token>
+```
+
+Sau response:
+
+- chuyển về `/goals` hoặc mở detail;
+- refresh dashboard goal progress.
+
+### 14.4 Sửa goal
+
+```http
+PATCH /api/v1/goals/{id}
+Authorization: Bearer <token>
+```
+
+### 14.5 Xóa/hủy goal
+
+```http
+DELETE /api/v1/goals/{id}
+Authorization: Bearer <token>
+```
+
+UX:
+
+- Label nên là `Hủy mục tiêu` vì backend chuyển status `Cancelled`.
 
 ---
 
-## 12) Gợi ý phase sau
+## 15. Reminder flow
 
-Khi MVP đã ổn định, có thể mở rộng theo thứ tự:
+### 15.1 Màn reminders
 
-1. Bank-link đầy đủ và đối soát tự động.
-2. Ví chung / hũ chung nhiều thành viên.
-3. CSKH/ticket nội bộ.
-4. Social features và chia sẻ kế hoạch chi tiêu.
-5. Mô hình giữ tiền hoặc thanh toán hộ user nếu có định hướng pháp lý rõ ràng.
+Khi vào `/reminders`, FE gọi:
+
+```http
+GET /api/v1/reminders
+GET /api/v1/categories
+```
+
+Render:
+
+- title;
+- amount;
+- frequency;
+- next due date;
+- status.
+
+### 15.2 Tạo reminder
+
+Form:
+
+| Field | UI |
+| --- | --- |
+| `title` | text |
+| `amount` | money input |
+| `frequency` | select `Daily`, `Weekly`, `Monthly`, `Quarterly`, `Yearly` |
+| `dayOfMonth` | optional number 1-31 |
+| `startDate` | date picker |
+| `categoryId` | optional category dropdown |
+| `notifyDaysBefore` | number |
+| `note` | optional textarea |
+
+Submit:
+
+```http
+POST /api/v1/reminders
+Authorization: Bearer <token>
+```
+
+Sau response:
+
+- show card mới với `nextDueDate`;
+- refresh list.
+
+### 15.3 Sửa reminder/status
+
+```http
+PATCH /api/v1/reminders/{id}
+Authorization: Bearer <token>
+```
+
+Body có thể gồm:
+
+- title;
+- amount;
+- frequency;
+- dayOfMonth;
+- status `Active`, `Paused`, `Completed`, `Cancelled`;
+- notifyDaysBefore;
+- note.
+
+### 15.4 Xóa reminder
+
+```http
+DELETE /api/v1/reminders/{id}
+Authorization: Bearer <token>
+```
+
+UX:
+
+- Label nên là `Hủy nhắc nhở`, vì backend chuyển status `Cancelled`.
+
+---
+
+## 16. Notification flow
+
+### 16.1 Notification badge
+
+Ở layout sau login, FE có thể gọi:
+
+```http
+GET /api/v1/notifications?pageIndex=1&pageSize=5&status=unread
+Authorization: Bearer <token>
+```
+
+Dùng `unreadCount` để hiển thị badge.
+
+### 16.2 Inbox notification
+
+UI `/notifications`:
+
+Filter:
+
+| UI | Query |
+| --- | --- |
+| Type | `type` |
+| Read/unread | `status` |
+| Pagination | `pageIndex`, `pageSize` |
+
+API:
+
+```http
+GET /api/v1/notifications?type=SpendingAlert&status=unread&pageIndex=1&pageSize=20
+Authorization: Bearer <token>
+```
+
+### 16.3 Mark read/unread
+
+Mark selected:
+
+```http
+PATCH /api/v1/notifications/status
+Authorization: Bearer <token>
+```
+
+Body:
+
+```json
+{
+  "ids": ["guid"],
+  "isRead": true,
+  "markAll": false
+}
+```
+
+Mark all:
+
+```json
+{
+  "ids": null,
+  "isRead": true,
+  "markAll": true
+}
+```
+
+Sau response:
+
+- update list;
+- update unread badge từ `unreadCount`.
+
+---
+
+## 17. AI chat flow
+
+UI `/ai-chat` hoặc sidebar chat:
+
+Input:
+
+- message textarea;
+- send button;
+- optional suggestions chips từ response trước.
+
+Submit:
+
+```http
+POST /api/v1/ai/chat
+Authorization: Bearer <token>
+```
+
+Body:
+
+```json
+{
+  "message": "string",
+  "recentMessages": [
+    {
+      "sender": "user",
+      "content": "string"
+    }
+  ]
+}
+```
+
+Sau response:
+
+- append answer vào chat;
+- render `suggestions` thành quick action chips;
+- hiển thị nhỏ `source` là `AI` hoặc `RuleBased`.
+
+UX:
+
+- Nếu API lỗi, show fallback UI: `Hiện chưa thể lấy tư vấn, vui lòng thử lại`.
+- Không hiển thị setting/API key/provider secret ở UI user.
+
+---
+
+## 18. Admin flow
+
+### 18.1 Admin login
+
+Admin dùng:
+
+```http
+POST /api/v1/auth/login
+```
+
+Sau response:
+
+1. FE lưu token.
+2. Decode JWT role.
+3. Nếu role `Admin`: chuyển `/admin/dashboard`.
+4. Nếu không phải admin mà vào admin route: redirect `/dashboard` hoặc show 403 page.
+
+### 18.2 Admin dashboard
+
+UI `/admin/dashboard` gọi:
+
+```http
+GET /api/v1/admin/dashboard
+Authorization: Bearer <adminToken>
+```
+
+Render:
+
+- summary cards;
+- recent users;
+- recent transactions.
+
+### 18.3 Admin users
+
+List:
+
+```http
+GET /api/v1/admin/users?pageIndex=1&pageSize=20&status=Active&keyword=abc
+Authorization: Bearer <adminToken>
+```
+
+Detail:
+
+```http
+GET /api/v1/admin/users/{id}
+Authorization: Bearer <adminToken>
+```
+
+Update status:
+
+```http
+PATCH /api/v1/admin/users/{id}/status
+Authorization: Bearer <adminToken>
+```
+
+Body:
+
+```json
+{
+  "status": "Banned",
+  "statusReason": "string"
+}
+```
+
+Change role:
+
+```http
+PATCH /api/v1/change-role/{accountId}?role=Admin
+Authorization: Bearer <adminToken>
+```
+
+UX:
+
+- Status action nên là explicit: `Ban user` hoặc `Unban user`.
+- Confirm trước khi ban hoặc đổi role.
+
+### 18.4 Admin default categories
+
+List:
+
+```http
+GET /api/v1/admin/categories?isActive=true
+Authorization: Bearer <adminToken>
+```
+
+Create:
+
+```http
+POST /api/v1/admin/categories
+Authorization: Bearer <adminToken>
+```
+
+Body:
+
+```json
+{
+  "name": "string",
+  "icon": "string",
+  "color": "string",
+  "order": 1
+}
+```
+
+Update:
+
+```http
+PATCH /api/v1/admin/categories/{id}
+Authorization: Bearer <adminToken>
+```
+
+Delete/deactivate:
+
+```http
+DELETE /api/v1/admin/categories/{id}
+Authorization: Bearer <adminToken>
+```
+
+### 18.5 Admin broadcasts
+
+List:
+
+```http
+GET /api/v1/admin/broadcasts?pageIndex=1&pageSize=20&status=Queued
+Authorization: Bearer <adminToken>
+```
+
+Create/send:
+
+```http
+POST /api/v1/admin/broadcasts
+Authorization: Bearer <adminToken>
+```
+
+Body gửi ngay:
+
+```json
+{
+  "title": "string",
+  "body": "string",
+  "targetAudience": "All",
+  "scheduledAt": null
+}
+```
+
+Body hẹn giờ:
+
+```json
+{
+  "title": "string",
+  "body": "string",
+  "targetAudience": "All",
+  "scheduledAt": "datetimeOffset"
+}
+```
+
+UX:
+
+- Nếu `scheduledAt = null`, show trạng thái `Sent`.
+- Nếu có `scheduledAt`, show trạng thái `Queued`.
+- Scheduled dispatch job hiện cần backend bổ sung nếu muốn tự gửi đúng giờ.
+
+### 18.6 Admin audit logs
+
+UI `/admin/audit-logs` gọi:
+
+```http
+GET /api/v1/admin/audit-logs?page=1&pageSize=20
+Authorization: Bearer <adminToken>
+```
+
+Filter:
+
+- adminId;
+- actionType;
+- entityType;
+- fromDate;
+- toDate.
+
+### 18.7 Admin AI settings
+
+Load form:
+
+```http
+GET /api/v1/admin/ai-settings
+Authorization: Bearer <adminToken>
+```
+
+Render:
+
+- model name;
+- system prompt;
+- temperature;
+- max tokens;
+- enabled switch;
+- api key masked.
+
+Update:
+
+```http
+PATCH /api/v1/admin/ai-settings
+Authorization: Bearer <adminToken>
+```
+
+Body:
+
+```json
+{
+  "modelName": "string",
+  "systemPrompt": "string",
+  "temperature": 0.7,
+  "maxTokens": 1000,
+  "isEnabled": true
+}
+```
+
+UX:
+
+- Không có field nhập raw API key theo DTO hiện tại.
+- Không hiển thị secret thô ở UI.
+
+---
+
+## 19. Health/dev flow
+
+Các API này chủ yếu cho dev/ops, không phải core user UI:
+
+```http
+GET /health
+GET /health/db/local
+GET /health/db/render
+```
+
+FE production không cần gọi thường xuyên. Có thể dùng ở trang admin/dev diagnostics nếu team muốn.
+
+---
+
+## 20. Checklist FE khi nối API
+
+1. Luôn có loading state cho nút submit và màn list.
+2. Protected API luôn gửi Bearer token.
+3. Nếu nhận 401: clear token và redirect `/login`.
+4. Nếu nhận 403: show forbidden page hoặc redirect theo role.
+5. Sau create/update/delete, refresh list đang xem.
+6. Sau transaction/account/jar mutation, refresh dashboard nếu dashboard đang cache.
+7. Amount nhập từ FE gửi số dương.
+8. Không dựng public UI cho API chưa có trong `docs/API V2.md`.
+9. Không hiển thị route/admin menu nếu JWT role không phù hợp.
+10. Không expose secret config, API key, secure token trên FE.
+
+---
+
+## 21. Các khoảng trống cần backend bổ sung nếu FE muốn làm đủ flow
+
+| Nhu cầu FE | Hiện trạng | Cần backend bổ sung |
+| --- | --- | --- |
+| Import statement đầy đủ | Chỉ có `POST /api/v1/imports/image` | create job, status, preview, edit draft, confirm |
+| Reminder tự sinh notification | Có CRUD reminder | background job tạo notification đúng kỳ |
+| Scheduled broadcast gửi đúng giờ | Có create queued broadcast | job dispatch queued broadcast |
+| Route đồng nhất `/api/v1` | Một số route vẫn là `/User`, `/Jar`, `/Transactions` | align controller route nếu muốn public contract sạch |
+| Expense trực tiếp từ account | Transaction expense hiện rõ nhất là từ jar | chốt nghiệp vụ và xử lý balance account nếu cần |
+| Category limit alert đầy đủ | Limit CRUD có category target | transaction service cần check category limit |

@@ -646,57 +646,6 @@ namespace Personal_Finance_Management.Repository.Migrations
                         });
                 });
 
-            modelBuilder.Entity("Personal_Finance_Management.Repository.Entity.GoalContribution", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
-                        .HasColumnName("id");
-
-                    b.Property<decimal>("Amount")
-                        .HasColumnType("numeric(18,2)")
-                        .HasColumnName("amount");
-
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at")
-                        .HasDefaultValueSql("NOW()");
-
-                    b.Property<Guid>("GoalId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("goal_id");
-
-                    b.Property<string>("Note")
-                        .HasColumnType("text")
-                        .HasColumnName("note");
-
-                    b.Property<Guid?>("SourceJarId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("source_jar_id");
-
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("user_id");
-
-                    b.HasKey("Id")
-                        .HasName("pk_goal_contributions");
-
-                    b.HasIndex("SourceJarId")
-                        .HasDatabaseName("ix_goal_contributions_source_jar_id");
-
-                    b.HasIndex("GoalId", "CreatedAt")
-                        .HasDatabaseName("ix_goal_contributions_goal_created_at");
-
-                    b.HasIndex("UserId", "CreatedAt")
-                        .HasDatabaseName("ix_goal_contributions_user_created_at");
-
-                    b.ToTable("goal_contributions", null, t =>
-                        {
-                            t.HasCheckConstraint("chk_goal_contributions_amount", "\"amount\" > 0");
-                        });
-                });
-
             modelBuilder.Entity("Personal_Finance_Management.Repository.Entity.ImportJob", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1608,35 +1557,6 @@ namespace Personal_Finance_Management.Repository.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("Personal_Finance_Management.Repository.Entity.GoalContribution", b =>
-                {
-                    b.HasOne("Personal_Finance_Management.Repository.Entity.Goal", "Goal")
-                        .WithMany("Contributions")
-                        .HasForeignKey("GoalId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired()
-                        .HasConstraintName("fk_goal_contributions_goals_goal_id");
-
-                    b.HasOne("Personal_Finance_Management.Repository.Entity.Jar", "SourceJar")
-                        .WithMany()
-                        .HasForeignKey("SourceJarId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .HasConstraintName("fk_goal_contributions_jars_source_jar_id");
-
-                    b.HasOne("Personal_Finance_Management.Repository.Entity.Account", "User")
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired()
-                        .HasConstraintName("fk_goal_contributions_accounts_user_id");
-
-                    b.Navigation("Goal");
-
-                    b.Navigation("SourceJar");
-
-                    b.Navigation("User");
-                });
-
             modelBuilder.Entity("Personal_Finance_Management.Repository.Entity.ImportJob", b =>
                 {
                     b.HasOne("Personal_Finance_Management.Repository.Entity.FinancialAccount", "FinancialAccount")
@@ -1863,11 +1783,6 @@ namespace Personal_Finance_Management.Repository.Migrations
             modelBuilder.Entity("Personal_Finance_Management.Repository.Entity.Broadcast", b =>
                 {
                     b.Navigation("Notifications");
-                });
-
-            modelBuilder.Entity("Personal_Finance_Management.Repository.Entity.Goal", b =>
-                {
-                    b.Navigation("Contributions");
                 });
 
             modelBuilder.Entity("Personal_Finance_Management.Repository.Entity.ImportJob", b =>

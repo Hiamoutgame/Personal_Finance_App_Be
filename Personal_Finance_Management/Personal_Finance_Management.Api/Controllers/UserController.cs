@@ -6,7 +6,7 @@ using Personal_Finance_Management.Service.User;
 namespace Personal_Finance_Management.Api.Controllers;
 
 [ApiController]
-[Route("[controller]")]
+[Route("api/v1/user")]
 [Authorize(Policy = AuthorizationExtension.Policies.User)]
 public class UserController : ControllerBase
 {

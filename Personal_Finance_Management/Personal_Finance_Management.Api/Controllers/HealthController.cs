@@ -5,7 +5,7 @@ using Personal_Finance_Management.Repository;
 namespace Personal_Finance_Management.Api.Controllers;
 
 [ApiController]
-[Route("health")]
+[Route("api/v1/health")]
 public class HealthController : ControllerBase
 {
     private readonly AppDbContext _dbContext;

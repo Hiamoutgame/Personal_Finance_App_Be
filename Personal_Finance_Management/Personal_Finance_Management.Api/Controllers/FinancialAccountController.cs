@@ -6,7 +6,7 @@ namespace Personal_Finance_Management.Api.Controllers;
 
 [Authorize]
 [ApiController]
-[Route("[controller]")]
+[Route("api/v1/financial-accounts")]
 public class FinancialAccountController : ControllerBase
 {
     private readonly IService _service;

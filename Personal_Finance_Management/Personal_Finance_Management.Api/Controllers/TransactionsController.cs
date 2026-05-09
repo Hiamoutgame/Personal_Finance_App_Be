@@ -5,7 +5,7 @@ using Personal_Finance_Management.Service.Transaction;
 namespace Personal_Finance_Management.Api.Controllers;
 
 [ApiController]
-[Route("[controller]")]
+[Route("api/v1/transactions")]
 [Authorize]
 public class TransactionsController : ControllerBase
 {
@@ -16,7 +16,7 @@ public class TransactionsController : ControllerBase
     }
 
     [HttpGet("")]
-    public async Task<IActionResult> GetTransactions([FromQuery]Request.GetTransactionsRequest request)
+    public async Task<IActionResult> GetTransactions([FromQuery] Request.GetTransactionsRequest request)
     {
         var result = await _service.GetTransactions(request);
         return Ok(result);
@@ -35,7 +35,7 @@ public class TransactionsController : ControllerBase
         var result = await _service.UpdateTransaction(id, request);
         return Ok(result);
     }
-    
+
     [HttpDelete("{id}")]
     public async Task<IActionResult> DeleteTransactions(Guid id)
     {

@@ -5,7 +5,7 @@ using Personal_Finance_Management.Service.Jar;
 namespace Personal_Finance_Management.Api.Controllers;
 
 [ApiController]
-[Route("[controller]")]
+[Route("api/v1/jars")]
 [Authorize]
 public class JarController : ControllerBase
 {
@@ -42,6 +42,6 @@ public class JarController : ControllerBase
         var result = await _service.DeleteJar(id);
         return Ok(result);
     }
-    
-    
+
+
 }
