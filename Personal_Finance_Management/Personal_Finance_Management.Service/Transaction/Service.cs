@@ -286,7 +286,7 @@ public class Service : IService
             else if (transaction.FromJarId != null && transaction.ToJarId == null && 
                      transaction.FinancialAccountId != null)
             {
-                var fromJar = _dbContext.Jars.FirstOrDefault(x => x.Id == transaction.ToJarId);
+                var fromJar = _dbContext.Jars.FirstOrDefault(x => x.Id == transaction.FromJarId);
                 var finnacialAccount = _dbContext.FinancialAccounts.FirstOrDefault(x => x.Id == transaction.FinancialAccountId);
                 if (fromJar.Balance - transaction.TransactionsAmount >= 0)
                 {

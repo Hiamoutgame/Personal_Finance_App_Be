@@ -18,6 +18,9 @@ public class Response
         public DateTime DueDate { get; set; }
         public required string Status { get; set; }
         public decimal SuggestedMonthlyContribution { get; set; }
+        /** Hũ dùng làm sổ tiết kiệm cho mục tiêu; SavedAmount = số dư hũ này. */
+        public Guid? LinkedJarId { get; set; }
+        public string? LinkedJarName { get; set; }
     }
     
     public class GetGoalByIdResponse
@@ -32,6 +35,8 @@ public class Response
         public required string Status { get; set; }
         public decimal SuggestedMonthlyContribution { get; set; }
         public Guid? LinkedJarId { get; set; }
+        public string? LinkedJarName { get; set; }
+        public string? Note { get; set; }
     }
 
 
