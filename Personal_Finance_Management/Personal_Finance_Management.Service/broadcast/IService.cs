@@ -10,5 +10,6 @@ namespace Personal_Finance_Management.Service.broadcast
     {
         public Task<Response.BroadcastsResponse> CreateBroadcast(Request.BroadcastsRequest request);
         public Task<Page<Response.BroadcastsResponse>> GetBroadcasts(int pageIndex, int pageSize, string status = "Queued");
+        public Task<int> DispatchDueBroadcastsAsync(CancellationToken cancellationToken = default);
     }
 }

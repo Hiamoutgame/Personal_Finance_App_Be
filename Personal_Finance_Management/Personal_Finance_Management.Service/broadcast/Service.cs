@@ -65,6 +65,7 @@ namespace Personal_Finance_Management.Service.broadcast
                     Id = Guid.NewGuid(),
                     UserId = userId,
                     BroadcastId = broadcast.Id,
+                    Type = "Broadcast",
                     Title = broadcast.Title,
                     Body = broadcast.Body,
                     IsRead = false,
@@ -125,6 +126,71 @@ namespace Personal_Finance_Management.Service.broadcast
             };
 
 
+        }
+        public async Task<int> DispatchDueBroadcastsAsync(CancellationToken cancellationToken = default)
+        {
+            var now = DateTimeOffset.UtcNow;
+            var dispatchedCount = 0;
+
+            var dueBroadcasts = await _dbContext.Broadcasts
+                .Where(x => x.Status == "Queued"
+                            && x.ScheduledAt != null
+                            && x.ScheduledAt <= now)
+                .OrderBy(x => x.ScheduledAt)
+                .Take(20)
+                .ToListAsync(cancellationToken);
+
+            if (dueBroadcasts.Count == 0)
+            {
+                return dispatchedCount;
+            }
+
+            var targetUsers = await _dbContext.Accounts
+                .Where(x => x.Role.Code == "User" && x.Status == "Active")
+                .Select(x => x.Id)
+                .ToListAsync(cancellationToken);
+
+            await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
+
+            foreach (var broadcast in dueBroadcasts)
+            {
+                var alreadyCreated = await _dbContext.Notifications
+                    .AnyAsync(x => x.BroadcastId == broadcast.Id, cancellationToken);
+
+                if (!alreadyCreated)
+                {
+                    var notifications = targetUsers.Select(userId => new Repository.Entity.Notification
+                    {
+                        Id = Guid.NewGuid(),
+                        UserId = userId,
+                        BroadcastId = broadcast.Id,
+                        Type = "Broadcast",
+                        Title = broadcast.Title,
+                        Body = broadcast.Body,
+                        IsRead = false,
+                        CreatedAt = now,
+                    }).ToList();
+
+                    _dbContext.Notifications.AddRange(notifications);
+                    broadcast.DeliveredCount = notifications.Count;
+                }
+                else
+                {
+                    broadcast.DeliveredCount = await _dbContext.Notifications
+                        .CountAsync(x => x.BroadcastId == broadcast.Id, cancellationToken);
+                }
+
+                broadcast.Status = "Sent";
+                broadcast.SentAt = now;
+                broadcast.TargetCount = targetUsers.Count;
+                broadcast.UpdatedAt = now;
+                dispatchedCount++;
+            }
+
+            await _dbContext.SaveChangesAsync(cancellationToken);
+            await transaction.CommitAsync(cancellationToken);
+
+            return dispatchedCount;
         }
         public async Task<Guid> GetAdminIdFromToken()
         {

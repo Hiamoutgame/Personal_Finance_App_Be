@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Personal_Finance_Management.Api.Extensions;
+using Personal_Finance_Management.Api.Jobs;
 using Personal_Finance_Management.Api.Middlewares;
 using Personal_Finance_Management.Repository;
 using AdminService = Personal_Finance_Management.Service.Admin;
@@ -82,6 +83,7 @@ builder.Services.AddScoped<BroadcastService.IService, BroadcastService.Service>(
 builder.Services.AddScoped<AdminService.IService, AdminService.Service>();
 builder.Services.AddScoped<AIService.IService, AIService.Service>();
 builder.Services.AddScoped<DatabaseSeedService>();
+builder.Services.AddHostedService<BroadcastDispatchBackgroundService>();
 builder.Services.AddHttpClient<OcrService.IService, OcrService.Service>(client =>
 {
     var timeoutSeconds = builder.Configuration.GetValue<int?>("Ocr:TimeoutSeconds") ?? 120;

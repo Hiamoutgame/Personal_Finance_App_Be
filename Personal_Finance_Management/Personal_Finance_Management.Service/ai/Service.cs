@@ -3,6 +3,7 @@ using System.Text.Json;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 using Personal_Finance_Management.Repository;
 using Personal_Finance_Management.Repository.Entity;
 using Personal_Finance_Management.Service.Validations;
@@ -15,15 +16,18 @@ public class Service : IService
     private readonly AppDbContext _dbContext;
     private readonly IConfiguration _configuration;
     private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly ILogger<Service> _logger;
 
     public Service(
         AppDbContext dbContext,
         IConfiguration configuration,
-        IHttpContextAccessor httpContextAccessor)
+        IHttpContextAccessor httpContextAccessor,
+        ILogger<Service> logger)
     {
         _dbContext = dbContext;
         _configuration = configuration;
         _httpContextAccessor = httpContextAccessor;
+        _logger = logger;
     }
 
 
@@ -86,8 +90,9 @@ public class Service : IService
                 Source = "AI"
             };
         }
-        catch
+        catch (Exception ex)
         {
+            _logger.LogWarning(ex, "Google AI chat failed. Falling back to rule-based response.");
             return BuildRuleBasedFallback();
         }
     }
@@ -358,7 +363,7 @@ public class Service : IService
                + JsonSerializer.Serialize(context);
     }
 
-    private static async Task<string?> CallGoogleAi(
+    private async Task<string?> CallGoogleAi(
         AiSetting setting,
         string apiKey,
         string prompt,
@@ -397,6 +402,13 @@ public class Service : IService
         using var response = await httpClient.PostAsJsonAsync(requestUri, payload);
         if (!response.IsSuccessStatusCode)
         {
+            var responseBody = await response.Content.ReadAsStringAsync();
+            _logger.LogWarning(
+                "Google AI request failed. StatusCode={StatusCode}, ReasonPhrase={ReasonPhrase}, Body={Body}",
+                (int)response.StatusCode,
+                response.ReasonPhrase,
+                Truncate(responseBody, 1000));
+
             return null;
         }
 
@@ -407,6 +419,7 @@ public class Service : IService
             || candidates.ValueKind != JsonValueKind.Array
             || candidates.GetArrayLength() == 0)
         {
+            _logger.LogWarning("Google AI response did not contain candidates.");
             return null;
         }
 
@@ -416,6 +429,7 @@ public class Service : IService
             || parts.ValueKind != JsonValueKind.Array
             || parts.GetArrayLength() == 0)
         {
+            _logger.LogWarning("Google AI response did not contain content parts.");
             return null;
         }
 
