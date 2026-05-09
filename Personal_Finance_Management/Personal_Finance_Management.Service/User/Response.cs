@@ -36,4 +36,21 @@ public class Response
         public int limitCount { get; set; }
         public int activeGoalCount { get; set; }
     }
+
+    public class AdminUserResponse
+    {
+        public Guid Id { get; set; }
+        public string UserName { get; set; } = string.Empty;
+        public string FirstName { get; set; } = string.Empty;
+        public string LastName { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
+        public string? Phone { get; set; }
+        public string? AvatarUrl { get; set; }
+        public string PreferredCurrency { get; set; } = "VND";
+        public bool IsOnboardingCompleted { get; set; }
+        public string Status { get; set; } = string.Empty;
+        public string? StatusReason { get; set; }
+        public DateTimeOffset CreatedAt { get; set; }
+        public DateTimeOffset? LastLoginAt { get; set; }
+    }
 }

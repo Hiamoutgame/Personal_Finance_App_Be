@@ -21,6 +21,13 @@ namespace Personal_Finance_Management.Api.Controllers
             _userService = userService;
         }
 
+        [HttpGet]
+        public async Task<IActionResult> GetUsers([FromQuery] Request.GetAdminUsersRequest request)
+        {
+            var users = await _userService.GetAdminUsers(request);
+            return Ok(users);
+        }
+
         [HttpGet("{id:guid}")]
         public async Task<IActionResult> GetUserById(Guid id)
         {
@@ -29,9 +36,11 @@ namespace Personal_Finance_Management.Api.Controllers
         }
         // hien: endpoint nay xem Khóa hoặc mở khóa tài khoản user
         [HttpPatch("{id:guid}/status")]
-        public async Task<IActionResult> UpdateUserStatus(Guid id)
+        public async Task<IActionResult> UpdateUserStatus(Guid id, [FromBody] Request.UserStatusRequest request)
         {
-            var user = await _userService.UpdateUserStatus(new Request.UserStatusRequest { UserId = id });
+            request ??= new Request.UserStatusRequest();
+            request.UserId = id;
+            var user = await _userService.UpdateUserStatus(request);
             return Ok(user);
         }
     }

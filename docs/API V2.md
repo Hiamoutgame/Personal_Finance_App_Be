@@ -238,7 +238,7 @@ Security note:
 Các mục dưới đây là chỗ đang thiếu hoặc cần sửa code để khớp quyết định đã chốt.
 
 1. Auth:
-    - Register đã chốt `201 Created`; controller đã cập nhật từ `Ok(...)` sang `201 Created`.
+    - Register đã chốt `201 Created`.
     - Login đã chốt `email + password`.
     - Không thêm admin auth login riêng.
 2. Import:

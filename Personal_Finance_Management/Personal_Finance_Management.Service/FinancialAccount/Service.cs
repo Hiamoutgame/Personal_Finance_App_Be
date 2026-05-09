@@ -297,7 +297,12 @@ public class Service : IService
 
         if (user == null)
             throw new Exception("User not found");
-        var financialAccount = _dbContext.FinancialAccounts.FirstOrDefault(x => x.Id == id);
+        var financialAccount = _dbContext.FinancialAccounts.FirstOrDefault(x => x.Id == id && x.UserId == userIdGuid);
+        if (financialAccount == null)
+        {
+            throw AppValidationException.NotFound("Financial account not found", "financialAccountId", "FINANCIAL_ACCOUNT_NOT_FOUND");
+        }
+
         financialAccount.IsActive = false;
         await _dbContext.SaveChangesAsync();
         var result = new Response.DeleteFinancialAccountResponse()

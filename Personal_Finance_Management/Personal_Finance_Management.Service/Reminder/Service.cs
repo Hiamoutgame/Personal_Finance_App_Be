@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Personal_Finance_Management.Repository;
+using Personal_Finance_Management.Repository.Enum;
 using Personal_Finance_Management.Service.Validations;
 
 namespace Personal_Finance_Management.Service.Reminder;
@@ -9,13 +10,16 @@ public class Service : IService
 {
     private readonly AppDbContext _appDbContext;
     private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly IServices _validationServices;
 
     public Service(
         AppDbContext appDbContext,
-        IHttpContextAccessor httpContextAccessor)
+        IHttpContextAccessor httpContextAccessor,
+        IServices validationServices)
     {
         _appDbContext = appDbContext;
         _httpContextAccessor = httpContextAccessor;
+        _validationServices = validationServices;
     }
     private Guid GetCurrentUserId()
     {
@@ -39,40 +43,22 @@ public class Service : IService
             .ToListAsync();
         
         var resultData = new List<Response.ReminderResponse>();
-        var now = DateTime.Now;
+        var now = DateTimeOffset.UtcNow;
         foreach (var r in remindersFromDb)
         {
-            DateTime calculatedNextDue = r.StartDate; 
-            
-            if (r.Frequency == "Monthly" && r.DayOfMonth.HasValue)
-            {
-                int year = now.Year;
-                int month = now.Month;
-                int day = r.DayOfMonth.Value;
-                
-                int maxDaysInMonth = DateTime.DaysInMonth(year, month);
-                if (day > maxDaysInMonth)
-                {
-                    day = maxDaysInMonth;
-                }
+            var calculatedNextDue = CalculateNextDueDate(
+                r.StartDate,
+                r.Frequency,
+                r.DayOfMonth,
+                r.NotifyDaysBefore,
+                now);
 
-                DateTime dateOfThisMonth = new DateTime(year, month, day);
-                
-                if (dateOfThisMonth < now.Date)
-                {
-                    calculatedNextDue = dateOfThisMonth.AddMonths(1);
-                }
-                else
-                {
-                    calculatedNextDue = dateOfThisMonth;
-                }
-            }
             resultData.Add(new Response.ReminderResponse
             {
                 Id = r.Id,
                 Title = r.Title,
                 Amount = r.Amount,
-                Frequency = r.Frequency,
+                Frequency = r.Frequency ?? string.Empty,
                 NextDueDate = calculatedNextDue,
                 Status = r.Status
             });
@@ -86,10 +72,7 @@ public class Service : IService
 
     public async Task<Response.ReminderResponse> CreateReminder(Request.CreateReminderRequest request)
 {
-    if (request == null)
-    {
-        throw new("request is null");
-    }
+    await _validationServices.ValidateCreateReminderRequest(request);
 
     var userIdGuid = GetCurrentUserId();
     
@@ -101,7 +84,7 @@ public class Service : IService
         UserId = userIdGuid,              
         Title = request.Title,            
         Amount = request.Amount,          
-        Frequency = request.Frequency,    
+        Frequency = NormalizeEnum<ReminderFrequency>(request.Frequency),    
         DayOfMonth = request.DayOfMonth, 
         StartDate = request.StartDate.DateTime, 
         CategoryId = request.CategoryId,
@@ -115,29 +98,18 @@ public class Service : IService
     _appDbContext.Reminders.Add(newReminder);
     await _appDbContext.SaveChangesAsync();
     
-    DateTime calculatedNextDue = request.StartDate.DateTime;
-    
-    if (request.Frequency == "Monthly" && request.DayOfMonth.HasValue)
-    {
-        
-        DateTime nextMonthDate = calculatedNextDue.AddMonths(1);
-        
-        int year = nextMonthDate.Year;
-        int month = nextMonthDate.Month;
-    
-        int day = request.DayOfMonth.Value;
-        int maxDays = DateTime.DaysInMonth(year, month);
-        if (day > maxDays)
-        {
-            day = maxDays;
-        }
-        calculatedNextDue = new DateTime(year, month, day);
-    }
+    var calculatedNextDue = CalculateNextDueDate(
+        newReminder.StartDate,
+        newReminder.Frequency,
+        newReminder.DayOfMonth,
+        newReminder.NotifyDaysBefore,
+        DateTimeOffset.UtcNow);
 
     return new Response.ReminderResponse
     {
         Id = newReminder.Id,
         Title = newReminder.Title,
+        Amount = newReminder.Amount,
         Frequency = newReminder.Frequency,
         NextDueDate = calculatedNextDue,
         Status = newReminder.Status
@@ -146,13 +118,13 @@ public class Service : IService
 
     public async Task<Response.ReminderActionResponse> UpdateReminder(Guid id, Request.UpdateReminderRequest request)
 {
+    await _validationServices.ValidateUpdateReminderRequest(request);
 
     var userIdGuid = GetCurrentUserId();
 
     var reminder = await _appDbContext.Reminders
         .FirstOrDefaultAsync(r => r.Id == id 
-                                  && r.UserId == userIdGuid 
-                                  && r.Status == "Active");
+                                  && r.UserId == userIdGuid);
     
     if (reminder == null)
     {
@@ -163,11 +135,11 @@ public class Service : IService
     
     if (request.Amount.HasValue) reminder.Amount = request.Amount.Value;
     
-    if (request.Frequency != null) reminder.Frequency = request.Frequency;
+    if (request.Frequency != null) reminder.Frequency = NormalizeEnum<ReminderFrequency>(request.Frequency);
     
     if (request.DayOfMonth.HasValue) reminder.DayOfMonth = (short?)request.DayOfMonth.Value; 
     
-    if (request.Status != null) reminder.Status = request.Status;
+    if (request.Status != null) reminder.Status = NormalizeEnum<ReminderStatus>(request.Status);
     
     if (request.NotifyDaysBefore.HasValue) reminder.NotifyDaysBefore = (short)request.NotifyDaysBefore.Value; 
     
@@ -178,29 +150,18 @@ public class Service : IService
     await _appDbContext.SaveChangesAsync();
 
     
-    DateTime calculatedNextDue = reminder.StartDate;
-
-    if (reminder.Frequency == "Monthly" && reminder.DayOfMonth.HasValue)
-    {
-        DateTime nextMonthDate = calculatedNextDue.AddMonths(1);
-        
-        int year = nextMonthDate.Year;
-        int month = nextMonthDate.Month;
-        int day = reminder.DayOfMonth.Value; 
-        
-        int maxDays = DateTime.DaysInMonth(year, month);
-        if (day > maxDays)
-        {
-            day = maxDays;
-        }
-        calculatedNextDue = new DateTime(year, month, day);
-    }
+    var calculatedNextDue = CalculateNextDueDate(
+        reminder.StartDate,
+        reminder.Frequency,
+        reminder.DayOfMonth,
+        reminder.NotifyDaysBefore,
+        DateTimeOffset.UtcNow);
     
     return new Response.ReminderActionResponse
     {
         Id = reminder.Id,
         Title = reminder.Title,
-        Frequency = reminder.Frequency ?? "Once",
+        Frequency = reminder.Frequency ?? string.Empty,
         NextDueDate = calculatedNextDue,
         Status = reminder.Status
     };
@@ -212,8 +173,7 @@ public class Service : IService
         
         var reminder = await _appDbContext.Reminders
             .FirstOrDefaultAsync(r => r.Id == id 
-                                      && r.UserId == userIdGuid 
-                                      && r.Status == "Active");
+                                      && r.UserId == userIdGuid);
         
         if (reminder == null)
         {
@@ -221,7 +181,7 @@ public class Service : IService
         }
         
         var now = DateTimeOffset.UtcNow;
-        reminder.Status = "InActive";
+        reminder.Status = ReminderStatus.Cancelled.ToString();
     
         reminder.UpdatedAt = now;
         
@@ -231,5 +191,78 @@ public class Service : IService
         {
             Message = "Reminder deleted"
         };
+    }
+
+    private static DateTimeOffset CalculateNextDueDate(
+        DateTime startDate,
+        string? frequency,
+        short? dayOfMonth,
+        short? notifyDaysBefore,
+        DateTimeOffset now)
+    {
+        var normalizedFrequency = Enum.TryParse<ReminderFrequency>(
+            frequency,
+            ignoreCase: true,
+            out var parsedFrequency)
+            ? parsedFrequency
+            : ReminderFrequency.Monthly;
+
+        var dueDate = BuildDueDate(startDate, normalizedFrequency, dayOfMonth);
+        var notifyOffset = Math.Max(0, (int)(notifyDaysBefore ?? 0));
+
+        while (new DateTimeOffset(dueDate.AddDays(-notifyOffset), TimeSpan.Zero) < now)
+        {
+            dueDate = normalizedFrequency switch
+            {
+                ReminderFrequency.Daily => dueDate.AddDays(1),
+                ReminderFrequency.Weekly => dueDate.AddDays(7),
+                ReminderFrequency.Monthly => AddMonthsKeepingDay(dueDate, 1, dayOfMonth),
+                ReminderFrequency.Quarterly => AddMonthsKeepingDay(dueDate, 3, dayOfMonth),
+                ReminderFrequency.Yearly => AddYearsKeepingDay(dueDate, dayOfMonth),
+                _ => dueDate.AddMonths(1)
+            };
+        }
+
+        return new DateTimeOffset(dueDate.AddDays(-notifyOffset), TimeSpan.Zero);
+    }
+
+    private static DateTime BuildDueDate(
+        DateTime startDate,
+        ReminderFrequency frequency,
+        short? dayOfMonth)
+    {
+        if (frequency is ReminderFrequency.Monthly or ReminderFrequency.Quarterly or ReminderFrequency.Yearly)
+        {
+            var day = dayOfMonth ?? (short)startDate.Day;
+            return CreateDateKeepingDay(startDate.Year, startDate.Month, day);
+        }
+
+        return startDate.Date;
+    }
+
+    private static DateTime AddMonthsKeepingDay(DateTime date, int months, short? dayOfMonth)
+    {
+        var next = date.AddMonths(months);
+        var day = dayOfMonth ?? (short)date.Day;
+        return CreateDateKeepingDay(next.Year, next.Month, day);
+    }
+
+    private static DateTime AddYearsKeepingDay(DateTime date, short? dayOfMonth)
+    {
+        var next = date.AddYears(1);
+        var day = dayOfMonth ?? (short)date.Day;
+        return CreateDateKeepingDay(next.Year, next.Month, day);
+    }
+
+    private static DateTime CreateDateKeepingDay(int year, int month, short dayOfMonth)
+    {
+        var safeDay = Math.Min(dayOfMonth, (short)DateTime.DaysInMonth(year, month));
+        return new DateTime(year, month, safeDay);
+    }
+
+    private static string NormalizeEnum<TEnum>(string value)
+        where TEnum : struct, Enum
+    {
+        return Enum.Parse<TEnum>(value.Trim(), ignoreCase: true).ToString();
     }
 }

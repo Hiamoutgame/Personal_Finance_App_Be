@@ -20,7 +20,7 @@ public class Request
             public decimal? Amount { get; set; }
             public string? Frequency { get; set; }
             public int? DayOfMonth { get; set; }
-            public string? Status { get; set; } // Ví dụ: "Active", "Inactive"
+            public string? Status { get; set; }
             public int? NotifyDaysBefore { get; set; }
             public string? Note { get; set; }
         }

@@ -1,12 +1,15 @@
 using System.ComponentModel.DataAnnotations;
 using Microsoft.EntityFrameworkCore;
 using Personal_Finance_Management.Repository;
+using Personal_Finance_Management.Repository.Enum;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Formats.Bmp;
 using SixLabors.ImageSharp.Formats.Jpeg;
 using SixLabors.ImageSharp.Formats.Png;
 using AdminRequest = Personal_Finance_Management.Service.Admin.Request;
 using AuthRequest = Personal_Finance_Management.Service.Auth.Request;
+using ReminderRequest = Personal_Finance_Management.Service.Reminder.Request;
+using UserRequest = Personal_Finance_Management.Service.User.Request;
 
 namespace Personal_Finance_Management.Service.Validations;
 
@@ -180,5 +183,147 @@ public class ValidationServices : IServices
     public async Task ValidateAdminAuditLogsRequest(AdminRequest.AdminAuditLogsRequest request)
     {
         await _adminAuditLogsRequestValidator.ValidateOrThrowAppException(request);
+    }
+
+    public Task ValidateCreateReminderRequest(ReminderRequest.CreateReminderRequest request)
+    {
+        if (request is null)
+        {
+            throw AppValidationException.BadRequest("Request body is required.", "body", "REQUIRED");
+        }
+
+        ValidateRequiredText(request.Title, "title", "Reminder title is required.");
+        ValidateReminderAmount(request.Amount, "amount");
+        ValidateEnumValue<ReminderFrequency>(request.Frequency, "frequency", "INVALID_REMINDER_FREQUENCY", required: true);
+        ValidateDayOfMonth(request.DayOfMonth, "dayOfMonth");
+        ValidateNotifyDaysBefore(request.NotifyDaysBefore, "notifyDaysBefore");
+
+        return Task.CompletedTask;
+    }
+
+    public Task ValidateUpdateReminderRequest(ReminderRequest.UpdateReminderRequest request)
+    {
+        if (request is null)
+        {
+            throw AppValidationException.BadRequest("Request body is required.", "body", "REQUIRED");
+        }
+
+        if (request.Title is not null)
+        {
+            ValidateRequiredText(request.Title, "title", "Reminder title is required.");
+        }
+
+        if (request.Amount.HasValue)
+        {
+            ValidateReminderAmount(request.Amount.Value, "amount");
+        }
+
+        if (request.Frequency is not null)
+        {
+            ValidateEnumValue<ReminderFrequency>(request.Frequency, "frequency", "INVALID_REMINDER_FREQUENCY", required: true);
+        }
+
+        ValidateDayOfMonth(request.DayOfMonth, "dayOfMonth");
+        ValidateNotifyDaysBefore(request.NotifyDaysBefore, "notifyDaysBefore");
+
+        if (request.Status is not null)
+        {
+            ValidateEnumValue<ReminderStatus>(request.Status, "status", "INVALID_REMINDER_STATUS", required: true);
+        }
+
+        return Task.CompletedTask;
+    }
+
+    public Task ValidateAdminUsersRequest(UserRequest.GetAdminUsersRequest request)
+    {
+        if (request is null)
+        {
+            throw AppValidationException.BadRequest("Request query is required.", "query", "REQUIRED");
+        }
+
+        if (request.PageIndex <= 0)
+        {
+            throw AppValidationException.BadRequest("Page index must be greater than zero.", "pageIndex", "INVALID_PAGE_INDEX");
+        }
+
+        if (request.PageSize <= 0)
+        {
+            throw AppValidationException.BadRequest("Page size must be greater than zero.", "pageSize", "INVALID_PAGE_SIZE");
+        }
+
+        if (!string.IsNullOrWhiteSpace(request.Status))
+        {
+            ValidateEnumValue<AccountStatus>(request.Status, "status", "INVALID_ACCOUNT_STATUS", required: true);
+        }
+
+        return Task.CompletedTask;
+    }
+
+    public Task ValidateAdminUserStatusRequest(UserRequest.UserStatusRequest request)
+    {
+        if (request is null)
+        {
+            throw AppValidationException.BadRequest("Request body is required.", "body", "REQUIRED");
+        }
+
+        if (request.UserId == Guid.Empty)
+        {
+            throw AppValidationException.BadRequest("User id is required.", "userId", "REQUIRED");
+        }
+
+        ValidateEnumValue<AccountStatus>(request.Status, "status", "INVALID_ACCOUNT_STATUS", required: true);
+
+        return Task.CompletedTask;
+    }
+
+    private static void ValidateRequiredText(string value, string field, string message)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            throw AppValidationException.BadRequest(message, field, "REQUIRED");
+        }
+    }
+
+    private static void ValidateReminderAmount(decimal amount, string field)
+    {
+        if (amount < 0)
+        {
+            throw AppValidationException.BadRequest("Reminder amount must be greater than or equal to zero.", field, "INVALID_REMINDER_AMOUNT");
+        }
+    }
+
+    private static void ValidateDayOfMonth(int? dayOfMonth, string field)
+    {
+        if (dayOfMonth.HasValue && (dayOfMonth.Value < 1 || dayOfMonth.Value > 31))
+        {
+            throw AppValidationException.BadRequest("Day of month must be between 1 and 31.", field, "INVALID_DAY_OF_MONTH");
+        }
+    }
+
+    private static void ValidateNotifyDaysBefore(int? notifyDaysBefore, string field)
+    {
+        if (notifyDaysBefore.HasValue && notifyDaysBefore.Value < 0)
+        {
+            throw AppValidationException.BadRequest("Notify days before must be greater than or equal to zero.", field, "INVALID_NOTIFY_DAYS_BEFORE");
+        }
+    }
+
+    private static void ValidateEnumValue<TEnum>(string? value, string field, string code, bool required)
+        where TEnum : struct, Enum
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            if (required)
+            {
+                throw AppValidationException.BadRequest($"{field} is required.", field, "REQUIRED");
+            }
+
+            return;
+        }
+
+        if (!Enum.TryParse<TEnum>(value.Trim(), ignoreCase: true, out _))
+        {
+            throw AppValidationException.BadRequest($"Invalid {field}.", field, code);
+        }
     }
 }
