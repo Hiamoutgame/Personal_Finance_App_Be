@@ -32,7 +32,7 @@ public class Service : IService
         var jarSetup = _dbContext.JarSetups.FirstOrDefault(x => x.UserId == userIdGuid);
         var jars = _dbContext.Jars.Where(x => x.UserId == userIdGuid);
 
-        var totalJarsBalance = _dbContext.Jars.Where(x => x.JarSetupId == jarSetup.Id).Sum(x => x.Balance);
+        var totalJarsBalance = _dbContext.Jars.Where(x => x.UserId == userIdGuid).Sum(x => x.Balance);
         var totalAccountsBalance = _dbContext.FinancialAccounts.Where(x => x.UserId == userIdGuid).Sum(x => x.CurrentBalance);
         var selectedQuery = jars.Select(x => new Response.GetJarResponse
         {
@@ -47,7 +47,7 @@ public class Service : IService
         {
             methodType = jarSetup.MethodType,
             totalJarBalance = totalJarsBalance,
-            unallocatedBalance = totalAccountsBalance - totalJarsBalance,
+            unallocatedBalance = totalAccountsBalance,
             data = selectedQuery.ToList(),
         };
         return result;

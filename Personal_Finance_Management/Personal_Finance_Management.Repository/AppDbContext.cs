@@ -22,7 +22,7 @@ public class AppDbContext : DbContext
     public DbSet<Transaction> Transactions { get; set; }
     public DbSet<SpendingLimit> SpendingLimits { get; set; }
     public DbSet<Goal> Goals { get; set; }
-    public DbSet<GoalContribution> GoalContributions { get; set; }
+
     public DbSet<Reminder> Reminders { get; set; }
     public DbSet<Broadcast> Broadcasts { get; set; }
     public DbSet<Notification> Notifications { get; set; }
@@ -680,44 +680,7 @@ public class AppDbContext : DbContext
                 .OnDelete(DeleteBehavior.Restrict);
         });
 
-        modelBuilder.Entity<GoalContribution>(builder =>
-        {
-            builder.ToTable("goal_contributions");
 
-            builder.Property(g => g.Amount)
-                .IsRequired()
-                .HasColumnType("numeric(18,2)");
-
-            builder.Property(g => g.Note).HasColumnType("text");
-
-            builder.Property(g => g.CreatedAt)
-                .HasDefaultValueSql("NOW()");
-
-            builder.HasIndex(g => new { g.GoalId, g.CreatedAt })
-                .HasDatabaseName("ix_goal_contributions_goal_created_at");
-
-            builder.HasIndex(g => new { g.UserId, g.CreatedAt })
-                .HasDatabaseName("ix_goal_contributions_user_created_at");
-
-            builder.ToTable(t => t.HasCheckConstraint(
-                "chk_goal_contributions_amount",
-                "\"amount\" > 0"));
-
-            builder.HasOne(g => g.Goal)
-                .WithMany(goal => goal.Contributions)
-                .HasForeignKey(g => g.GoalId)
-                .OnDelete(DeleteBehavior.Restrict);
-
-            builder.HasOne(g => g.User)
-                .WithMany()
-                .HasForeignKey(g => g.UserId)
-                .OnDelete(DeleteBehavior.Restrict);
-
-            builder.HasOne(g => g.SourceJar)
-                .WithMany()
-                .HasForeignKey(g => g.SourceJarId)
-                .OnDelete(DeleteBehavior.Restrict);
-        });
 
         modelBuilder.Entity<Reminder>(builder =>
         {

@@ -1,3 +1,5 @@
+using System.Text.Json;
+
 namespace Personal_Finance_Management.Service.Transaction;
 
 public class Request
@@ -37,5 +39,21 @@ public class Request
         public decimal? transactionsAmount { get; set; }
         public Guid? categoryId { get; set; }
         public string? note { get; set; }
+    }
+
+    public class CassoWebhookRequest
+    {
+        public int error { get; set; }
+        public JsonElement data { get; set; }
+    }
+
+    public class CassoSyncTransactionsRequest
+    {
+        public Guid financialAccountId { get; set; }
+        public DateOnly? fromDate { get; set; }
+        public DateOnly? toDate { get; set; }
+        public int page { get; set; } = 1;
+        public int pageSize { get; set; } = 20;
+        public string? sort { get; set; } = "ASC";
     }
 }

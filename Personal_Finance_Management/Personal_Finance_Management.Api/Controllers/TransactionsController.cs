@@ -42,4 +42,21 @@ public class TransactionsController : ControllerBase
         var result = await _service.DeleteTransaction(id);
         return Ok(result);
     }
+
+    [HttpGet("Casso")]
+    public async Task<IActionResult> SyncCassoTransactions([FromQuery] Request.CassoSyncTransactionsRequest request)
+    {
+        var result = await _service.SyncCassoTransactions(request);
+        return Ok(result);
+    }
+
+    [AllowAnonymous]
+    [HttpPost("Casso")]
+    public async Task<IActionResult> ProcessCassoWebhook([FromBody] Request.CassoWebhookRequest request)
+    {
+        var secureToken = Request.Headers["secure-token"].FirstOrDefault();
+        var cassoSignature = Request.Headers["X-Casso-Signature"].FirstOrDefault();
+        var result = await _service.ProcessCassoWebhook(request, secureToken, cassoSignature);
+        return Ok(result);
+    }
 }
