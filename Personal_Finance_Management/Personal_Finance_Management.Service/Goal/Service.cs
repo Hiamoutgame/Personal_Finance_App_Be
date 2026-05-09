@@ -58,7 +58,9 @@ public class Service : IService
                 ProgressPercentage = Math.Round(progress, 1),
                 DueDate = goal.DueDate,
                 Status = goal.Status,
-                SuggestedMonthlyContribution = suggested
+                SuggestedMonthlyContribution = suggested,
+                LinkedJarId = goal.LinkedJarId,
+                LinkedJarName = goal.LinkedJar?.Name
             });
         }
 
@@ -98,7 +100,9 @@ public class Service : IService
             DaysRemaining = daysRemaining,
             Status = goal.Status,
             SuggestedMonthlyContribution = suggested,
-            LinkedJarId = goal.LinkedJarId
+            LinkedJarId = goal.LinkedJarId,
+            LinkedJarName = goal.LinkedJar?.Name,
+            Note = goal.Note
         };
     }
 
