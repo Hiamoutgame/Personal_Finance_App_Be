@@ -82,6 +82,7 @@ public class Service : IService
             FirstName = user.FirstName,
             LastName = user.LastName,
             Email = user.Email,
+            Role = role.Code,
             IsOnboardingCompleted = user.IsOnboardingCompleted,
             AccessToken = token
         };
