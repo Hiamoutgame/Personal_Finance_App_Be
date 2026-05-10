@@ -147,6 +147,11 @@ public class Service : IService
             throw AppValidationException.NotFound("Jar not found.", "id", "JAR_NOT_FOUND");
         }
 
+        if (jar.Balance != 0)
+        {
+            throw new Exception("Jar balance must be 0");
+        }
+
         jar.Status = "Archived";
         await _dbContext.SaveChangesAsync();
         var result = new Response.DeleteJarResponse
