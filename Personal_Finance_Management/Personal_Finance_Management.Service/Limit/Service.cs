@@ -30,83 +30,83 @@ public class Service : IService
 
 
     
-        public async Task<Response.GetLimitsResponse> GetLimits()
+    public async Task<Response.GetLimitsResponse> GetLimits()
+    {
+        var userId = GetCurrentUserId();
+        
+        var limits = await _appDbContext.SpendingLimits
+            .Include(l => l.Category)
+            .Include(l => l.Jar)
+            .Where(l => l.UserId == userId && l.IsActive)
+            .ToListAsync();
+
+        var jarIds = limits
+            .Where(l => l.JarId.HasValue)
+            .Select(l => l.JarId!.Value)
+            .Distinct()
+            .ToList();
+
+        var spentByJarId = jarIds.Count == 0
+            ? new Dictionary<Guid, decimal>()
+            : await _appDbContext.Transactions
+                .Where(t => t.UserId == userId
+                            && !t.IsDeleted
+                            && t.Type == "Expense"
+                            && t.FromJarId.HasValue
+                            && jarIds.Contains(t.FromJarId.Value)
+                            && t.ToJarId == null
+                            && t.FinancialAccountId == null)
+                .GroupBy(t => t.FromJarId!.Value)
+                .Select(g => new
+                {
+                    JarId = g.Key,
+                    CurrentSpent = g.Sum(t => t.TransactionsAmount)
+                })
+                .ToDictionaryAsync(x => x.JarId, x => x.CurrentSpent);
+
+        var items = new List<Response.GetLimitItem>();
+
+        foreach (var limit in limits)
         {
-            var userId = GetCurrentUserId();
+            string targetName = "Unknow";
+            Guid targetId = Guid.Empty;
+            string targetType = "Jar";
+
+            decimal currentSpent = 0m;
             
-            var limits = await _appDbContext.SpendingLimits
-                .Include(l => l.Category)
-                .Include(l => l.Jar)
-                .Where(l => l.UserId == userId && l.IsActive)
-                .ToListAsync();
-
-            var jarIds = limits
-                .Where(l => l.JarId.HasValue)
-                .Select(l => l.JarId!.Value)
-                .Distinct()
-                .ToList();
-
-            var spentByJarId = jarIds.Count == 0
-                ? new Dictionary<Guid, decimal>()
-                : await _appDbContext.Transactions
-                    .Where(t => t.UserId == userId
-                                && !t.IsDeleted
-                                && t.Type == "Expense"
-                                && t.FromJarId.HasValue
-                                && jarIds.Contains(t.FromJarId.Value)
-                                && t.ToJarId == null
-                                && t.FinancialAccountId == null)
-                    .GroupBy(t => t.FromJarId!.Value)
-                    .Select(g => new
-                    {
-                        JarId = g.Key,
-                        CurrentSpent = g.Sum(t => t.TransactionsAmount)
-                    })
-                    .ToDictionaryAsync(x => x.JarId, x => x.CurrentSpent);
-
-            var items = new List<Response.GetLimitItem>();
-
-            foreach (var limit in limits)
+            if (limit.Jar != null && limit.JarId.HasValue)
             {
-                string targetName = "Unknow";
-                Guid targetId = Guid.Empty;
-                string targetType = "Jar";
+                targetId = limit.JarId.Value;
+                targetName = limit.Jar.Name;
+                targetType = "Jar";
 
-                decimal currentSpent = 0m;
-                
-                if (limit.Jar != null && limit.JarId.HasValue)
-                {
-                    targetId = limit.JarId.Value;
-                    targetName = limit.Jar.Name;
-                    targetType = "Jar";
-
-                    currentSpent = spentByJarId.TryGetValue(limit.JarId.Value, out var spent)
-                        ? spent
-                        : 0m;
-                }
-                if (limit.Category != null && limit.CategoryId.HasValue)
-                {
-                    targetType = "Category";
-                    targetId = limit.Category.Id;
-                    targetName = limit.Category.Name;
-                }
-                var item = new Response.GetLimitItem
-                {
-                    Id = limit.Id,
-                    TargetId = targetId,
-                    TargetName = targetName,
-                    LimitAmount = limit.LimitAmount,
-                    Period = limit.Period,
-                    AlertAtPercentage = limit.AlertAtPercentage,
-                    CurrentSpent = currentSpent,
-                    CurrentPercentage = (double)((currentSpent * 100) / limit.LimitAmount),
-                    Status = "Active",
-                    TargetType = targetType
-                };
-
-                items.Add(item);
+                currentSpent = spentByJarId.TryGetValue(limit.JarId.Value, out var spent)
+                    ? spent
+                    : 0m;
             }
-            return new Response.GetLimitsResponse { Data = items };
+            if (limit.Category != null && limit.CategoryId.HasValue)
+            {
+                targetType = "Category";
+                targetId = limit.Category.Id;
+                targetName = limit.Category.Name;
+            }
+            var item = new Response.GetLimitItem
+            {
+                Id = limit.Id,
+                TargetId = targetId,
+                TargetName = targetName,
+                LimitAmount = limit.LimitAmount,
+                Period = limit.Period,
+                AlertAtPercentage = limit.AlertAtPercentage,
+                CurrentSpent = currentSpent,
+                CurrentPercentage = (double)((currentSpent * 100) / limit.LimitAmount),
+                Status = "Active",
+                TargetType = targetType
+            };
+
+            items.Add(item);
+        }
+        return new Response.GetLimitsResponse { Data = items };
     }
 
     public async Task<Response.CreateLimitResponse> CreateLimit(Request.CreateLimitRequest request)
