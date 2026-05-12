@@ -33,7 +33,7 @@ public class Service : IService
         
         var goals = await _appDbContext.Goals
             .Include(g => g.LinkedJar)
-            .Where(g => g.UserId == userId && g.Status == "Active")
+            .Where(g => g.UserId == userId && g.Status == "Active" && g.Status == "Completed" )
             .OrderBy(g => g.Title)
             .ToListAsync();
         
