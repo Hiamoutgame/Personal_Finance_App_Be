@@ -1294,6 +1294,10 @@ namespace Personal_Finance_Management.Repository.Migrations
                         .HasColumnType("character varying(20)")
                         .HasColumnName("period");
 
+                    b.Property<DateTimeOffset>("ResetAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("reset_at");
+
                     b.Property<DateTimeOffset>("UpdatedAt")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("timestamp with time zone")

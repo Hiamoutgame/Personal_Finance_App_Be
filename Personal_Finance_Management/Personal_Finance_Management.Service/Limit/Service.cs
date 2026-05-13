@@ -48,19 +48,23 @@ public class Service : IService
 
         var spentByJarId = jarIds.Count == 0
             ? new Dictionary<Guid, decimal>()
-            : await _appDbContext.Transactions
-                .Where(t => t.UserId == userId
-                            && !t.IsDeleted
-                            && t.Type == "Expense"
-                            && t.FromJarId.HasValue
-                            && jarIds.Contains(t.FromJarId.Value)
-                            && t.ToJarId == null
-                            && t.FinancialAccountId == null)
-                .GroupBy(t => t.FromJarId!.Value)
-                .Select(g => new
+            : await _appDbContext.SpendingLimits
+                .Where(l => l.UserId == userId
+                            && l.IsActive
+                            && l.JarId.HasValue
+                            && jarIds.Contains(l.JarId.Value))
+                .Select(l => new
                 {
-                    JarId = g.Key,
-                    CurrentSpent = g.Sum(t => t.TransactionsAmount)
+                    JarId = l.JarId!.Value,
+                    CurrentSpent = _appDbContext.Transactions
+                        .Where(t => t.UserId == userId
+                                    && !t.IsDeleted
+                                    && t.Type == "Expense"
+                                    && t.FromJarId == l.JarId
+                                    && t.ToJarId == null
+                                    && t.FinancialAccountId == null
+                                    && t.CreatedAt >= l.ResetAt)
+                        .Sum(t => (decimal?)t.TransactionsAmount) ?? 0m
                 })
                 .ToDictionaryAsync(x => x.JarId, x => x.CurrentSpent);
 
@@ -113,7 +117,7 @@ public class Service : IService
     {
         var userId = GetCurrentUserId();
 
-       
+        var now = DateTimeOffset.UtcNow;
         var limit = new SpendingLimit()
         {
             LimitAmount = request.LimitAmount,
@@ -123,8 +127,9 @@ public class Service : IService
             UserId = userId,
             CategoryId = null,
             JarId = null,
-            CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow,
+            CreatedAt = now,
+            UpdatedAt = now,
+            ResetAt = now,
         };
         if (request.TargetType == "Category")
         {

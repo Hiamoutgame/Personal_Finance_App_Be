@@ -23,4 +23,5 @@ public class SpendingLimit : BaseEntity, IAudictableEntity
 
     public DateTimeOffset CreatedAt { get; set; }
     public DateTimeOffset UpdatedAt { get; set; }
+    public DateTimeOffset ResetAt { get; set; }
 }
