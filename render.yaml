@@ -17,7 +17,7 @@ services:
       - key: EnableSwagger
         value: "true"
       - key: ConnectionStrings__RenderConnection
-        value: "Host=dpg-d7qs9okm0tmc73ft86g0-a;Port=5432;Database=personalfinancemanagementdb;Username=personal_finance_user;Password=p9Ja0uRqLWzMBMaYaL3HsebJccgoq4hT"
+        sync: false
       - key: JwtOptions__SecretKey
         generateValue: true
       - key: JwtOptions__Issuer
@@ -43,7 +43,7 @@ services:
       - key: MailOptions__Port
         value: "587"
       - key: GoogleAI__ApiKey
-        value: "AIzaSyD0usprLEaMdr6SIbml6iH1PkIhjh6DQCM"
+        sync: false
       - key: GoogleAI__DefaultModel
         value: "gemini-3.1-flash-lite"
       - key: GoogleAI__IsEnabled
