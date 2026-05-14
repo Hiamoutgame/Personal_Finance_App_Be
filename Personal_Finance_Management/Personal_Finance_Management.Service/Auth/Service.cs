@@ -143,14 +143,14 @@ public class Service : IService
             {
                 if(DateTimeOffset.Now - limit.ResetAt >= TimeSpan.FromDays(1))
                 {
-                    limit.ResetAt = DateTimeOffset.Now;
+                    limit.ResetAt = DateTimeOffset.UtcNow;
                     hasLimitReset = true;
                 }
             }else if (limit.Period == "Monthly")
             {
                 if (DateTimeOffset.Now - limit.ResetAt >= TimeSpan.FromDays(30))
                 {
-                    limit.ResetAt = DateTimeOffset.Now;
+                    limit.ResetAt = DateTimeOffset.UtcNow;
                     hasLimitReset = true;
                 }
             }
