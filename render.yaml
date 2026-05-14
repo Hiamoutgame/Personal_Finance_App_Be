@@ -18,14 +18,44 @@ services:
         value: "true"
       - key: ConnectionStrings__RenderConnection
         sync: false
+      - key: ConnectionStrings__DefaultConnection
+        sync: false
       - key: JwtOptions__SecretKey
-        generateValue: true
+        sync: false
       - key: JwtOptions__Issuer
         value: PersonalFinanceManagement
       - key: JwtOptions__Audience
         value: PersonalFinanceManagement
       - key: JwtOptions__ExpireMinutes
         value: "120"
+      - key: SeedAccounts__Enabled
+        sync: false
+      - key: SeedAccounts__ResetPasswords
+        sync: false
+      - key: SeedAccounts__Accounts__0__Username
+        sync: false
+      - key: SeedAccounts__Accounts__0__Email
+        sync: false
+      - key: SeedAccounts__Accounts__0__Password
+        sync: false
+      - key: SeedAccounts__Accounts__0__FirstName
+        sync: false
+      - key: SeedAccounts__Accounts__0__LastName
+        sync: false
+      - key: SeedAccounts__Accounts__0__Role
+        sync: false
+      - key: SeedAccounts__Accounts__1__Username
+        sync: false
+      - key: SeedAccounts__Accounts__1__Email
+        sync: false
+      - key: SeedAccounts__Accounts__1__Password
+        sync: false
+      - key: SeedAccounts__Accounts__1__FirstName
+        sync: false
+      - key: SeedAccounts__Accounts__1__LastName
+        sync: false
+      - key: SeedAccounts__Accounts__1__Role
+        sync: false
       - key: CloudinaryOptions__CloudName
         sync: false
       - key: CloudinaryOptions__ApiKey
@@ -42,10 +72,16 @@ services:
         value: smtp.gmail.com
       - key: MailOptions__Port
         value: "587"
+      - key: Ocr__BaseUrl
+        sync: false
+      - key: Ocr__Layout
+        value: invoice
+      - key: Ocr__TimeoutSeconds
+        value: "120"
       - key: GoogleAI__ApiKey
         sync: false
       - key: GoogleAI__DefaultModel
-        value: "gemini-3.1-flash-lite"
+        value: gemini-2.5-flash
       - key: GoogleAI__IsEnabled
         value: "true"
       - key: GoogleAI__Temperature
@@ -55,6 +91,14 @@ services:
       - key: GoogleAI__TimeoutSeconds
         value: "30"
       - key: GoogleAI__SystemPrompt
-        value: "Bạn là trợ lý tài chính cá nhân của FinJar. Trả lời ngắn gọn, thực tế, không đưa lời khuyên đầu tư rủi ro."
-      - key: Ocr
+        value: "You are FinJar, a personal finance assistant. Answer in Vietnamese. Be concise, practical, and avoid exposing secrets or raw internal data."
+      - key: CasooOptions__BaseUrlWebhooks
+        value: https://oauth.casso.vn/v2/webhooks
+      - key: CasooOptions__BaseUrlTransactions
+        value: https://oauth.casso.vn/v2/transactions
+      - key: CasooOptions__SecureToken
+        sync: false
+      - key: CasooOptions__TimeoutSeconds
+        value: "30"
+      - key: CasooOptions__ApiKey
         sync: false
