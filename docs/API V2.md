@@ -917,7 +917,19 @@ Ghi chú:
 
 ### Import/OCR
 
-#### `POST /api/v1/imports/image`
+#### `POST /api/v1/imports`
+
+Upload anh/PDF hoa don, chay OCR neu `runOcr=true`, luu `ImportJob` va draft dau tien xuong DB, sau do tra preview nhe cho FE.
+
+`POST /api/v1/imports/image` van duoc giu nhu alias tuong thich nguoc va dung cung request/response.
+
+FE mac dinh nen render `preview`, khong render raw OCR. Raw OCR, blocks, lines va bbox chi phuc vu debug/dev.
+
+Persistence:
+
+- Tao `ImportJob` gan voi user hien tai va `financialAccountId`.
+- Tao `ImportTransactionDraft` row dau tien neu OCR trich xuat duoc `amount` hoac `merchantName`.
+- Chua tao `Transaction` that o buoc upload. Transaction that nen tao o flow confirm import sau.
 
 Request:
 
@@ -927,8 +939,184 @@ Request:
   "contentType": "multipart/form-data",
   "formData": {
     "file": "file",
+    "financialAccountId": "guid | null",
+    "bankCode": "string | null",
     "layout": "string | null",
-    "runOcr": "boolean"
+    "runOcr": "boolean",
+    "includeDebug": "boolean"
+  }
+}
+```
+
+Fields:
+
+- `file`: anh/PDF hoa don, ho tro `.jpg`, `.jpeg`, `.png`, `.bmp`, `.pdf`, toi da 10MB.
+- `financialAccountId`: account nhan import. Neu khong gui, BE lay default active financial account cua user.
+- `bankCode`: optional metadata cho statement/import theo ngan hang, OCR hoa don hien chua dung.
+- `layout`: `none | invoice | document | null`; mac dinh lay tu config OCR.
+- `runOcr`: mac dinh `true`; neu `false` thi chi upload file va tra metadata.
+- `includeDebug`: mac dinh `false`; neu `true` moi tra `rawOcrJson` va `ocrResult` day du.
+
+Response:
+
+```json
+{
+  "status": 200,
+  "body": {
+    "id": "guid",
+    "financialAccountId": "guid",
+    "status": "Pending | AwaitingReview | Failed",
+    "message": "string",
+    "fileName": "string",
+    "originalFileName": "string",
+    "storedFilePath": "string",
+    "contentType": "string | null",
+    "sizeInBytes": "long",
+    "ocrJsonFileName": "string | null",
+    "storedOcrJsonPath": "string | null",
+    "receipt": {
+      "isSuccess": "boolean",
+      "totalAmount": "decimal | null",
+      "totalRawText": "string | null",
+      "transactionDate": "datetimeOffset | null",
+      "transactionDateRawText": "string | null",
+      "merchantName": "string | null",
+      "suggestedCategoryId": "guid | null",
+      "suggestedCategoryName": "string | null",
+      "categoryMatchedBy": "string | null",
+      "warnings": ["string"]
+    },
+    "preview": {
+      "id": "string",
+      "status": "success | uploaded",
+      "imageUrl": "string",
+      "transaction": {
+        "merchantName": "string | null",
+        "amount": "decimal | null",
+        "date": "datetimeOffset | null",
+        "type": "Expense",
+        "suggestedCategoryId": "guid | null",
+        "suggestedCategoryName": "string | null",
+        "matchedBy": "string | null",
+        "note": "string | null"
+      },
+      "items": [
+        {
+          "name": "string",
+          "amount": "decimal | null"
+        }
+      ],
+      "summary": {
+        "subtotal": "decimal | null",
+        "discount": "decimal | null",
+        "total": "decimal | null"
+      },
+      "warnings": ["string"]
+    },
+    "rawOcrJson": "string | null",
+    "ocrResult": {
+      "isSuccess": "boolean",
+      "text": "string | null",
+      "layout": "string | null",
+      "engine": "string",
+      "blocks": [],
+      "lines": [],
+      "receipt": "same as body.receipt",
+      "rawJson": "string | null",
+      "statusCode": "int | null",
+      "errorMessage": "string | null"
+    }
+  }
+}
+```
+
+Response notes:
+
+- `preview` la object chinh FE nen render cho user.
+- `id` la `ImportJob.Id`, FE dung de goi `GET/PATCH/DELETE /api/v1/imports/{id}`.
+- `status` upload OCR thanh cong thuong la `AwaitingReview`; neu khong chay OCR la `Pending`; OCR loi la `Failed`.
+- `receipt` la ket qua extraction sach hon OCR raw, co the dung khi FE can tu build UI khac preview.
+- `rawOcrJson` va `ocrResult` mac dinh la `null` khi `includeDebug=false`.
+- `storedFilePath` va `storedOcrJsonPath` la path noi bo server, FE khong nen render hoac dung de tai file.
+- `preview.imageUrl` la URL FE dung de xem anh hoa don.
+
+Vi du response nhe cho FE:
+
+```json
+{
+  "status": 200,
+  "body": {
+    "id": "8a6e4df6-3a9f-4bb4-8ad4-7e7469b0d79e",
+    "financialAccountId": "8a1d4f6a-f9b5-40a2-bf50-cb04fdf1f405",
+    "status": "AwaitingReview",
+    "message": "OCR completed successfully",
+    "fileName": "20260514111736_36cf0356cfa34c958b1863899916717a.jpg",
+    "originalFileName": "receipt.jpg",
+    "contentType": "image/jpeg",
+    "sizeInBytes": 245123,
+    "receipt": {
+      "isSuccess": true,
+      "totalAmount": 25000,
+      "totalRawText": "25,000",
+      "transactionDate": "2017-07-14T00:00:00+00:00",
+      "transactionDateRawText": "14/07/2017",
+      "merchantName": "FamilyMart",
+      "suggestedCategoryId": null,
+      "suggestedCategoryName": "Mua sam",
+      "categoryMatchedBy": "merchant-alias",
+      "warnings": []
+    },
+    "preview": {
+      "id": "20260514111736_36cf0356cfa34c958b1863899916717a",
+      "status": "success",
+      "imageUrl": "/api/v1/imports/images/20260514111736_36cf0356cfa34c958b1863899916717a.jpg",
+      "transaction": {
+        "merchantName": "FamilyMart",
+        "amount": 25000,
+        "date": "2017-07-14T00:00:00+00:00",
+        "type": "Expense",
+        "suggestedCategoryId": null,
+        "suggestedCategoryName": "Mua sam",
+        "matchedBy": "merchant-alias",
+        "note": "Hoa don FamilyMart"
+      },
+      "items": [
+        {
+          "name": "T2.Bun tuoi Nguyen",
+          "amount": 4000
+        },
+        {
+          "name": "T2.Combo 2.07.17",
+          "amount": 23000
+        }
+      ],
+      "summary": {
+        "subtotal": 27000,
+        "discount": 2000,
+        "total": 25000
+      },
+      "warnings": []
+    },
+    "rawOcrJson": null,
+    "ocrResult": null
+  }
+}
+```
+
+#### `GET /api/v1/imports`
+
+Lay danh sach import jobs cua user hien tai.
+
+Request:
+
+```json
+{
+  "auth": "Bearer User",
+  "query": {
+    "page": "int, default 1",
+    "pageSize": "int, default 20, max 100",
+    "status": "Pending | Processing | AwaitingReview | Completed | Failed | null",
+    "financialAccountId": "guid | null"
   }
 }
 ```
@@ -939,31 +1127,222 @@ Response:
 {
   "status": 200,
   "body": {
-    "message": "string",
-    "fileName": "string",
-    "originalFileName": "string",
-    "storedFilePath": "string",
-    "contentType": "string | null",
-    "sizeInBytes": "long",
-    "ocrJsonFileName": "string | null",
-    "storedOcrJsonPath": "string | null",
-    "rawOcrJson": "string | null",
-    "ocrResult": {
-      "isSuccess": "boolean",
-      "text": "string | null",
-      "layout": "string | null",
-      "engine": "string",
-      "rawJson": "string | null",
-      "statusCode": "int | null",
-      "errorMessage": "string | null"
+    "data": [
+      {
+        "id": "guid",
+        "financialAccountId": "guid",
+        "fileName": "string",
+        "originalContentType": "string | null",
+        "status": "string",
+        "progress": "int",
+        "parsedCount": "int",
+        "failedCount": "int",
+        "errorMessage": "string | null",
+        "imageUrl": "string",
+        "uploadedAt": "datetimeOffset",
+        "updatedAt": "datetimeOffset"
+      }
+    ],
+    "pagination": {
+      "page": "int",
+      "pageSize": "int",
+      "totalCount": "int",
+      "totalPages": "int"
     }
   }
 }
 ```
 
+#### `GET /api/v1/imports/{id}`
+
+Lay chi tiet import job va cac draft da parse.
+
+Response:
+
+```json
+{
+  "status": 200,
+  "body": {
+    "id": "guid",
+    "financialAccountId": "guid",
+    "fileName": "string",
+    "originalContentType": "string | null",
+    "status": "string",
+    "progress": "int",
+    "parsedCount": "int",
+    "failedCount": "int",
+    "errorMessage": "string | null",
+    "imageUrl": "string",
+    "uploadedAt": "datetimeOffset",
+    "updatedAt": "datetimeOffset",
+    "drafts": [
+      {
+        "id": "guid",
+        "rowIndex": "int",
+        "transactionDate": "datetimeOffset | null",
+        "amount": "decimal | null",
+        "type": "Income | Expense | null",
+        "rawDescription": "string | null",
+        "editedNote": "string | null",
+        "isValid": "boolean",
+        "validationError": "string | null",
+        "editedCategoryId": "guid | null",
+        "editedCategoryName": "string | null",
+        "editedJarId": "guid | null",
+        "editedJarName": "string | null",
+        "createdAt": "datetimeOffset",
+        "updatedAt": "datetimeOffset"
+      }
+    ]
+  }
+}
+```
+
+#### `PATCH /api/v1/imports/{id}`
+
+Sua draft dau tien cua import job. Route nay phu hop OCR receipt vi moi hoa don hien sinh mot draft chinh.
+
+Request:
+
+```json
+{
+  "auth": "Bearer User",
+  "body": {
+    "transactionDate": "datetimeOffset | null",
+    "amount": "decimal | null",
+    "type": "Income | Expense | null",
+    "editedNote": "string | null",
+    "editedCategoryId": "guid | null",
+    "editedJarId": "guid | null",
+    "isValid": "boolean | null",
+    "validationError": "string | null"
+  }
+}
+```
+
+Response: same as one item in `drafts`.
+
+#### `PATCH /api/v1/imports/{id}/drafts/{draftId}`
+
+Sua mot draft cu the trong import job.
+
+Request/response giong `PATCH /api/v1/imports/{id}`.
+
+#### `POST /api/v1/imports/{id}/confirm`
+
+Buoc trung gian de tao `Transaction` that tu `ImportTransactionDraft`.
+
+Flow khuyen dung cho FE:
+
+1. `POST /api/v1/imports`: upload/OCR va luu `ImportJob` + `ImportTransactionDraft`.
+2. FE hien preview, cho user sua ngay/thang, amount, category va chon nguon tien.
+3. `PATCH /api/v1/imports/{id}` hoac `PATCH /api/v1/imports/{id}/drafts/{draftId}`: cap nhat draft neu user sua.
+4. `POST /api/v1/imports/{id}/confirm`: tao `Transaction` that va cap nhat balance.
+
+Business rule:
+
+- Neu body co `fromJarId`: tao expense transaction tru tu hu do, transaction co `fromJarId`, `financialAccountId = null`.
+- Neu body khong co `fromJarId`: tao transaction gan voi `financialAccountId` trong body; neu body khong gui thi dung `ImportJob.FinancialAccountId`.
+- Expense tu financial account se tru `FinancialAccount.CurrentBalance`.
+- Income se cong `FinancialAccount.CurrentBalance`.
+- Draft van duoc giu lai lam log/audit, `NormalizedPayloadJson` duoc copy sang `Transaction.RawPayloadJson`.
+- Confirm thanh cong se set `ImportJob.Status = Completed`.
+- Khong cho confirm lai neu job da `Completed` hoac da co transaction thuoc `ImportJobId`.
+
+Request:
+
+```json
+{
+  "auth": "Bearer User",
+  "body": {
+    "financialAccountId": "guid | null",
+    "fromJarId": "guid | null",
+    "draftIds": ["guid"]
+  }
+}
+```
+
+Fields:
+
+- `financialAccountId`: vi/nguon tien de ghi nhan transaction. Optional vi co fallback tu `ImportJob.FinancialAccountId`.
+- `fromJarId`: hu chi tieu neu user muon tru tien truc tiep tu hu. Khong gui dong thoi voi `financialAccountId`.
+- `draftIds`: optional; neu khong gui thi confirm tat ca draft cua import job.
+
+Response:
+
+```json
+{
+  "status": 200,
+  "body": {
+    "importJobId": "guid",
+    "status": "Completed",
+    "createdCount": "int",
+    "transactions": [
+      {
+        "id": "guid",
+        "draftId": "guid",
+        "financialAccountId": "guid | null",
+        "fromJarId": "guid | null",
+        "categoryId": "guid | null",
+        "type": "Income | Expense",
+        "transactionsAmount": "decimal",
+        "transactionDate": "datetimeOffset"
+      }
+    ],
+    "message": "Import confirmed"
+  }
+}
+```
+
+#### `DELETE /api/v1/imports/{id}`
+
+Xoa import job cua user hien tai, xoa cac draft lien quan va xoa best-effort file upload/OCR json tren server.
+
+Response:
+
+```json
+{
+  "status": 200,
+  "body": {
+    "message": "Import deleted"
+  }
+}
+```
+
+#### `GET /api/v1/imports/images/{fileName}`
+
+Lay file anh hoa don da upload de FE preview.
+
+Request:
+
+```json
+{
+  "auth": "Bearer User",
+  "params": {
+    "fileName": "string"
+  }
+}
+```
+
+Response:
+
+```json
+{
+  "status": 200,
+  "body": "binary image/pdf file"
+}
+```
+
+Notes:
+
+- FE lay URL nay tu `preview.imageUrl`.
+- Endpoint tra `PhysicalFile` voi content type theo extension.
+- Endpoint check filename chong path traversal va check `ImportJob.FileName` thuoc user hien tai truoc khi tra file.
+
 TODO:
 
-- `[TODO]` Controller hiện chỉ có `POST /api/v1/imports/image`, chưa có full flow `POST /api/v1/imports`, `GET /api/v1/imports/{id}`, `GET /api/v1/imports/{id}/preview`, `POST /api/v1/imports/{id}/confirm`. Cần bổ sung: ____
+- `[TODO]` Full parser statement bank/csv/xlsx chua hoan tat.
+- `[TODO]` `rawOcrJson`, `ocrResult.blocks`, `ocrResult.lines` chi nen bat khi debug; FE production render `preview`.
 
 ## 4. Dashboard, AI
 
@@ -2238,8 +2617,7 @@ Các mục dưới đây là chỗ đang thiếu hoặc cần sửa code để k
    - Login đã chốt `email + password`.
    - Không thêm admin auth login riêng.
 2. Import:
-   - Controller chỉ có OCR image upload.
-   - Full statement import/status/preview/confirm chưa có.
-   - Scope cần fill: ____
+   - Da co upload OCR/image, list/detail, patch draft, confirm draft thanh transaction va delete import job.
+   - Full statement multi-row import tu file bank/csv/xlsx chua hoan tat.
 3. Secrets/config:
    - `appsettings*.json` trong repo đang có secret thật-looking. Không đưa vào API docs. Nên rotate và chuyển sang env/secret manager.

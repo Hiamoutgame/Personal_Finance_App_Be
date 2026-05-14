@@ -56,3 +56,5 @@ services:
         value: "30"
       - key: GoogleAI__SystemPrompt
         value: "Bạn là trợ lý tài chính cá nhân của FinJar. Trả lời ngắn gọn, thực tế, không đưa lời khuyên đầu tư rủi ro."
+      - key: Ocr
+        sync: false
