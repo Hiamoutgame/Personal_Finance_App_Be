@@ -33,7 +33,7 @@ public class Service : IService
         
         var goals = await _appDbContext.Goals
             .Include(g => g.LinkedJar)
-            .Where(g => g.UserId == userId && g.Status == "Active")
+            .Where(g => g.UserId == userId && g.Status == "Active" && g.Status == "Completed" )
             .OrderBy(g => g.Title)
             .ToListAsync();
         
@@ -110,11 +110,13 @@ public class Service : IService
     {
         var userId = GetCurrentUserId();
         
+        var linkedJar = _appDbContext.Jars.FirstOrDefault(x => x.Id == request.LinkedJarId);
+
         var goal = new Goal
         {
             Title = request.Title,
             TargetAmount = request.TargetAmount,
-            SavedAmount = 0,            
+            SavedAmount = linkedJar?.Balance ?? 0,            
             DueDate = request.DueDate,
             Status = "Active",          
             Note = request.Note,
@@ -124,7 +126,26 @@ public class Service : IService
 
         _appDbContext.Goals.Add(goal);
         await _appDbContext.SaveChangesAsync();
+        if (linkedJar.Balance >= request.TargetAmount)
+        {
+            goal.Status = "Completed";
+            goal.UpdatedAt = DateTimeOffset.UtcNow;
 
+            // Tạo thông báo cho người dùng
+            var notification = new Notification
+            {
+                UserId = goal.UserId,
+                Type = "GoalUpdate",
+                Title = "Chúc mừng! Bạn đã hoàn thành mục tiêu",
+                Body = $"Mục tiêu '{goal.Title}' đã đạt được mức {goal.TargetAmount:N0}đ trong hũ {linkedJar.Name}.",
+                IsRead = false,
+                CreatedAt = DateTimeOffset.UtcNow,
+                MetadataJson = $"{{\"goalId\": \"{goal.Id}\", \"jarId\": \"{linkedJar.Id}\"}}"
+            };
+
+            _appDbContext.Notifications.Add(notification);
+            await _appDbContext.SaveChangesAsync();
+        }
         // Get saved amount from jar if linked
         decimal savedAmount = 0;
         if (goal.LinkedJarId.HasValue)

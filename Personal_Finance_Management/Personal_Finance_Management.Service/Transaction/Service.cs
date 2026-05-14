@@ -555,7 +555,6 @@ public class Service : IService
 
                 };
                 if (await HasLimitNotification(item.UserId, item.Id, jar.Id, notification.Body)) return;
-                item.IsActive = false;
                 item.UpdatedAt = DateTimeOffset.UtcNow;
                 _dbContext.Notifications.Add(notification);
             }

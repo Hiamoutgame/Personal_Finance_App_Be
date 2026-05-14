@@ -89,6 +89,7 @@ builder.Services.AddHttpClient<OcrService.IService, OcrService.Service>(client =
     var timeoutSeconds = builder.Configuration.GetValue<int?>("Ocr:TimeoutSeconds") ?? 120;
     client.Timeout = TimeSpan.FromSeconds(timeoutSeconds);
 });
+builder.Services.AddScoped<OcrService.IReceiptParserService, OcrService.ReceiptParserService>();
 builder.Services.AddScoped<ImportService.IServices, ImportService.Service>();
 
 var app = builder.Build();

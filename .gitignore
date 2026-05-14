@@ -63,5 +63,10 @@ nunit-*.xml
 
 note/
 Ocr_Service/.venv
-__pycache__
-log
+__pycache__/
+log/
+
+
+Personal_Finance_Management/Personal_Finance_Management.Api/appsettings.Development.json
+Personal_Finance_Management/Personal_Finance_Management.Api/appsettings.json
+Personal_Finance_Management/Personal_Finance_Management.Service/import/Upload

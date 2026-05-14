@@ -134,7 +134,31 @@ public class Service : IService
             new Claim("isOnboardingCompleted", user.IsOnboardingCompleted ? "true" : "false"),
             new Claim(ClaimTypes.Role, user.Role.Code)
         });
-
+        
+        var hasLimitReset = false;
+        var activeLimit = _dbContext.SpendingLimits.Where(l => l.UserId == user.Id && l.IsActive == true);
+        foreach (var limit in activeLimit)
+        {
+            if (limit.Period == "Daily")
+            {
+                if(DateTimeOffset.Now - limit.ResetAt >= TimeSpan.FromDays(1))
+                {
+                    limit.ResetAt = DateTimeOffset.Now;
+                    hasLimitReset = true;
+                }
+            }else if (limit.Period == "Monthly")
+            {
+                if (DateTimeOffset.Now - limit.ResetAt >= TimeSpan.FromDays(30))
+                {
+                    limit.ResetAt = DateTimeOffset.Now;
+                    hasLimitReset = true;
+                }
+            }
+        }
+        if (hasLimitReset)
+        {
+            await _dbContext.SaveChangesAsync();
+        }
         return await Task.FromResult(new Response.LoginResponse
         {
             Id = user.Id,
