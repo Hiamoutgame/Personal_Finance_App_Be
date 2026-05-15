@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Personal_Finance_Management.Repository;
+using Personal_Finance_Management.Service.Base;
 using Personal_Finance_Management.Service.Validations;
 
 namespace Personal_Finance_Management.Service.FinancialAccount;
@@ -18,11 +19,7 @@ public class Service : IService
     
     public async Task<Response.GetFinancialAccountResult> GetUserFinancialAccount()
     {
-        var userId = _httpContext.HttpContext.User.Claims.FirstOrDefault(x => x.Type == "id")?.Value;
-        if (string.IsNullOrEmpty(userId))
-            throw new UnauthorizedAccessException("UserId not found in token");
-
-        var userIdGuid = Guid.Parse(userId);
+        var userIdGuid = GetCurrentUserId();
 
         var user = await _dbContext.Accounts
             .FirstOrDefaultAsync(x => x.Id == userIdGuid);
@@ -54,11 +51,7 @@ public class Service : IService
 
     public async Task<Response.CreateManualFinancialAccountResponse> CreateManualFinancialAccount(Request.CreateManualFinancialAccountRequest request)
     {
-        var userId = _httpContext.HttpContext.User.Claims.FirstOrDefault(x => x.Type == "id")?.Value;
-        if (string.IsNullOrEmpty(userId))
-            throw new UnauthorizedAccessException("UserId not found in token");
-
-        var userIdGuid = Guid.Parse(userId);
+        var userIdGuid = GetCurrentUserId();
 
         var user = await _dbContext.Accounts
             .FirstOrDefaultAsync(x => x.Id == userIdGuid);
@@ -133,11 +126,7 @@ public class Service : IService
 
     public async Task<Response.CreateLinkApiFinancialAccountResponse> CreateLinkApiFinancialAccount(Request.CreateLinkApiFinancialAccountRequest request)
     {
-        var userId = _httpContext.HttpContext.User.Claims.FirstOrDefault(x => x.Type == "id")?.Value;
-        if (string.IsNullOrEmpty(userId))
-            throw new UnauthorizedAccessException("UserId not found in token");
-
-        var userIdGuid = Guid.Parse(userId);
+        var userIdGuid = GetCurrentUserId();
 
         var user = await _dbContext.Accounts
             .FirstOrDefaultAsync(x => x.Id == userIdGuid);
@@ -192,9 +181,7 @@ public class Service : IService
             throw AppValidationException.Conflict("Linked bank account already exists", "accountNumber", "LINKED_ACCOUNT_ALREADY_EXISTS");
         }
 
-        var maskedAccountNumber = accountNumber.Length <= 4
-            ? accountNumber
-            : new string('*', accountNumber.Length - 4) + accountNumber.Substring(accountNumber.Length - 4);
+        var maskedAccountNumber = ServiceTextHelper.MaskTrailing(accountNumber);
 
         var financialAccount = new Repository.Entity.FinancialAccount()
         {
@@ -239,11 +226,7 @@ public class Service : IService
 
     public async Task<Response.UpdateFinancialAccountResponse> UpdateFinancialAccount(Guid id, Request.UpdateFinancialAccountRequest request)
     {
-        var userId = _httpContext.HttpContext.User.Claims.FirstOrDefault(x => x.Type == "id")?.Value;
-        if (string.IsNullOrEmpty(userId))
-            throw new UnauthorizedAccessException("UserId not found in token");
-
-        var userIdGuid = Guid.Parse(userId);
+        var userIdGuid = GetCurrentUserId();
 
         var user = await _dbContext.Accounts
             .FirstOrDefaultAsync(x => x.Id == userIdGuid);
@@ -286,11 +269,7 @@ public class Service : IService
 
     public async Task<Response.DeleteFinancialAccountResponse> DeleteFinancialAccount(Guid id)
     {
-        var userId = _httpContext.HttpContext.User.Claims.FirstOrDefault(x => x.Type == "id")?.Value;
-        if (string.IsNullOrEmpty(userId))
-            throw new UnauthorizedAccessException("UserId not found in token");
-
-        var userIdGuid = Guid.Parse(userId);
+        var userIdGuid = GetCurrentUserId();
 
         var user = await _dbContext.Accounts
             .FirstOrDefaultAsync(x => x.Id == userIdGuid);
@@ -310,5 +289,10 @@ public class Service : IService
             message = "Financial account deactivated"
         };
         return result;
+    }
+
+    private Guid GetCurrentUserId()
+    {
+        return ServiceClaimHelper.GetRequiredUserId(_httpContext);
     }
 }

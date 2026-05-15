@@ -2,6 +2,7 @@ using System.ComponentModel.DataAnnotations;
 using Microsoft.EntityFrameworkCore;
 using Personal_Finance_Management.Repository;
 using Personal_Finance_Management.Repository.Enum;
+using Personal_Finance_Management.Service.Base;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Formats.Bmp;
 using SixLabors.ImageSharp.Formats.Jpeg;
@@ -278,10 +279,7 @@ public class ValidationServices : IServices
 
     private static void ValidateRequiredText(string value, string field, string message)
     {
-        if (string.IsNullOrWhiteSpace(value))
-        {
-            throw AppValidationException.BadRequest(message, field, "REQUIRED");
-        }
+        ServiceTextHelper.ValidateRequiredText(value, field, message);
     }
 
     private static void ValidateReminderAmount(decimal amount, string field)

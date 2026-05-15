@@ -6,6 +6,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Personal_Finance_Management.Repository;
 using Personal_Finance_Management.Repository.Entity;
+using Personal_Finance_Management.Service.Base;
 using Personal_Finance_Management.Service.Validations;
 using JsonSerializer = System.Text.Json.JsonSerializer;
 
@@ -39,7 +40,7 @@ public class Service : IService
             throw AppValidationException.BadRequest("Request body is required.", "body", "REQUIRED");
         }
 
-        var message = NormalizeRequiredText(request.Message, "message", "Message is required.");
+        var message = ServiceTextHelper.NormalizeRequiredText(request.Message, "message", "Message is required.");
         ValidateRecentMessages(request.RecentMessages);
 
         var userId = GetCurrentUserId();
@@ -114,7 +115,7 @@ public class Service : IService
                 Temperature = _configuration.GetValue("GoogleAI:Temperature", 0.7m),
                 MaxTokens = _configuration.GetValue("GoogleAI:MaxTokens", 1000),
                 IsEnabled = _configuration.GetValue("GoogleAI:IsEnabled", true),
-                ApiKeyMasked = MaskApiKey(apiKey)
+                ApiKeyMasked = ServiceTextHelper.MaskOptionalSecret(apiKey)
             };
         }
 
@@ -125,7 +126,7 @@ public class Service : IService
             Temperature = setting.Temperature,
             MaxTokens = setting.MaxTokens,
             IsEnabled = setting.IsEnabled,
-            ApiKeyMasked = MaskApiKey(apiKey)
+            ApiKeyMasked = ServiceTextHelper.MaskOptionalSecret(apiKey)
         };
     }
 
@@ -159,7 +160,7 @@ public class Service : IService
 
         if (request.ModelName is not null)
         {
-            setting.ModelName = NormalizeRequiredText(
+            setting.ModelName = ServiceTextHelper.NormalizeRequiredText(
                 request.ModelName,
                 "modelName",
                 "Model name is required.");
@@ -167,7 +168,7 @@ public class Service : IService
 
         if (request.SystemPrompt is not null)
         {
-            setting.SystemPrompt = NormalizeRequiredText(
+            setting.SystemPrompt = ServiceTextHelper.NormalizeRequiredText(
                 request.SystemPrompt,
                 "systemPrompt",
                 "System prompt is required.");
@@ -331,7 +332,7 @@ public class Service : IService
             .Select(item => new
             {
                 Sender = item.Sender.Trim(),
-                Content = Truncate(item.Content.Trim(), 500)
+                Content = ServiceTextHelper.Truncate(item.Content.Trim(), 500)
             })
             .ToList();
 
@@ -407,7 +408,7 @@ public class Service : IService
                 "Google AI request failed. StatusCode={StatusCode}, ReasonPhrase={ReasonPhrase}, Body={Body}",
                 (int)response.StatusCode,
                 response.ReasonPhrase,
-                Truncate(responseBody, 1000));
+                ServiceTextHelper.Truncate(responseBody, 1000));
 
             return null;
         }
@@ -440,28 +441,12 @@ public class Service : IService
 
     private Guid GetCurrentAdminId()
     {
-        var adminIdValue = _httpContextAccessor.HttpContext?.User.Claims
-            .FirstOrDefault(x => x.Type == "id")?.Value;
-
-        if (!Guid.TryParse(adminIdValue, out var adminId))
-        {
-            throw new UnauthorizedAccessException("Admin ID claim is missing");
-        }
-
-        return adminId;
+        return ServiceClaimHelper.GetRequiredAdminId(_httpContextAccessor);
     }
 
     private Guid GetCurrentUserId()
     {
-        var userIdValue = _httpContextAccessor.HttpContext?.User.Claims
-            .FirstOrDefault(x => x.Type == "id")?.Value;
-
-        if (!Guid.TryParse(userIdValue, out var userId))
-        {
-            throw new UnauthorizedAccessException("User ID claim is missing");
-        }
-
-        return userId;
+        return ServiceClaimHelper.GetRequiredAccountId(_httpContextAccessor, "User ID claim is missing");
     }
 
     private static void ValidateRecentMessages(List<Request.RecentMessage>? recentMessages)
@@ -473,7 +458,7 @@ public class Service : IService
 
         foreach (var recentMessage in recentMessages)
         {
-            var sender = NormalizeRequiredText(
+            var sender = ServiceTextHelper.NormalizeRequiredText(
                 recentMessage.Sender,
                 "sender",
                 "Recent message sender is required.");
@@ -486,46 +471,11 @@ public class Service : IService
                     "AI_CHAT_INVALID");
             }
 
-            NormalizeRequiredText(
+            ServiceTextHelper.NormalizeRequiredText(
                 recentMessage.Content,
                 "content",
                 "Recent message content is required.");
         }
     }
-
-    private static string NormalizeRequiredText(string value, string field, string message)
-    {
-        var normalizedValue = value.Trim();
-        if (string.IsNullOrWhiteSpace(normalizedValue))
-        {
-            throw AppValidationException.BadRequest(message, field, "REQUIRED");
-        }
-
-        return normalizedValue;
-    }
-
-    private static string Truncate(string value, int maxLength)
-    {
-        return value.Length <= maxLength
-            ? value
-            : value[..maxLength];
-    }
-
-    private static string? MaskApiKey(string? apiKey)
-    {
-        if (string.IsNullOrWhiteSpace(apiKey))
-        {
-            return null;
-        }
-
-        var trimmedKey = apiKey.Trim();
-        if (trimmedKey.Length <= 8)
-        {
-            return "****";
-        }
-
-        return $"{trimmedKey[..4]}...{trimmedKey[^4..]}";
-    }
-
 
 }

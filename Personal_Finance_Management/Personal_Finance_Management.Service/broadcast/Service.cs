@@ -6,6 +6,7 @@ using CloudinaryDotNet.Actions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Personal_Finance_Management.Repository;
+using Personal_Finance_Management.Service.Base;
 using Personal_Finance_Management.Service.baseServices;
 
 namespace Personal_Finance_Management.Service.broadcast
@@ -32,10 +33,7 @@ namespace Personal_Finance_Management.Service.broadcast
                 throw new Exception("Body is required");
 
 
-            var adminIdValue = _httpContextAccessor.HttpContext.User.Claims
-                .FirstOrDefault(x => x.Type == "id")?.Value;
-
-            var adminId = Guid.Parse(adminIdValue ?? throw new Exception("Admin ID claim is missing"));
+            var adminId = ServiceClaimHelper.GetRequiredAdminId(_httpContextAccessor);
 
             var targetUsers = await _dbContext.Accounts.Where(x => x.Role.Code == "User" && x.Status == "Active")
                 .Select(x => x.Id)
@@ -194,15 +192,7 @@ namespace Personal_Finance_Management.Service.broadcast
         }
         public async Task<Guid> GetAdminIdFromToken()
         {
-            var adminIdValue = await Task.FromResult(_httpContextAccessor.HttpContext.User.Claims
-                .FirstOrDefault(x => x.Type == "id")?.Value);
-
-            if (adminIdValue == null)
-            {
-                throw new Exception("Admin ID claim is missing");
-            }
-
-            return Guid.Parse(adminIdValue);
+            return await Task.FromResult(ServiceClaimHelper.GetRequiredAdminId(_httpContextAccessor));
         }
     }
 }

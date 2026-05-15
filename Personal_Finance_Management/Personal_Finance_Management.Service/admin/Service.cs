@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Personal_Finance_Management.Repository;
 using Personal_Finance_Management.Repository.Entity;
 using Personal_Finance_Management.Repository.Enum;
+using Personal_Finance_Management.Service.Base;
 using Personal_Finance_Management.Service.baseServices;
 using Personal_Finance_Management.Service.Validations;
 
@@ -216,9 +217,7 @@ public class Service : IService
 
     public async Task<string> UpdateRole(Guid userId, AccountRole role)
     {
-        var adminId = _httpContextAccessor.HttpContext.User.Claims.FirstOrDefault(x => x.Type == "id")?.Value;
-        if (string.IsNullOrEmpty(adminId))
-            throw new UnauthorizedAccessException("AdminId not found in token");
+        ServiceClaimHelper.GetRequiredAccountId(_httpContextAccessor, "AdminId not found in token");
         var user = await _dbContext.Accounts.FirstOrDefaultAsync(x => x.Id == userId);
         if (user == null)
         {

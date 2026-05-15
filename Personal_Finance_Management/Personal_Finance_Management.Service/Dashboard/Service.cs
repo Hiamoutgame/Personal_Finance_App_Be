@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Personal_Finance_Management.Repository;
+using Personal_Finance_Management.Service.Base;
 
 namespace Personal_Finance_Management.Service.Dashboard;
 
@@ -17,11 +18,7 @@ public class Service : IService
     
     public async Task<Response.GetDashboardResult> GetDashboard()
     {
-        var userId = _httpContext.HttpContext.User.Claims.FirstOrDefault(x => x.Type == "id")?.Value;
-        if (string.IsNullOrEmpty(userId))
-            throw new UnauthorizedAccessException("UserId not found in token");
-
-        var userIdGuid = Guid.Parse(userId);
+        var userIdGuid = ServiceClaimHelper.GetRequiredUserId(_httpContext);
 
         var user = await _dbContext.Accounts
             .FirstOrDefaultAsync(x => x.Id == userIdGuid);

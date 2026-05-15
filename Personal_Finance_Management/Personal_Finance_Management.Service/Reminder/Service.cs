@@ -2,6 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 using Personal_Finance_Management.Repository;
 using Personal_Finance_Management.Repository.Enum;
+using Personal_Finance_Management.Service.Base;
 using Personal_Finance_Management.Service.Validations;
 
 namespace Personal_Finance_Management.Service.Reminder;
@@ -23,15 +24,7 @@ public class Service : IService
     }
     private Guid GetCurrentUserId()
     {
-        var userId = _httpContextAccessor.HttpContext?.User.Claims
-            .FirstOrDefault(x => x.Type == "id")?.Value;
-
-        if (!Guid.TryParse(userId, out var userIdGuid))
-        {
-            throw new UnauthorizedAccessException("UserId not found in token");
-        }
-
-        return userIdGuid;
+        return ServiceClaimHelper.GetRequiredUserId(_httpContextAccessor);
     }
     public async Task<Response.GetRemindersResponse> GetReminders()
     {
@@ -84,7 +77,7 @@ public class Service : IService
         UserId = userIdGuid,              
         Title = request.Title,            
         Amount = request.Amount,          
-        Frequency = NormalizeEnum<ReminderFrequency>(request.Frequency),    
+        Frequency = ServiceTextHelper.NormalizeEnum<ReminderFrequency>(request.Frequency),    
         DayOfMonth = request.DayOfMonth, 
         StartDate = request.StartDate.DateTime, 
         CategoryId = request.CategoryId,
@@ -135,11 +128,11 @@ public class Service : IService
     
     if (request.Amount.HasValue) reminder.Amount = request.Amount.Value;
     
-    if (request.Frequency != null) reminder.Frequency = NormalizeEnum<ReminderFrequency>(request.Frequency);
+    if (request.Frequency != null) reminder.Frequency = ServiceTextHelper.NormalizeEnum<ReminderFrequency>(request.Frequency);
     
     if (request.DayOfMonth.HasValue) reminder.DayOfMonth = (short?)request.DayOfMonth.Value; 
     
-    if (request.Status != null) reminder.Status = NormalizeEnum<ReminderStatus>(request.Status);
+    if (request.Status != null) reminder.Status = ServiceTextHelper.NormalizeEnum<ReminderStatus>(request.Status);
     
     if (request.NotifyDaysBefore.HasValue) reminder.NotifyDaysBefore = (short)request.NotifyDaysBefore.Value; 
     
@@ -258,11 +251,5 @@ public class Service : IService
     {
         var safeDay = Math.Min(dayOfMonth, (short)DateTime.DaysInMonth(year, month));
         return new DateTime(year, month, safeDay);
-    }
-
-    private static string NormalizeEnum<TEnum>(string value)
-        where TEnum : struct, Enum
-    {
-        return Enum.Parse<TEnum>(value.Trim(), ignoreCase: true).ToString();
     }
 }
