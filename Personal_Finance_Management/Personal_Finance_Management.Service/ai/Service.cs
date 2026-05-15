@@ -32,7 +32,6 @@ public class Service : IService
     }
 
 
-
     public async Task<Response.AnswerResponse> ChatBot(Request.ChatBoxRequest request)
     {
         if (request is null)
@@ -48,9 +47,11 @@ public class Service : IService
             .AsNoTracking()
             .OrderByDescending(ai => ai.UpdatedAt)
             .FirstOrDefaultAsync();
+        var apiKey = (_configuration["GoogleAI:ApiKey"])?.Trim();
         var effectiveSetting = setting ?? new AiSetting
         {
             Id = Guid.Empty,
+            ApiKeyEncrypted = apiKey,
             ModelName = _configuration["GoogleAI:DefaultModel"]!,
             SystemPrompt = _configuration["GoogleAI:SystemPrompt"] ?? "",
             Temperature = _configuration.GetValue("GoogleAI:Temperature", 0.7m),
@@ -59,7 +60,8 @@ public class Service : IService
             UpdatedAt = DateTimeOffset.UtcNow
         };
 
-        var apiKey = (_configuration["GoogleAI:ApiKey"])?.Trim();
+
+        Console.WriteLine(apiKey);
         if (!effectiveSetting.IsEnabled || string.IsNullOrWhiteSpace(apiKey))
         {
             return BuildRuleBasedFallback();
@@ -68,11 +70,8 @@ public class Service : IService
         try
         {
             var prompt = await BuildChatPrompt(userId, message, request.RecentMessages, effectiveSetting);
-            var answer = await CallGoogleAi(
-                effectiveSetting,
-                apiKey,
-                prompt,
-                _configuration.GetValue("GoogleAI:TimeoutSeconds", 30));
+            var timeoutSeconds = _configuration.GetValue("GoogleAI:TimeoutSeconds", 300);
+            var answer = await CallGoogleAi(effectiveSetting, apiKey, prompt, timeoutSeconds);
 
             if (string.IsNullOrWhiteSpace(answer))
             {
@@ -242,6 +241,7 @@ public class Service : IService
             Source = "RuleBased"
         };
     }
+
     private async Task<string> BuildChatPrompt(
         Guid userId,
         string message,
@@ -477,5 +477,4 @@ public class Service : IService
                 "Recent message content is required.");
         }
     }
-
 }
