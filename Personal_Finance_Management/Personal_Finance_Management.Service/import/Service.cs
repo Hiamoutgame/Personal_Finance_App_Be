@@ -3,6 +3,7 @@ using Personal_Finance_Management.Repository.Entity;
 using System.Text.Json;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
+using Personal_Finance_Management.Service.Base;
 using Personal_Finance_Management.Service.Validations;
 using ValidationServices = Personal_Finance_Management.Service.Validations;
 using OcrService = Personal_Finance_Management.Service.ocr;
@@ -82,7 +83,7 @@ namespace Personal_Finance_Management.Service.import
                 FileName = fileName,
                 OriginalContentType = request.File.ContentType,
                 StoredFilePath = savePath,
-                BankCode = NormalizeOptionalText(request.BankCode),
+                BankCode = ServiceTextHelper.NormalizeOptionalText(request.BankCode),
                 Status = request.RunOcr
                     ? ocrResult is { IsSuccess: true } ? "AwaitingReview" : "Failed"
                     : "Pending",
@@ -574,7 +575,7 @@ namespace Personal_Finance_Management.Service.import
 
             if (request.EditedNote is not null)
             {
-                draft.EditedNote = NormalizeOptionalText(request.EditedNote);
+                draft.EditedNote = ServiceTextHelper.NormalizeOptionalText(request.EditedNote);
             }
 
             if (request.EditedCategoryId.HasValue)
@@ -594,7 +595,7 @@ namespace Personal_Finance_Management.Service.import
 
             if (request.ValidationError is not null)
             {
-                draft.ValidationError = NormalizeOptionalText(request.ValidationError);
+                draft.ValidationError = ServiceTextHelper.NormalizeOptionalText(request.ValidationError);
             }
 
             draft.UpdatedAt = DateTimeOffset.UtcNow;
@@ -711,13 +712,7 @@ namespace Personal_Finance_Management.Service.import
 
         private Guid GetCurrentUserId()
         {
-            var userId = _httpContext.HttpContext?.User.Claims.FirstOrDefault(x => x.Type == "id")?.Value;
-            if (string.IsNullOrWhiteSpace(userId))
-            {
-                throw new UnauthorizedAccessException("UserId not found in token");
-            }
-
-            return Guid.Parse(userId);
+            return ServiceClaimHelper.GetRequiredUserId(_httpContext);
         }
 
         private async Task<Repository.Entity.FinancialAccount> GetImportFinancialAccount(Guid userId, Guid? financialAccountId)
@@ -939,12 +934,6 @@ namespace Personal_Finance_Management.Service.import
             return normalized.Contains("giam")
                    || normalized.Contains("discount")
                    || normalized.Contains("chiet khau");
-        }
-
-        private static string? NormalizeOptionalText(string? value)
-        {
-            var normalized = value?.Trim();
-            return string.IsNullOrWhiteSpace(normalized) ? null : normalized;
         }
 
         private static void DeleteFileIfExists(string? filePath)

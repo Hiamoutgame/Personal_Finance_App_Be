@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Personal_Finance_Management.Repository;
 using Personal_Finance_Management.Repository.Entity;
+using Personal_Finance_Management.Service.Base;
 using Personal_Finance_Management.Service.Validations;
 
 namespace Personal_Finance_Management.Service.category
@@ -72,8 +73,8 @@ namespace Personal_Finance_Management.Service.category
             {
                 Id = Guid.NewGuid(),
                 Name = NormalizeRequiredName(request.Name),
-                Icon = NormalizeOptionalText(request.Icon),
-                Color = NormalizeOptionalText(request.Color),
+                Icon = ServiceTextHelper.NormalizeOptionalText(request.Icon),
+                Color = ServiceTextHelper.NormalizeOptionalText(request.Color),
                 IsDefault = false,
                 OwnerUserId = userIdGuid,
                 IsActive = true,
@@ -106,12 +107,12 @@ namespace Personal_Finance_Management.Service.category
 
             if (request.Icon is not null)
             {
-                category.Icon = NormalizeOptionalText(request.Icon);
+                category.Icon = ServiceTextHelper.NormalizeOptionalText(request.Icon);
             }
 
             if (request.Color is not null)
             {
-                category.Color = NormalizeOptionalText(request.Color);
+                category.Color = ServiceTextHelper.NormalizeOptionalText(request.Color);
             }
 
             category.UpdatedAt = DateTimeOffset.UtcNow;
@@ -184,8 +185,8 @@ namespace Personal_Finance_Management.Service.category
             {
                 Id = Guid.NewGuid(),
                 Name = name,
-                Icon = NormalizeOptionalText(request.Icon),
-                Color = NormalizeOptionalText(request.Color),
+                Icon = ServiceTextHelper.NormalizeOptionalText(request.Icon),
+                Color = ServiceTextHelper.NormalizeOptionalText(request.Color),
                 DisplayOrder = request.Order,
                 IsDefault = true,
                 OwnerUserId = null,
@@ -218,12 +219,12 @@ namespace Personal_Finance_Management.Service.category
 
             if (request.Icon is not null)
             {
-                category.Icon = NormalizeOptionalText(request.Icon);
+                category.Icon = ServiceTextHelper.NormalizeOptionalText(request.Icon);
             }
 
             if (request.Color is not null)
             {
-                category.Color = NormalizeOptionalText(request.Color);
+                category.Color = ServiceTextHelper.NormalizeOptionalText(request.Color);
             }
 
             if (request.Order.HasValue)
@@ -296,32 +297,15 @@ namespace Personal_Finance_Management.Service.category
         //hien: em hien code cai này de có the lay ra userId tu token, sau này có the refactor lai de dung chung cho cac service khac
         private Guid GetCurrentUserId()
         {
-            var userId = _httpContextAccessor.HttpContext?.User.Claims
-                .FirstOrDefault(x => x.Type == "id")?.Value;
-
-            if (!Guid.TryParse(userId, out var userIdGuid))
-            {
-                throw new UnauthorizedAccessException("UserId not found in token");
-            }
-
-            return userIdGuid;
+            return ServiceClaimHelper.GetRequiredUserId(_httpContextAccessor);
         }
 
         private static string NormalizeRequiredName(string? name)
         {
-            var normalizedName = name?.Trim();
-            if (string.IsNullOrWhiteSpace(normalizedName))
-            {
-                throw AppValidationException.BadRequest("Category name is required.", "name", "REQUIRED");
-            }
-
-            return normalizedName;
-        }
-
-        private static string? NormalizeOptionalText(string? value)
-        {
-            var normalizedValue = value?.Trim();
-            return string.IsNullOrWhiteSpace(normalizedValue) ? null : normalizedValue;
+            return ServiceTextHelper.NormalizeRequiredText(
+                name,
+                "name",
+                "Category name is required.");
         }
 
         private static Response.CategoryResponse MapCategory(Category category)

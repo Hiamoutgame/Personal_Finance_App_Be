@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Personal_Finance_Management.Repository;
+using Personal_Finance_Management.Service.Base;
 using Personal_Finance_Management.Service.Validations;
 
 namespace Personal_Finance_Management.Service.Jar;
@@ -19,11 +20,7 @@ public class Service : IService
     
     public async Task<Response.GetJarsResult> GetJar()
     {
-        var userId = _httpContext.HttpContext.User.Claims.FirstOrDefault(x => x.Type == "id")?.Value;
-        if (string.IsNullOrEmpty(userId))
-            throw new UnauthorizedAccessException("UserId not found in token");
-
-        var userIdGuid = Guid.Parse(userId);
+        var userIdGuid = GetCurrentUserId();
 
         var user = await _dbContext.Accounts
             .FirstOrDefaultAsync(x => x.Id == userIdGuid );
@@ -56,11 +53,7 @@ public class Service : IService
 
     public async Task<Response.CreateJarResponse> CreateJar(Request.CreateJarRequest request)
     {
-        var userId = _httpContext.HttpContext.User.Claims.FirstOrDefault(x => x.Type == "id")?.Value;
-        if (string.IsNullOrEmpty(userId))
-            throw new UnauthorizedAccessException("UserId not found in token");
-
-        var userIdGuid = Guid.Parse(userId);
+        var userIdGuid = GetCurrentUserId();
 
         var user = await _dbContext.Accounts
             .FirstOrDefaultAsync(x => x.Id == userIdGuid );
@@ -96,11 +89,7 @@ public class Service : IService
 
     public async Task<Response.UpdateJarResponse> UpdateJar(Guid id, Request.UpdateJarRequest request)
     {
-        var userId = _httpContext.HttpContext.User.Claims.FirstOrDefault(x => x.Type == "id")?.Value;
-        if (string.IsNullOrEmpty(userId))
-            throw new UnauthorizedAccessException("UserId not found in token");
-
-        var userIdGuid = Guid.Parse(userId);
+        var userIdGuid = GetCurrentUserId();
 
         var user = await _dbContext.Accounts
             .FirstOrDefaultAsync(x => x.Id == userIdGuid);
@@ -131,11 +120,7 @@ public class Service : IService
 
     public async Task<Response.DeleteJarResponse> DeleteJar(Guid id)
     {
-        var userId = _httpContext.HttpContext.User.Claims.FirstOrDefault(x => x.Type == "id")?.Value;
-        if (string.IsNullOrEmpty(userId))
-            throw new UnauthorizedAccessException("UserId not found in token");
-
-        var userIdGuid = Guid.Parse(userId);
+        var userIdGuid = GetCurrentUserId();
 
         var user = await _dbContext.Accounts
             .FirstOrDefaultAsync(x => x.Id == userIdGuid);
@@ -159,5 +144,10 @@ public class Service : IService
             message = "Jar deleted"
         };
         return result;
+    }
+
+    private Guid GetCurrentUserId()
+    {
+        return ServiceClaimHelper.GetRequiredUserId(_httpContext);
     }
 }

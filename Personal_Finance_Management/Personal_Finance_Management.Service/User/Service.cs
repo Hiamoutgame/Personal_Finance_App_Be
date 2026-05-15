@@ -4,6 +4,7 @@ using Personal_Finance_Management.Repository;
 using Personal_Finance_Management.Repository.Constants;
 using Personal_Finance_Management.Repository.Entity;
 using Personal_Finance_Management.Repository.Enum;
+using Personal_Finance_Management.Service.Base;
 using Personal_Finance_Management.Service.Validations;
 using BaseResponse = Personal_Finance_Management.Service.Base.Response;
 
@@ -26,11 +27,7 @@ public class Service : IService
     }
     public async Task<Response.GetUserInforResponse> GetUserInfor()
     {
-        var userId = _httpContext.HttpContext.User.Claims.FirstOrDefault(x => x.Type == "id")?.Value;
-        if (string.IsNullOrEmpty(userId))
-            throw new UnauthorizedAccessException("UserId not found in token");
-
-        var userIdGuid = Guid.Parse(userId);
+        var userIdGuid = GetCurrentUserId();
 
         var query = _dbContext.Accounts.Where(x => x.Id == userIdGuid);
         var selectedQuery = query.Select(x => new Response.GetUserInforResponse()
@@ -59,7 +56,7 @@ public class Service : IService
 
         if (!string.IsNullOrWhiteSpace(request.Status))
         {
-            var status = Enum.Parse<AccountStatus>(request.Status.Trim(), ignoreCase: true).ToString();
+            var status = ServiceTextHelper.NormalizeEnum<AccountStatus>(request.Status);
             query = query.Where(x => x.Status == status);
         }
 
@@ -124,11 +121,7 @@ public class Service : IService
 
     public async Task<Response.UpdateUserResponse> UpdateUserProfile(Request.UpdateUserRequest request)
     {
-        var userId = _httpContext.HttpContext.User.Claims.FirstOrDefault(x => x.Type == "id")?.Value;
-        if (string.IsNullOrEmpty(userId))
-            throw new UnauthorizedAccessException("UserId not found in token");
-
-        var userIdGuid = Guid.Parse(userId);
+        var userIdGuid = GetCurrentUserId();
 
         var user = await _dbContext.Accounts
             .FirstOrDefaultAsync(x => x.Id == userIdGuid);
@@ -162,7 +155,7 @@ public class Service : IService
         if (user == null)
             throw AppValidationException.NotFound("User not found.", "id", "USER_NOT_FOUND");
 
-        user.Status = Enum.Parse<AccountStatus>(request.Status!.Trim(), ignoreCase: true).ToString();
+        user.Status = ServiceTextHelper.NormalizeEnum<AccountStatus>(request.Status!);
         user.StatusReason = request.StatusReason;
         user.UpdatedAt = DateTimeOffset.UtcNow;
 
@@ -172,11 +165,7 @@ public class Service : IService
 
     public async Task<Response.ViewSetupResponse> ViewSetup()
     {
-        var userId = _httpContext.HttpContext.User.Claims.FirstOrDefault(x => x.Type == "id")?.Value;
-        if (string.IsNullOrEmpty(userId))
-            throw new UnauthorizedAccessException("UserId not found in token");
-
-        var userIdGuid = Guid.Parse(userId);
+        var userIdGuid = GetCurrentUserId();
 
         var user = await _dbContext.Accounts
             .FirstOrDefaultAsync(x => x.Id == userIdGuid);
@@ -222,5 +211,10 @@ public class Service : IService
             CreatedAt = user.CreatedAt,
             LastLoginAt = user.LastLoginAt
         };
+    }
+
+    private Guid GetCurrentUserId()
+    {
+        return ServiceClaimHelper.GetRequiredUserId(_httpContext);
     }
 }

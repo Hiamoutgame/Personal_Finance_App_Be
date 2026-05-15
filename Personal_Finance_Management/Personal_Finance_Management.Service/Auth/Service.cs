@@ -6,6 +6,7 @@ using Personal_Finance_Management.Repository;
 using Personal_Finance_Management.Repository.Constants;
 using Personal_Finance_Management.Repository.Entity;
 using Personal_Finance_Management.Repository.Enum;
+using Personal_Finance_Management.Service.Base;
 using ValidationService = Personal_Finance_Management.Service.Validations;
 using JwtService = Personal_Finance_Management.Service.JwtService;
 
@@ -37,10 +38,10 @@ public class Service : IService
     {
         await _validationServices.ValidateRegisterRequest(request);
 
-        var username = request.Username.Trim();
+        var username = ServiceTextHelper.NormalizeRequiredText(request.Username, "username", "Username is required.");
         var email = request.Email.Trim().ToLowerInvariant();
-        var firstName = request.FirstName.Trim();
-        var lastName = request.LastName.Trim();
+        var firstName = ServiceTextHelper.NormalizeRequiredText(request.FirstName, "firstName", "First name is required.");
+        var lastName = ServiceTextHelper.NormalizeRequiredText(request.LastName, "lastName", "Last name is required.");
 
         var now = DateTimeOffset.UtcNow;
         var role = await EnsureUserRole(now);
@@ -174,11 +175,7 @@ public class Service : IService
 
     public async Task<string> Logout()
     {
-        var userId = _httpContext.HttpContext.User.Claims.FirstOrDefault(x => x.Type == "id")?.Value;
-        if (string.IsNullOrEmpty(userId))
-        {
-            throw new Exception("Invalid user id.");
-        }
+        ServiceClaimHelper.GetRequiredAccountId(_httpContext, "Invalid user id.");
         return await Task.FromResult("Logout successful.");
     }
 }

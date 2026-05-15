@@ -2,6 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 using Personal_Finance_Management.Repository;
 using Personal_Finance_Management.Repository.Entity;
+using Personal_Finance_Management.Service.Base;
 
 
 namespace Personal_Finance_Management.Service.limit;
@@ -19,13 +20,7 @@ public class Service : IService
     
     private Guid GetCurrentUserId()
     {
-        var userId = _httpContextAccessor.HttpContext?.User.Claims
-            .FirstOrDefault(x => x.Type == "id")?.Value;
-
-        if (!Guid.TryParse(userId, out var userIdGuid))
-            throw new UnauthorizedAccessException("UserId not found in token");
-
-        return userIdGuid;
+        return ServiceClaimHelper.GetRequiredUserId(_httpContextAccessor);
     }
 
 

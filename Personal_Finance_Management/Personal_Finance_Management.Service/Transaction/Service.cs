@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Personal_Finance_Management.Repository;
 using Personal_Finance_Management.Repository.Entity;
+using Personal_Finance_Management.Service.Base;
 using Personal_Finance_Management.Service.Validations;
 using System.Net.Http.Headers;
 using System.Text.Json;
@@ -24,11 +25,7 @@ public class Service : IService
     
     public async Task<Response.GetTransactionsResult> GetTransactions(Request.GetTransactionsRequest request)
     {
-        var userId = _httpContext.HttpContext.User.Claims.FirstOrDefault(x => x.Type == "id")?.Value;
-        if (string.IsNullOrEmpty(userId))
-            throw new UnauthorizedAccessException("UserId not found in token");
-
-        var userIdGuid = Guid.Parse(userId);
+        var userIdGuid = GetCurrentUserId();
 
         var user = await _dbContext.Accounts
             .FirstOrDefaultAsync(x => x.Id == userIdGuid);
@@ -162,11 +159,7 @@ public class Service : IService
 
     public async Task<Response.CreateTransactionResponse> CreateTransaction(Request.CreateTransactionRequest request)
     {
-        var userId = _httpContext.HttpContext.User.Claims.FirstOrDefault(x => x.Type == "id")?.Value;
-        if (string.IsNullOrEmpty(userId))
-            throw new UnauthorizedAccessException("UserId not found in token");
-
-        var userIdGuid = Guid.Parse(userId);
+        var userIdGuid = GetCurrentUserId();
 
         var user = await _dbContext.Accounts
             .FirstOrDefaultAsync(x => x.Id == userIdGuid);
@@ -326,11 +319,7 @@ public class Service : IService
 
     public async Task<Response.UpdateTransactionResponse> UpdateTransaction(Guid id, Request.UpdateTransactionRequest request)
     {
-        var userId = _httpContext.HttpContext.User.Claims.FirstOrDefault(x => x.Type == "id")?.Value;
-        if (string.IsNullOrEmpty(userId))
-            throw new UnauthorizedAccessException("UserId not found in token");
-
-        var userIdGuid = Guid.Parse(userId);
+        var userIdGuid = GetCurrentUserId();
 
         var user = await _dbContext.Accounts
             .FirstOrDefaultAsync(x => x.Id == userIdGuid);
@@ -436,11 +425,7 @@ public class Service : IService
 
     public async Task<Response.DeleteTransactionResponse> DeleteTransaction(Guid id)
     {
-        var userId = _httpContext.HttpContext.User.Claims.FirstOrDefault(x => x.Type == "id")?.Value;
-        if (string.IsNullOrEmpty(userId))
-            throw new UnauthorizedAccessException("UserId not found in token");
-
-        var userIdGuid = Guid.Parse(userId);
+        var userIdGuid = GetCurrentUserId();
 
         var user = await _dbContext.Accounts
             .FirstOrDefaultAsync(x => x.Id == userIdGuid);
@@ -891,11 +876,7 @@ public class Service : IService
             throw AppValidationException.BadRequest("Request body is required.", "body", "REQUIRED");
         }
 
-        var userId = _httpContext.HttpContext.User.Claims.FirstOrDefault(x => x.Type == "id")?.Value;
-        if (string.IsNullOrEmpty(userId))
-            throw new UnauthorizedAccessException("UserId not found in token");
-
-        var userIdGuid = Guid.Parse(userId);
+        var userIdGuid = GetCurrentUserId();
         if (request.financialAccountId == Guid.Empty)
         {
             throw AppValidationException.BadRequest("Financial account is required.", "financialAccountId", "REQUIRED");
@@ -1181,5 +1162,10 @@ public class Service : IService
             skippedCount = skippedCount,
             message = "Casso transactions synced."
         };
+    }
+
+    private Guid GetCurrentUserId()
+    {
+        return ServiceClaimHelper.GetRequiredUserId(_httpContext);
     }
 }
