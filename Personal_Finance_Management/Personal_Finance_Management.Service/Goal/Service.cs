@@ -39,6 +39,10 @@ public class Service : IService
         foreach (var goal in goals)
         {
             decimal savedAmount = goal.LinkedJar?.Balance ?? 0;
+            if (goal.Status == "Completed")
+            {
+                savedAmount = goal.TargetAmount;
+            }
             double progress = 0;
             if (goal.TargetAmount > 0)
                 progress = (double)(savedAmount / goal.TargetAmount) * 100;
