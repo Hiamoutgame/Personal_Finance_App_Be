@@ -19,6 +19,7 @@ public class Response
         public required string Title { get; set; }
         public required string Body { get; set; }
         public bool IsRead { get; set; }
+        public string? MetadataJson { get; set; }
         public DateTimeOffset OccurredAt { get; set; } 
     }
 

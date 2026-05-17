@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Personal_Finance_Management.Api.Contracts;
 using Personal_Finance_Management.Service.Jar;
 
 namespace Personal_Finance_Management.Api.Controllers;
@@ -36,7 +37,11 @@ public class JarController : ControllerBase
         return Ok(result);
     }
 
-    [HttpDelete("{id}")]
+    [HttpDelete("{id:guid}")]
+    [ProducesResponseType(typeof(Response.DeleteJarResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> DeleteJar(Guid id)
     {
         var result = await _service.DeleteJar(id);

@@ -54,6 +54,7 @@ public class Service : IService
                 Title = n.Title,
                 Body = n.Body,
                 IsRead = n.IsRead,
+                MetadataJson = n.MetadataJson,
                 OccurredAt = n.CreatedAt
             })
             .ToListAsync();

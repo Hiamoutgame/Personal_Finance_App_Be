@@ -1,6 +1,10 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Personal_Finance_Management.Service.FinancialAccount;
+using BankConnectionRequest = Personal_Finance_Management.Service.BankConnection.Request;
+using BankConnectionService = Personal_Finance_Management.Service.BankConnection.IService;
+using BankSyncRequest = Personal_Finance_Management.Service.BankSync.Request;
+using BankSyncService = Personal_Finance_Management.Service.BankSync.IService;
 
 namespace Personal_Finance_Management.Api.Controllers;
 
@@ -10,9 +14,17 @@ namespace Personal_Finance_Management.Api.Controllers;
 public class FinancialAccountController : ControllerBase
 {
     private readonly IService _service;
-    public FinancialAccountController(IService service)
+    private readonly BankConnectionService _bankConnectionService;
+    private readonly BankSyncService _bankSyncService;
+
+    public FinancialAccountController(
+        IService service,
+        BankConnectionService bankConnectionService,
+        BankSyncService bankSyncService)
     {
         _service = service;
+        _bankConnectionService = bankConnectionService;
+        _bankSyncService = bankSyncService;
     }
 
     [HttpGet("")]
@@ -30,9 +42,40 @@ public class FinancialAccountController : ControllerBase
     }
 
     [HttpPost("LinkApi")]
+    [ApiExplorerSettings(IgnoreApi = true)]
     public async Task<IActionResult> CreateLinkApiFinancialAccount([FromBody] Request.CreateLinkApiFinancialAccountRequest request)
     {
         var result = await _service.CreateLinkApiFinancialAccount(request);
+        return Ok(result);
+    }
+
+    [HttpPost("casso/connect")]
+    [ApiExplorerSettings(IgnoreApi = true)]
+    public async Task<IActionResult> StartCassoConnection([FromBody] BankConnectionRequest.StartCassoConnectionRequest request)
+    {
+        var result = await _bankConnectionService.StartCassoConnection(request);
+        return Ok(result);
+    }
+
+    [AllowAnonymous]
+    [HttpGet("casso/callback")]
+    [ApiExplorerSettings(IgnoreApi = true)]
+    public async Task<IActionResult> HandleCassoCallback([FromQuery] string? code, [FromQuery] string? state, [FromQuery] string? error)
+    {
+        var result = await _bankConnectionService.HandleCassoCallback(code, state, error);
+        if (!string.IsNullOrWhiteSpace(result.redirectUrl))
+        {
+            return Redirect(result.redirectUrl);
+        }
+
+        return result.success ? Ok(result) : BadRequest(result);
+    }
+
+    [HttpPost("{id}/sync")]
+    [ApiExplorerSettings(IgnoreApi = true)]
+    public async Task<IActionResult> SyncFinancialAccount(Guid id, [FromBody] BankSyncRequest.SyncLinkedAccountRequest request)
+    {
+        var result = await _bankSyncService.SyncLinkedAccount(id, request);
         return Ok(result);
     }
 

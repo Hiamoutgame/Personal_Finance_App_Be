@@ -92,6 +92,13 @@ public class Service : IService
             throw AppValidationException.Conflict("Financial account already exists", "name", "FINANCIAL_ACCOUNT_ALREADY_EXISTS");
         }
 
+        await using var dbTransaction = await _dbContext.Database.BeginTransactionAsync();
+
+        if (request.isDefault)
+        {
+            await ClearDefaultFinancialAccounts(user.Id);
+        }
+
         var financialAccount = new Repository.Entity.FinancialAccount()
         {
             Id = Guid.NewGuid(),
@@ -108,6 +115,7 @@ public class Service : IService
 
         _dbContext.FinancialAccounts.Add(financialAccount);
         await _dbContext.SaveChangesAsync();
+        await dbTransaction.CommitAsync();
 
         var result = new Response.CreateManualFinancialAccountResponse
         {
@@ -183,6 +191,13 @@ public class Service : IService
 
         var maskedAccountNumber = ServiceTextHelper.MaskTrailing(accountNumber);
 
+        await using var dbTransaction = await _dbContext.Database.BeginTransactionAsync();
+
+        if (request.isDefault)
+        {
+            await ClearDefaultFinancialAccounts(user.Id);
+        }
+
         var financialAccount = new Repository.Entity.FinancialAccount()
         {
             Id = Guid.NewGuid(),
@@ -205,6 +220,7 @@ public class Service : IService
 
         _dbContext.FinancialAccounts.Add(financialAccount);
         await _dbContext.SaveChangesAsync();
+        await dbTransaction.CommitAsync();
 
         var result = new Response.CreateLinkApiFinancialAccountResponse
         {
@@ -250,11 +266,19 @@ public class Service : IService
             throw AppValidationException.BadRequest("Linked bank account balance cannot be updated manually.", "currentBalance", "LINKED_ACCOUNT_BALANCE_READ_ONLY");
         }
 
+        await using var dbTransaction = await _dbContext.Database.BeginTransactionAsync();
+
+        if (request.isDefault == true)
+        {
+            await ClearDefaultFinancialAccounts(userIdGuid, query.Id);
+        }
+
         query.Name = request.name ?? query.Name;
         query.CurrentBalance = request.currentBalance ?? query.CurrentBalance;
         query.IsDefault = request.isDefault ?? query.IsDefault;
-        query.UpdatedAt = DateTime.UtcNow;
+        query.UpdatedAt = DateTimeOffset.UtcNow;
         await _dbContext.SaveChangesAsync();
+        await dbTransaction.CommitAsync();
 
         var result = new Response.UpdateFinancialAccountResponse
         {
@@ -283,6 +307,8 @@ public class Service : IService
         }
 
         financialAccount.IsActive = false;
+        financialAccount.IsDefault = false;
+        financialAccount.UpdatedAt = DateTimeOffset.UtcNow;
         await _dbContext.SaveChangesAsync();
         var result = new Response.DeleteFinancialAccountResponse()
         {
@@ -294,5 +320,20 @@ public class Service : IService
     private Guid GetCurrentUserId()
     {
         return ServiceClaimHelper.GetRequiredUserId(_httpContext);
+    }
+
+    private async Task ClearDefaultFinancialAccounts(Guid userId, Guid? exceptFinancialAccountId = null)
+    {
+        var query = _dbContext.FinancialAccounts
+            .Where(x => x.UserId == userId && x.IsDefault);
+
+        if (exceptFinancialAccountId.HasValue)
+        {
+            query = query.Where(x => x.Id != exceptFinancialAccountId.Value);
+        }
+
+        await query.ExecuteUpdateAsync(setters => setters
+            .SetProperty(x => x.IsDefault, false)
+            .SetProperty(x => x.UpdatedAt, DateTimeOffset.UtcNow));
     }
 }

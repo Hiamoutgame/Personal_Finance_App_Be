@@ -198,6 +198,10 @@ public class ValidationServices : IServices
         ValidateEnumValue<ReminderFrequency>(request.Frequency, "frequency", "INVALID_REMINDER_FREQUENCY", required: true);
         ValidateDayOfMonth(request.DayOfMonth, "dayOfMonth");
         ValidateNotifyDaysBefore(request.NotifyDaysBefore, "notifyDaysBefore");
+        if (request.StartDate.Date < DateTimeOffset.UtcNow.Date)
+        {
+            throw AppValidationException.BadRequest("Reminder start date cannot be in the past.", "startDate", "REMINDER_START_DATE_IN_PAST");
+        }
 
         return Task.CompletedTask;
     }

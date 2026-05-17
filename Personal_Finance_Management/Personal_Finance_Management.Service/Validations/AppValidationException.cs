@@ -13,12 +13,12 @@ public class AppValidationException : Exception
 
     public static AppValidationException BadRequest(string message, string field, string code)
     {
-        return BadRequest(message, new { field, code }, code);
+        return new AppValidationException(message, 400, new { field, code });
     }
 
     public static AppValidationException BadRequest(string message, object details, string code)
     {
-        return new AppValidationException(message, 400, new { details, code });
+        return new AppValidationException(message, 400, details);
     }
 
     public static AppValidationException Conflict(string message, string field, string code)

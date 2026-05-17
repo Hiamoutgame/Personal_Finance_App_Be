@@ -7,13 +7,22 @@ docs/
 
 **/bin/
 **/obj/
+**/bin
+**/obj
+**/artifacts/
+**/artifacts
 **/*.user
 **/*.suo
 **/.DS_Store
 .DS_Store
+build-api-diag.log
+assets/
+Personal_Finance_Management/Personal_Finance_Management.Service/import/Upload/
 
 .env
 .env.*
 !.env.example
+**/appsettings.json
+**/appsettings.*.json
 
 README.md

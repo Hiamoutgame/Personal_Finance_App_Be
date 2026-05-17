@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Personal_Finance_Management.Repository;
 using Personal_Finance_Management.Repository.Entity;
 using Personal_Finance_Management.Service.Base;
+using Personal_Finance_Management.Service.Validations;
 
 
 namespace Personal_Finance_Management.Service.limit;
@@ -35,34 +36,6 @@ public class Service : IService
             .Where(l => l.UserId == userId && l.IsActive)
             .ToListAsync();
 
-        var jarIds = limits
-            .Where(l => l.JarId.HasValue)
-            .Select(l => l.JarId!.Value)
-            .Distinct()
-            .ToList();
-
-        var spentByJarId = jarIds.Count == 0
-            ? new Dictionary<Guid, decimal>()
-            : await _appDbContext.SpendingLimits
-                .Where(l => l.UserId == userId
-                            && l.IsActive
-                            && l.JarId.HasValue
-                            && jarIds.Contains(l.JarId.Value))
-                .Select(l => new
-                {
-                    JarId = l.JarId!.Value,
-                    CurrentSpent = _appDbContext.Transactions
-                        .Where(t => t.UserId == userId
-                                    && !t.IsDeleted
-                                    && t.Type == "Expense"
-                                    && t.FromJarId == l.JarId
-                                    && t.ToJarId == null
-                                    && t.FinancialAccountId == null
-                                    && t.CreatedAt >= l.ResetAt)
-                        .Sum(t => (decimal?)t.TransactionsAmount) ?? 0m
-                })
-                .ToDictionaryAsync(x => x.JarId, x => x.CurrentSpent);
-
         var items = new List<Response.GetLimitItem>();
 
         foreach (var limit in limits)
@@ -79,15 +52,29 @@ public class Service : IService
                 targetName = limit.Jar.Name;
                 targetType = "Jar";
 
-                currentSpent = spentByJarId.TryGetValue(limit.JarId.Value, out var spent)
-                    ? spent
-                    : 0m;
+                currentSpent = await _appDbContext.Transactions
+                    .Where(t => t.UserId == userId
+                                && !t.IsDeleted
+                                && t.Type == "Expense"
+                                && t.FromJarId == limit.JarId.Value
+                                && t.ToJarId == null
+                                && t.FinancialAccountId == null
+                                && t.TransactionDate >= limit.ResetAt)
+                    .SumAsync(t => (decimal?)t.TransactionsAmount) ?? 0m;
             }
             if (limit.Category != null && limit.CategoryId.HasValue)
             {
                 targetType = "Category";
                 targetId = limit.Category.Id;
                 targetName = limit.Category.Name;
+
+                currentSpent = await _appDbContext.Transactions
+                    .Where(t => t.UserId == userId
+                                && !t.IsDeleted
+                                && t.Type == "Expense"
+                                && t.CategoryId == limit.CategoryId.Value
+                                && t.TransactionDate >= limit.ResetAt)
+                    .SumAsync(t => (decimal?)t.TransactionsAmount) ?? 0m;
             }
             var item = new Response.GetLimitItem
             {
@@ -98,7 +85,9 @@ public class Service : IService
                 Period = limit.Period,
                 AlertAtPercentage = limit.AlertAtPercentage,
                 CurrentSpent = currentSpent,
-                CurrentPercentage = (double)((currentSpent * 100) / limit.LimitAmount),
+                CurrentPercentage = limit.LimitAmount <= 0
+                    ? 0
+                    : (double)((currentSpent * 100) / limit.LimitAmount),
                 Status = "Active",
                 TargetType = targetType
             };
@@ -111,6 +100,15 @@ public class Service : IService
     public async Task<Response.CreateLimitResponse> CreateLimit(Request.CreateLimitRequest request)
     {
         var userId = GetCurrentUserId();
+        if (request.LimitAmount <= 0)
+        {
+            throw AppValidationException.BadRequest("Limit amount must be greater than zero.", "limitAmount", "INVALID_LIMIT_AMOUNT");
+        }
+
+        if (request.AlertAtPercentage <= 0 || request.AlertAtPercentage > 100)
+        {
+            throw AppValidationException.BadRequest("Alert percentage must be between 1 and 100.", "alertAtPercentage", "INVALID_ALERT_PERCENTAGE");
+        }
 
         var now = DateTimeOffset.UtcNow;
         var limit = new SpendingLimit()
@@ -128,12 +126,34 @@ public class Service : IService
         };
         if (request.TargetType == "Category")
         {
+            var categoryExists = await _appDbContext.Categories.AnyAsync(x =>
+                x.Id == request.TargetId
+                && x.IsActive
+                && (x.OwnerUserId == null || x.OwnerUserId == userId));
+            if (!categoryExists)
+            {
+                throw AppValidationException.NotFound("Category not found.", "targetId", "CATEGORY_NOT_FOUND");
+            }
+
             limit.CategoryId = request.TargetId;
         }
 
         if (request.TargetType == "Jar")
         {
+            var jarExists = await _appDbContext.Jars.AnyAsync(x =>
+                x.Id == request.TargetId
+                && x.UserId == userId);
+            if (!jarExists)
+            {
+                throw AppValidationException.NotFound("Jar not found.", "targetId", "JAR_NOT_FOUND");
+            }
+
             limit.JarId = request.TargetId;
+        }
+
+        if (limit.CategoryId == null && limit.JarId == null)
+        {
+            throw AppValidationException.BadRequest("Invalid limit target type.", "targetType", "INVALID_LIMIT_TARGET_TYPE");
         }
         
         _appDbContext.SpendingLimits.Add(limit);
@@ -161,10 +181,22 @@ public class Service : IService
             throw new ("Limit not found");
         
         if (request.LimitAmount.HasValue)
+        {
+            if (request.LimitAmount.Value <= 0)
+            {
+                throw AppValidationException.BadRequest("Limit amount must be greater than zero.", "limitAmount", "INVALID_LIMIT_AMOUNT");
+            }
             limit.LimitAmount = request.LimitAmount.Value;
+        }
 
         if (request.AlertAtPercentage.HasValue)
+        {
+            if (request.AlertAtPercentage.Value <= 0 || request.AlertAtPercentage.Value > 100)
+            {
+                throw AppValidationException.BadRequest("Alert percentage must be between 1 and 100.", "alertAtPercentage", "INVALID_ALERT_PERCENTAGE");
+            }
             limit.AlertAtPercentage = request.AlertAtPercentage.Value;
+        }
         
         await _appDbContext.SaveChangesAsync();
         

@@ -1,6 +1,8 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Personal_Finance_Management.Service.Transaction;
+using BankSyncRequest = Personal_Finance_Management.Service.BankSync.Request;
+using BankSyncService = Personal_Finance_Management.Service.BankSync.IService;
 
 namespace Personal_Finance_Management.Api.Controllers;
 
@@ -10,15 +12,25 @@ namespace Personal_Finance_Management.Api.Controllers;
 public class TransactionsController : ControllerBase
 {
     private readonly IService _service;
-    public TransactionsController(IService service)
+    private readonly BankSyncService _bankSyncService;
+
+    public TransactionsController(IService service, BankSyncService bankSyncService)
     {
         _service = service;
+        _bankSyncService = bankSyncService;
     }
 
     [HttpGet("")]
     public async Task<IActionResult> GetTransactions([FromQuery] Request.GetTransactionsRequest request)
     {
         var result = await _service.GetTransactions(request);
+        return Ok(result);
+    }
+
+    [HttpGet("{id}")]
+    public async Task<IActionResult> GetTransactionById(Guid id)
+    {
+        var result = await _service.GetTransactionById(id);
         return Ok(result);
     }
 
@@ -44,19 +56,38 @@ public class TransactionsController : ControllerBase
     }
 
     [HttpGet("Casso")]
+    [ApiExplorerSettings(IgnoreApi = true)]
     public async Task<IActionResult> SyncCassoTransactions([FromQuery] Request.CassoSyncTransactionsRequest request)
     {
-        var result = await _service.SyncCassoTransactions(request);
+        var result = await _bankSyncService.SyncLinkedAccount(
+            request.financialAccountId,
+            new BankSyncRequest.SyncLinkedAccountRequest
+            {
+                fromDate = request.fromDate,
+                toDate = request.toDate,
+                page = request.page,
+                pageSize = request.pageSize,
+                sort = request.sort,
+                triggerProviderSync = false
+            });
         return Ok(result);
     }
 
     [AllowAnonymous]
     [HttpPost("Casso")]
+    [ApiExplorerSettings(IgnoreApi = true)]
     public async Task<IActionResult> ProcessCassoWebhook([FromBody] Request.CassoWebhookRequest request)
     {
         var secureToken = Request.Headers["secure-token"].FirstOrDefault();
         var cassoSignature = Request.Headers["X-Casso-Signature"].FirstOrDefault();
-        var result = await _service.ProcessCassoWebhook(request, secureToken, cassoSignature);
+        var result = await _bankSyncService.ProcessCassoWebhook(
+            new BankSyncRequest.CassoWebhookRequest
+            {
+                error = request.error,
+                data = request.data
+            },
+            secureToken,
+            cassoSignature);
         return Ok(result);
     }
 }

@@ -119,7 +119,10 @@ public class Service : IService
 
         if (user is null || !BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
         {
-            throw new Exception("Invalid email or password.");
+            throw ValidationService.AppValidationException.BadRequest(
+                "Email hoặc mật khẩu không đúng.",
+                "email",
+                "INVALID_LOGIN_CREDENTIALS");
         }
 
         var token = _jwtService.GenerateAccessToken(new[]

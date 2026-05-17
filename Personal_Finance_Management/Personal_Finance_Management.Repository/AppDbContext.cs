@@ -15,6 +15,7 @@ public class AppDbContext : DbContext
     public DbSet<AuditLog> AuditLogs { get; set; }
     public DbSet<OnboardingProfile> OnboardingProfiles { get; set; }
     public DbSet<JarSetup> JarSetups { get; set; }
+    public DbSet<BankConnectionSession> BankConnectionSessions { get; set; }
     public DbSet<FinancialAccount> FinancialAccounts { get; set; }
     public DbSet<Category> Categories { get; set; }
     public DbSet<Jar> Jars { get; set; }
@@ -245,6 +246,62 @@ public class AppDbContext : DbContext
                 .OnDelete(DeleteBehavior.Restrict);
         });
 
+        modelBuilder.Entity<BankConnectionSession>(builder =>
+        {
+            builder.ToTable("bank_connection_sessions");
+
+            builder.Property(b => b.ProviderCode)
+                .IsRequired()
+                .HasMaxLength(50)
+                .HasDefaultValue("casso");
+
+            builder.Property(b => b.State)
+                .IsRequired()
+                .HasMaxLength(150);
+
+            builder.Property(b => b.CodeVerifier)
+                .HasColumnType("text");
+
+            builder.Property(b => b.ReturnUrl)
+                .HasColumnType("text");
+
+            builder.Property(b => b.IsDefault)
+                .HasDefaultValue(false);
+
+            builder.Property(b => b.AutoSync)
+                .HasDefaultValue(true);
+
+            builder.Property(b => b.Status)
+                .IsRequired()
+                .HasMaxLength(30)
+                .HasDefaultValue("Pending");
+
+            builder.Property(b => b.ErrorMessage)
+                .HasColumnType("text");
+
+            builder.Property(b => b.CreatedAt)
+                .HasDefaultValueSql("NOW()");
+
+            builder.Property(b => b.UpdatedAt)
+                .HasDefaultValueSql("NOW()");
+
+            builder.HasIndex(b => new { b.UserId, b.CreatedAt })
+                .HasDatabaseName("ix_bank_connection_sessions_user_created_at");
+
+            builder.HasIndex(b => b.State)
+                .IsUnique()
+                .HasDatabaseName("ix_bank_connection_sessions_state");
+
+            builder.ToTable(t => t.HasCheckConstraint(
+                "chk_bank_connection_sessions_status",
+                "\"status\" IN ('Pending','Authorized','Completed','Failed','Expired')"));
+
+            builder.HasOne(b => b.User)
+                .WithMany()
+                .HasForeignKey(b => b.UserId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
         modelBuilder.Entity<FinancialAccount>(builder =>
         {
             builder.ToTable("financial_accounts");
@@ -295,8 +352,10 @@ public class AppDbContext : DbContext
             builder.HasIndex(f => f.UserId)
                 .HasDatabaseName("ix_financial_accounts_user_id");
 
-            builder.HasIndex(f => new { f.UserId, f.IsDefault })
-                .HasDatabaseName("ix_financial_accounts_user_default");
+            builder.HasIndex(f => f.UserId)
+                .IsUnique()
+                .HasFilter("\"is_default\" = TRUE")
+                .HasDatabaseName("ux_financial_accounts_one_default_per_user");
 
             builder.HasIndex(f => f.SyncStatus)
                 .HasDatabaseName("ix_financial_accounts_sync_status");

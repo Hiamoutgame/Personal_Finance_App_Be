@@ -325,6 +325,8 @@ Response:
 
 #### `POST /api/v1/financial-accounts/LinkApi`
 
+Legacy/manual mapping endpoint. FE mới nên dùng OAuth flow `POST /api/v1/financial-accounts/casso/connect` thay vì để user nhập `accountNumber`.
+
 Request:
 
 ```json
@@ -360,6 +362,133 @@ Response:
   }
 }
 ```
+
+#### `POST /api/v1/financial-accounts/casso/connect`
+
+> Tam an khoi Swagger/API explorer. Khong expose cho FE trong MVP hien tai.
+
+Tạo phiên liên kết Casso cho user hiện tại và trả URL để FE redirect user sang Casso OAuth.
+
+Request:
+
+```json
+{
+  "auth": "Bearer",
+  "body": {
+    "returnUrl": "string | null",
+    "isDefault": "boolean | null",
+    "autoSync": "boolean | null"
+  }
+}
+```
+
+Response:
+
+```json
+{
+  "status": 200,
+  "body": {
+    "sessionId": "guid",
+    "authorizationUrl": "string",
+    "expiresAt": "datetimeOffset"
+  }
+}
+```
+
+Ghi chú:
+
+- Backend tạo row `bank_connection_sessions` status `Pending`.
+- `authorizationUrl` trỏ sang Casso OAuth authorization endpoint.
+- FE nhận `authorizationUrl` và redirect browser/user sang Casso.
+- `autoSync` mặc định `true`; sau callback thành công backend sẽ thử sync giao dịch ban đầu.
+
+#### `GET /api/v1/financial-accounts/casso/callback`
+
+> Tam an khoi Swagger/API explorer. Route duoc giu de khong pha flow noi bo neu can bat lai sau.
+
+Casso redirect về endpoint này sau khi user cấp quyền.
+
+Request:
+
+```json
+{
+  "auth": "Anonymous",
+  "query": {
+    "code": "string | null",
+    "state": "string",
+    "error": "string | null"
+  },
+  "body": null
+}
+```
+
+Response:
+
+```json
+{
+  "status": "302 | 200 | 400",
+  "body": {
+    "success": "boolean",
+    "message": "string",
+    "financialAccountId": "guid | null",
+    "redirectUrl": "string | null"
+  }
+}
+```
+
+Ghi chú:
+
+- Endpoint anonymous vì callback từ Casso không có JWT FinJar.
+- Backend xác định user bằng `state` trong `bank_connection_sessions`.
+- Nếu session hợp lệ, backend đổi `code` lấy Casso access token, gọi Casso accounts API, tạo/cập nhật `FinancialAccount` `LinkedApi`.
+- Token Casso không trả về FE; backend lưu token đã bảo vệ trong `FinancialAccount.AccessTokenRef`.
+- Nếu có `returnUrl`, backend redirect về URL đó kèm `cassoStatus=success|failed`.
+
+#### `POST /api/v1/financial-accounts/{id}/sync`
+
+> Tam an khoi Swagger/API explorer. Khong expose cho FE trong MVP hien tai.
+
+Sync giao dịch Casso cho một linked financial account. Đây là endpoint FE mới nên ưu tiên dùng khi user bấm nút sync trên màn accounts.
+
+Request:
+
+```json
+{
+  "auth": "Bearer",
+  "route": {
+    "id": "guid"
+  },
+  "body": {
+    "fromDate": "date | null",
+    "toDate": "date | null",
+    "page": "int | null",
+    "pageSize": "int | null",
+    "sort": "ASC | DESC | null",
+    "triggerProviderSync": "boolean | null"
+  }
+}
+```
+
+Response:
+
+```json
+{
+  "status": 200,
+  "body": {
+    "receivedCount": "int",
+    "createdCount": "int",
+    "skippedCount": "int",
+    "message": "string"
+  }
+}
+```
+
+Ghi chú:
+
+- Chỉ sync account `ConnectionMode = LinkedApi` và thuộc user hiện tại.
+- Nếu account có OAuth token riêng thì dùng Bearer token đó; account legacy có thể fallback sang Casso API key server config.
+- `triggerProviderSync = true` sẽ gọi Casso sync provider trước khi fetch transactions nếu account có external account ref.
+- Duplicate transaction được skip theo `FinancialAccountId + ExternalTransactionId`.
 
 #### `PATCH /api/v1/financial-accounts/{id}`
 
@@ -848,6 +977,10 @@ Ghi chú:
 
 #### `GET /api/v1/transactions/Casso`
 
+> Tam an khoi Swagger/API explorer. Day la endpoint legacy/manual sync, khong de FE goi trong MVP hien tai.
+
+Legacy sync endpoint. FE mới nên dùng `POST /api/v1/financial-accounts/{id}/sync` vì sync là action trên linked financial account.
+
 Request:
 
 ```json
@@ -881,6 +1014,8 @@ Response:
 
 #### `POST /api/v1/transactions/Casso`
 
+> Tam an khoi Swagger/API explorer. Webhook Casso V1 van co the goi truc tiep vao route nay neu da cau hinh `secure-token`.
+
 Request:
 
 ```json
@@ -913,7 +1048,11 @@ Response:
 
 Ghi chú:
 
-- Đây là endpoint integration Casso, route đang ghi theo controller hiện tại.
+- `GET /api/v1/transactions/Casso` được giữ để tương thích cũ, logic sync dùng chung BankSync service.
+- `POST /api/v1/transactions/Casso` là webhook Casso gọi vào backend.
+- Webhook yêu cầu header `secure-token` khớp config `Casso:WebhookSecureToken` hoặc `CasooOptions:SecureToken`.
+- Backend không tin `X-Casso-Signature` nếu chưa implement verify signature thật.
+- Transaction tạo từ Casso dùng `SourceType = Imported`, lưu `ExternalTransactionId`, `RawPayloadJson`, và cập nhật `FinancialAccount.CurrentBalance`.
 
 ### Import/OCR
 

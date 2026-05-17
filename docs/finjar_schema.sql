@@ -140,6 +140,32 @@ CREATE INDEX ix_financial_accounts_user_default
 CREATE INDEX ix_financial_accounts_sync_status
     ON financial_accounts(sync_status);
 
+CREATE TABLE bank_connection_sessions (
+    id            UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id       UUID         NOT NULL REFERENCES accounts(id),
+    provider_code VARCHAR(50)  NOT NULL DEFAULT 'casso',
+    state         VARCHAR(150) NOT NULL UNIQUE,
+    code_verifier TEXT         NULL,
+    return_url    TEXT         NULL,
+    is_default    BOOLEAN      NOT NULL DEFAULT FALSE,
+    auto_sync     BOOLEAN      NOT NULL DEFAULT TRUE,
+    status        VARCHAR(30)  NOT NULL DEFAULT 'Pending',
+    error_message TEXT         NULL,
+    expires_at    TIMESTAMPTZ  NOT NULL,
+    completed_at  TIMESTAMPTZ  NULL,
+    created_at    TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+    updated_at    TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+
+    CONSTRAINT chk_bank_connection_sessions_status
+        CHECK (status IN ('Pending', 'Authorized', 'Completed', 'Failed', 'Expired'))
+);
+
+CREATE INDEX ix_bank_connection_sessions_user_created_at
+    ON bank_connection_sessions(user_id, created_at DESC);
+
+CREATE INDEX ix_bank_connection_sessions_state
+    ON bank_connection_sessions(state);
+
 CREATE TABLE categories (
     id            Guid         PRIMARY KEY DEFAULT gen_random_uuid(),
     name          VARCHAR(100) NOT NULL,

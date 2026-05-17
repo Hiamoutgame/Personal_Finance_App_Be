@@ -26,10 +26,18 @@ public class Service : IService
             throw new Exception("User not found");
 
         // ===============================BalanceSummaryResponse===============================
-        var totalJar = _dbContext.Jars.Where(x => x.UserId == userIdGuid).Sum(x => x.Balance);
-        var totalAccount = _dbContext.FinancialAccounts.Where(x => x.UserId == userIdGuid).Sum(x => x.CurrentBalance);
-        var totalIncome = _dbContext.Transactions.Where(x => x.Type == "Income").Sum(x => x.TransactionsAmount);
-        var totalExpense = _dbContext.Transactions.Where(x => x.Type == "Expense").Sum(x => x.TransactionsAmount);
+        var totalJar = await _dbContext.Jars
+            .Where(x => x.UserId == userIdGuid)
+            .SumAsync(x => x.Balance);
+        var totalAccount = await _dbContext.FinancialAccounts
+            .Where(x => x.UserId == userIdGuid)
+            .SumAsync(x => x.CurrentBalance);
+        var totalIncome = await _dbContext.Transactions
+            .Where(x => x.UserId == userIdGuid && !x.IsDeleted && x.Type == "Income")
+            .SumAsync(x => (decimal?)x.TransactionsAmount) ?? 0m;
+        var totalExpense = await _dbContext.Transactions
+            .Where(x => x.UserId == userIdGuid && !x.IsDeleted && x.Type == "Expense")
+            .SumAsync(x => (decimal?)x.TransactionsAmount) ?? 0m;
         var BalanceSummaryResponse = new Response.BalanceSummaryResponse
         {
             totalBalance = totalJar + totalAccount,
@@ -57,7 +65,11 @@ public class Service : IService
         {
             jar = j,
             spent = _dbContext.Transactions
-                .Where(t => t.FromJarId == j.Id).Sum(s => (decimal?)s.TransactionsAmount) ?? 0,
+                .Where(t => t.UserId == userIdGuid
+                            && !t.IsDeleted
+                            && t.Type == "Expense"
+                            && t.FromJarId == j.Id)
+                .Sum(s => (decimal?)s.TransactionsAmount) ?? 0,
         });
         var selectedJarQuery = tmpJarObject.Select(x => new Response.JarSummaryResponse
         {
@@ -70,11 +82,16 @@ public class Service : IService
         
         
         // ===============================categoryBreakdown===============================
-        var categoryQuery = _dbContext.Categories.Where(x => x.OwnerUserId == userIdGuid);
+        var categoryQuery = _dbContext.Categories
+            .Where(x => x.IsActive && (x.OwnerUserId == null || x.OwnerUserId == userIdGuid));
         var tmpCategoryObject = categoryQuery.Select(c => new
         {
             Category = c,
-            totalSpent = _dbContext.Transactions.Where(t => t.CategoryId == c.Id && t.Type == "Expense")
+            totalSpent = _dbContext.Transactions
+                .Where(t => t.UserId == userIdGuid
+                            && !t.IsDeleted
+                            && t.CategoryId == c.Id
+                            && t.Type == "Expense")
                 .Sum(s => (decimal?)s.TransactionsAmount) ?? 0
 
         });
@@ -88,7 +105,10 @@ public class Service : IService
         
         
         // ===============================recentTransactions===============================
-        var transactionQuery = _dbContext.Transactions.Where(x => x.UserId == userIdGuid);
+        var transactionQuery = _dbContext.Transactions
+            .Where(x => x.UserId == userIdGuid && !x.IsDeleted)
+            .OrderByDescending(x => x.TransactionDate)
+            .Take(10);
         var selectedTransactionsQuery = transactionQuery.Select(x => new Response.RecentTransactionResponse
         {
             id = x.Id,

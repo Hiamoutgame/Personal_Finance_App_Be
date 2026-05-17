@@ -68,6 +68,18 @@ public class Service : IService
     await _validationServices.ValidateCreateReminderRequest(request);
 
     var userIdGuid = GetCurrentUserId();
+
+    if (request.CategoryId.HasValue)
+    {
+        var categoryExists = await _appDbContext.Categories.AnyAsync(x =>
+            x.Id == request.CategoryId.Value
+            && x.IsActive
+            && (x.OwnerUserId == null || x.OwnerUserId == userIdGuid));
+        if (!categoryExists)
+        {
+            throw AppValidationException.NotFound("Không tìm thấy danh mục này.", "categoryId", "CATEGORY_NOT_FOUND");
+        }
+    }
     
     var now = DateTimeOffset.UtcNow; 
     

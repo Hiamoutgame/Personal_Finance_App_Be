@@ -7,6 +7,9 @@ using Personal_Finance_Management.Repository;
 using AdminService = Personal_Finance_Management.Service.Admin;
 using authService = Personal_Finance_Management.Service.Auth;
 using BroadcastService = Personal_Finance_Management.Service.broadcast;
+using BankConnectionService = Personal_Finance_Management.Service.BankConnection;
+using BankSyncService = Personal_Finance_Management.Service.BankSync;
+using CassoService = Personal_Finance_Management.Service.Casso;
 using CategoryService = Personal_Finance_Management.Service.category;
 using ImportService = Personal_Finance_Management.Service.import;
 using jwtService = Personal_Finance_Management.Service.JwtService;
@@ -82,8 +85,18 @@ builder.Services.AddScoped<NotificationService.IService, NotificationService.Ser
 builder.Services.AddScoped<BroadcastService.IService, BroadcastService.Service>();
 builder.Services.AddScoped<AdminService.IService, AdminService.Service>();
 builder.Services.AddScoped<AIService.IService, AIService.Service>();
+builder.Services.AddScoped<BankConnectionService.IService, BankConnectionService.Service>();
+builder.Services.AddScoped<BankSyncService.IService, BankSyncService.Service>();
+builder.Services.AddScoped<CassoService.ICassoTokenProtector, CassoService.CassoTokenProtector>();
 builder.Services.AddScoped<DatabaseSeedService>();
 builder.Services.AddHostedService<BroadcastDispatchBackgroundService>();
+builder.Services.AddHttpClient<CassoService.ICassoClient, CassoService.CassoClient>(client =>
+{
+    var timeoutSeconds = builder.Configuration.GetValue<int?>("Casso:TimeoutSeconds")
+                         ?? builder.Configuration.GetValue<int?>("CasooOptions:TimeoutSeconds")
+                         ?? 30;
+    client.Timeout = TimeSpan.FromSeconds(timeoutSeconds);
+});
 builder.Services.AddHttpClient<OcrService.IService, OcrService.Service>(client =>
 {
     var timeoutSeconds = builder.Configuration.GetValue<int?>("Ocr:TimeoutSeconds") ?? 120;

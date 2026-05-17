@@ -134,7 +134,10 @@ public class Service : IService
 
         if (jar.Balance != 0)
         {
-            throw new Exception("Jar balance must be 0");
+            throw AppValidationException.BadRequest(
+                "Jar balance must be 0.",
+                "balance",
+                "JAR_BALANCE_MUST_BE_ZERO");
         }
 
         jar.Status = "Archived";

@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Personal_Finance_Management.Repository;
 using Personal_Finance_Management.Repository.Entity;
 using Personal_Finance_Management.Service.Base;
+using Personal_Finance_Management.Service.Validations;
 
 namespace Personal_Finance_Management.Service.goal;
 
@@ -28,7 +29,7 @@ public class Service : IService
         
         var goals = await _appDbContext.Goals
             .Include(g => g.LinkedJar)
-            .Where(g => g.UserId == userId && g.Status == "Active" && g.Status == "Completed" )
+            .Where(g => g.UserId == userId && (g.Status == "Active" || g.Status == "Completed"))
             .OrderBy(g => g.Title)
             .ToListAsync();
         
@@ -104,8 +105,18 @@ public class Service : IService
     public async Task<Response.CreateGoalResponse> CreateGoal(Request.CreateGoalRequest request)
     {
         var userId = GetCurrentUserId();
-        
-        var linkedJar = _appDbContext.Jars.FirstOrDefault(x => x.Id == request.LinkedJarId);
+        ValidateGoalInput(request.Title, request.TargetAmount, request.DueDate);
+
+        var linkedJar = request.LinkedJarId.HasValue
+            ? await _appDbContext.Jars.FirstOrDefaultAsync(x => x.Id == request.LinkedJarId.Value && x.UserId == userId)
+            : null;
+
+        if (request.LinkedJarId.HasValue && linkedJar == null)
+        {
+            throw AppValidationException.NotFound("Jar not found.", "linkedJarId", "JAR_NOT_FOUND");
+        }
+
+        var now = DateTimeOffset.UtcNow;
 
         var goal = new Goal
         {
@@ -116,12 +127,14 @@ public class Service : IService
             Status = "Active",          
             Note = request.Note,
             UserId = userId,
-            LinkedJarId = request.LinkedJarId
+            LinkedJarId = request.LinkedJarId,
+            CreatedAt = now,
+            UpdatedAt = now
         };
 
         _appDbContext.Goals.Add(goal);
         await _appDbContext.SaveChangesAsync();
-        if (linkedJar.Balance >= request.TargetAmount)
+        if (linkedJar != null && linkedJar.Balance >= request.TargetAmount)
         {
             goal.Status = "Completed";
             goal.UpdatedAt = DateTimeOffset.UtcNow;
@@ -175,11 +188,36 @@ public class Service : IService
         if (goal == null)
             throw new ("Goal not found");
         
+        if (request.Title != null && string.IsNullOrWhiteSpace(request.Title))
+        {
+            throw AppValidationException.BadRequest("Goal title is required.", "title", "GOAL_TITLE_REQUIRED");
+        }
+
+        if (request.TargetAmount.HasValue && request.TargetAmount.Value <= 0)
+        {
+            throw AppValidationException.BadRequest("Target amount must be greater than zero.", "targetAmount", "INVALID_GOAL_TARGET_AMOUNT");
+        }
+
+        if (request.DueDate.HasValue && request.DueDate.Value.Date < DateTime.UtcNow.Date)
+        {
+            throw AppValidationException.BadRequest("Goal due date cannot be in the past.", "dueDate", "GOAL_DUE_DATE_IN_PAST");
+        }
+
+        if (request.LinkedJarId.HasValue)
+        {
+            var jarExists = await _appDbContext.Jars.AnyAsync(x => x.Id == request.LinkedJarId.Value && x.UserId == userId);
+            if (!jarExists)
+            {
+                throw AppValidationException.NotFound("Jar not found.", "linkedJarId", "JAR_NOT_FOUND");
+            }
+        }
+
         if (request.Title != null) goal.Title = request.Title;
         if (request.TargetAmount.HasValue) goal.TargetAmount = request.TargetAmount.Value;
         if (request.DueDate.HasValue) goal.DueDate = request.DueDate.Value;
         if (request.LinkedJarId != null) goal.LinkedJarId = request.LinkedJarId;
         if (request.Note != null) goal.Note = request.Note;
+        goal.UpdatedAt = DateTimeOffset.UtcNow;
         
         await _appDbContext.SaveChangesAsync();
 
@@ -219,5 +257,23 @@ public class Service : IService
         if (soThangConLai <= 0) return conThieu;
 
         return conThieu / soThangConLai;
+    }
+
+    private static void ValidateGoalInput(string title, decimal targetAmount, DateTime dueDate)
+    {
+        if (string.IsNullOrWhiteSpace(title))
+        {
+            throw AppValidationException.BadRequest("Goal title is required.", "title", "GOAL_TITLE_REQUIRED");
+        }
+
+        if (targetAmount <= 0)
+        {
+            throw AppValidationException.BadRequest("Target amount must be greater than zero.", "targetAmount", "INVALID_GOAL_TARGET_AMOUNT");
+        }
+
+        if (dueDate.Date < DateTime.UtcNow.Date)
+        {
+            throw AppValidationException.BadRequest("Goal due date cannot be in the past.", "dueDate", "GOAL_DUE_DATE_IN_PAST");
+        }
     }
 }
