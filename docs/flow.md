@@ -6,11 +6,14 @@ Nguồn route và DTO hiện tại: `docs/API V2.md`.
 
 Lưu ý quan trọng:
 
-- Route trong file này bám theo backend hiện tại. Một số route chưa nằm dưới `/api/v1`, ví dụ `/User/me`, `/Onboarding`, `/FinancialAccount`, `/Jar`, `/Transactions`, `/user/dashboard`.
+- **Convention chung**: xem [conventions.md](./conventions.md). Mọi route, JSON case, kiểu dữ liệu, error envelope tuân theo file đó.
+- Route trong file này bám theo backend hiện tại. Các route chưa nằm dưới `/api/v1` (vd `/User/me`, `/Onboarding`, `/FinancialAccount`, `/Jar`, `/Transactions`, `/user/dashboard`) là drift cần sửa khi controller refactor; FE nên expect tất cả sẽ về `/api/v1/...` ở phase tiếp theo.
 - Các API có ghi `Bearer` phải gửi header `Authorization: Bearer <accessToken>`.
-- FE gửi `transactionsAmount` là số dương cho cả `Income` và `Expense`.
+- FE gửi `amount` là **số dương** cho cả `Income` và `Expense`. Server tự suy dấu khi ghi DB.
 - App không giữ tiền thật. `FinancialAccount` và `Jar` chỉ là sổ theo dõi nội bộ.
 - Admin dùng chung API login với user, sau đó phân quyền bằng role trong JWT.
+- **`Transaction.type` v1 chỉ có `Income` và `Expense`**. Không có `Transfer`. Chuyển tiền giữa jar dùng endpoint `POST /api/v1/jars/{id}/allocate` (chưa implement, xem [conventions.md §11](./conventions.md)).
+- **Jar balance** do server quản lý qua transaction + allocate. FE không tự set balance.
 
 ---
 
@@ -747,11 +750,15 @@ UX:
 - Nếu backend trả lỗi không đủ tiền, show lỗi ngay dưới amount/jar.
 - Không gửi amount âm.
 
-### 10.4 Transfer/internal jar movement
+### 10.4 Chuyển tiền giữa jar / allocate
 
-Code service hiện có nhánh `Transfer`, nhưng public contract MVP không khuyến nghị dựng UI transfer chính. FE chỉ nên dựng màn transfer nếu team chốt dùng capability này.
+**Quyết định v1**: KHÔNG có Transaction type `Transfer`. Dropdown type chỉ hiển thị `Income` và `Expense`.
 
-Nếu chưa chốt, không đưa `Transfer` vào dropdown type chính; chỉ hiển thị `Income` và `Expense`.
+Khi user muốn chuyển tiền từ tổng/financial account vào một jar, dùng endpoint riêng (chưa implement, xem [conventions.md §11](./conventions.md) và `API V2.md §11`):
+
+- `POST /api/v1/jars/{id}/allocate` — tăng `jar.balance` từ unallocated balance hoặc từ một financial account cụ thể.
+
+Chuyển tiền giữa hai jar (jar-to-jar) không có ở v1; nếu cần thiết, FE tạo 2 thao tác allocate ngược chiều khi endpoint sẵn sàng.
 
 ### 10.5 Sửa giao dịch
 
@@ -809,7 +816,9 @@ Ghi chú:
 
 ## 11. Casso sync flow
 
-### 11.1 User bấm sync linked account
+> **Quyết định**: FE mới nên dùng OAuth flow `POST /api/v1/financial-accounts/casso/connect` + sync qua `POST /api/v1/financial-accounts/{id}/sync`. Endpoint legacy `/Transactions/Casso` dưới đây là **@deprecated**, vẫn còn để backward compat và để Casso webhook gọi vào, sẽ bị xóa ở phase refactor tiếp theo.
+
+### 11.1 User bấm sync linked account (legacy, deprecated)
 
 Màn dùng: `/accounts` hoặc account detail.
 
@@ -818,7 +827,7 @@ Màn dùng: `/accounts` hoặc account detail.
 - account `connectionMode = LinkedApi`;
 - account active.
 
-API:
+API (legacy):
 
 ```http
 GET /Transactions/Casso?financialAccountId={id}&page=1&pageSize=50&sort=ASC
@@ -837,7 +846,7 @@ Sau response:
 - refresh account balance;
 - refresh dashboard.
 
-### 11.2 Webhook Casso
+### 11.2 Webhook Casso (deprecated, vẫn nhận webhook)
 
 Endpoint:
 

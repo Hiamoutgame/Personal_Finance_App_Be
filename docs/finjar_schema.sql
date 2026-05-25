@@ -2,6 +2,25 @@
 -- FinJar - PostgreSQL Schema (1-month MVP scope)
 -- Convention: PostgreSQL, uuid PK for business tables, timestamptz,
 -- numeric(18,2), JSON for structured metadata.
+--
+-- See docs/conventions.md for naming, enum values, sign conventions,
+-- and HTTP/API contract rules that ride on top of this schema.
+--
+-- Sign convention for transactions.transactions_amount:
+--   * API layer (request/response): amount is ALWAYS positive (> 0).
+--   * Server applies sign on write based on type: Income > 0, Expense < 0.
+--   * The check constraint chk_transactions_amount_by_type enforces this at DB.
+--
+-- Transfer transaction type is NOT supported in v1 (only Income/Expense).
+-- The from_jar_id / to_jar_id columns are kept for future jar-to-jar
+-- bookkeeping and for the upcoming POST /api/v1/jars/{id}/allocate endpoint.
+--
+-- Migrations are append-only. Do NOT edit a shipped migration; add a new
+-- one. Suggested follow-up migrations (not yet applied):
+--   - composite index on notifications(user_id, is_read, created_at DESC)
+--     to speed up unread inbox queries.
+--   - covering index on transactions(financial_account_id, category_id,
+--     transaction_date DESC) for dashboard category breakdown.
 -- ============================================================
 
 CREATE EXTENSION IF NOT EXISTS pgcrypto;

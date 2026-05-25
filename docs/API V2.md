@@ -1,5 +1,7 @@
 # API v2 - Tổng hợp endpoint hiện có trong controller
 
+> **Quan trọng**: Mọi quy ước về URL, JSON naming, kiểu dữ liệu, sign convention cho `amount`, pagination, error envelope, HTTP status code và enum values được định nghĩa tập trung tại [conventions.md](./conventions.md). Khi tài liệu này và `conventions.md` mâu thuẫn, **`conventions.md` được ưu tiên**. Các phần trong file này chưa cập nhật theo convention mới sẽ được sửa dần.
+
 Tài liệu này tổng hợp theo code controller hiện tại trong `Personal_Finance_Management.Api\Controllers` và DTO trong `Personal_Finance_Management.Service`.
 
 Quy ước trong tài liệu:
@@ -11,6 +13,20 @@ Quy ước trong tài liệu:
 - `auth` mô tả quyền gọi endpoint, không phải field body gửi lên API.
 - `Bearer` nghĩa là endpoint cần access token. Nếu controller dùng `[Authorize]` mà chưa chỉ rõ policy thì ghi `Bearer`.
 - Chỗ chưa rõ hoặc chưa implement được đánh dấu `[TODO]` và để dòng `Cần bổ sung: ____`.
+
+## 0. Quyết định chốt cho v1 (đọc trước khi tra cứu endpoint)
+
+Các điểm dưới đây giải quyết những mâu thuẫn còn tồn đọng trong các phiên bản cũ của tài liệu. Xem chi tiết tại [conventions.md](./conventions.md).
+
+- **`Transaction.type` chỉ có `Income` và `Expense`**. Không có `Transfer` ở v1. Việc chuyển tiền giữa các jar được mô hình hóa bằng endpoint riêng (xem mục 11 dưới đây), không tạo bản ghi `transactions`.
+- **Sign convention `amount`**: API luôn nhận và trả **số dương**. Server tự suy dấu khi ghi DB theo `type`.
+- **Routes**: tất cả endpoint dưới `/api/v1/...`, kebab-case. Endpoint legacy như `/api/v1/transactions/Casso` được đánh dấu `@deprecated` và sẽ bị xóa ở phase tiếp theo.
+- **HTTP status**: POST tạo mới trả `201`, DELETE thành công trả `204`, validation lỗi trả `422` với error envelope chuẩn. Một số ví dụ trong tài liệu vẫn ghi `200` cho create/delete — đó là drift, sẽ được sửa khi controller refactor.
+- **Error envelope** (4xx/5xx): `{ code, message, field?, details? }`.
+- **`ImportJob.status`**: `Pending | Processing | AwaitingReview | Completed | Failed` (đồng bộ với schema).
+- **`Notification.type`**: `SpendingAlert | GoalUpdate | Reminder | System | Broadcast`.
+- **Goal contribution**: dùng endpoint riêng `POST /api/v1/goals/{id}/contributions` (xem mục 11). Ghi chú cũ "đóng góp mục tiêu gộp qua transaction" đã bị bãi bỏ.
+- **Jar allocate**: dùng endpoint riêng `POST /api/v1/jars/{id}/allocate` (xem mục 11). Không tạo `Transaction` type `Transfer`.
 
 ## 1. Auth, User, Onboarding
 
@@ -679,7 +695,7 @@ Response:
 Ghi chú:
 
 - Route đang ghi theo controller hiện tại.
-- Public jar setup/allocate/transfer endpoints không có trong controller hiện tại.
+- Public jar setup endpoint không có trong controller hiện tại; jar allocate được spec ở mục 11 (Pending endpoints) và sẽ implement ở phase tiếp theo. Transfer giữa các jar không có trong v1 (xem [conventions.md §11](./conventions.md)).
 
 ### Category
 
@@ -975,7 +991,13 @@ Ghi chú:
 
 ### Casso Transaction Integration
 
-#### `GET /api/v1/transactions/Casso`
+> **@deprecated**: Hai endpoint dưới đây (`GET` và `POST /api/v1/transactions/Casso`) là legacy. FE mới phải dùng:
+> - `POST /api/v1/financial-accounts/casso/connect` cho OAuth flow,
+> - `POST /api/v1/financial-accounts/{id}/sync` cho thao tác sync thủ công.
+>
+> Webhook Casso vẫn nhận trên `POST /api/v1/transactions/Casso` cho đến khi có endpoint webhook mới ở phase tiếp theo; sau đó cả hai endpoint sẽ bị xóa.
+
+#### `GET /api/v1/transactions/Casso` *(deprecated)*
 
 > Tam an khoi Swagger/API explorer. Day la endpoint legacy/manual sync, khong de FE goi trong MVP hien tai.
 
@@ -1012,7 +1034,7 @@ Response:
 }
 ```
 
-#### `POST /api/v1/transactions/Casso`
+#### `POST /api/v1/transactions/Casso` *(deprecated, vẫn nhận webhook tới khi có endpoint thay thế)*
 
 > Tam an khoi Swagger/API explorer. Webhook Casso V1 van co the goi truc tiep vao route nay neu da cau hinh `secure-token`.
 
@@ -1104,7 +1126,7 @@ Response:
   "body": {
     "id": "guid",
     "financialAccountId": "guid",
-    "status": "Pending | AwaitingReview | Failed",
+    "status": "Pending | AwaitingReview | Processing | Completed | Failed",
     "message": "string",
     "fileName": "string",
     "originalFileName": "string",
@@ -1884,7 +1906,7 @@ Response:
 
 Ghi chú đã chốt:
 
-- Không dùng endpoint `POST /api/v1/goals/{id}/contributions`; flow đóng góp mục tiêu đã gộp qua transaction.
+- Không dùng endpoint `POST /api/v1/goals/{id}/contributions` ở phiên bản code hiện tại; tuy nhiên quy ước v1 đã chốt **sẽ thêm** endpoint này (xem mục 11 và [conventions.md §11](./conventions.md)). Cho đến khi implement, FE tạm dùng flow transaction để ghi nhận đóng góp — sau khi endpoint ra mắt sẽ migrate.
 
 ### Reminders
 
@@ -2760,3 +2782,137 @@ Các mục dưới đây là chỗ đang thiếu hoặc cần sửa code để k
    - Full statement multi-row import tu file bank/csv/xlsx chua hoan tat.
 3. Secrets/config:
    - `appsettings*.json` trong repo đang có secret thật-looking. Không đưa vào API docs. Nên rotate và chuyển sang env/secret manager.
+
+## 11. Pending endpoints (đã chốt scope v1, chưa implement)
+
+Các endpoint dưới đây đã được chốt trong [conventions.md §11](./conventions.md) nhưng controller chưa có. Sẽ implement ở phase refactor backend tiếp theo. FE có thể chuẩn bị contract dựa trên spec sau.
+
+### `POST /api/v1/jars/{id}/allocate`
+
+Phân bổ tiền vào một jar. Không tạo bản ghi `transactions`; chỉ điều chỉnh `jar.balance` (và optionally `financialAccount.currentBalance` nếu nguồn là financial account).
+
+Request:
+
+```json
+{
+  "auth": "Bearer User",
+  "route": { "id": "guid" },
+  "body": {
+    "amount": "decimal",
+    "sourceType": "FinancialAccount | Unallocated",
+    "sourceFinancialAccountId": "guid | null",
+    "note": "string | null"
+  }
+}
+```
+
+Response:
+
+```json
+{
+  "status": 200,
+  "body": {
+    "jarId": "guid",
+    "newBalance": "decimal",
+    "allocatedAt": "datetime"
+  }
+}
+```
+
+Lưu ý:
+
+- `amount > 0`.
+- Nếu `sourceType = "FinancialAccount"` thì `sourceFinancialAccountId` bắt buộc và server giảm `currentBalance` tương ứng (transactional).
+- Nếu `sourceType = "Unallocated"` thì chỉ tăng `jar.balance` từ phần `unallocatedBalance` tổng của user (logic check ở service).
+
+### `POST /api/v1/goals/{id}/contributions`
+
+Ghi nhận một lần đóng góp vào goal. Tăng `goal.savedAmount`; nếu chỉ định `sourceJarId` thì đồng thời giảm `jar.balance` (transactional).
+
+Request:
+
+```json
+{
+  "auth": "Bearer User",
+  "route": { "id": "guid" },
+  "body": {
+    "amount": "decimal",
+    "sourceJarId": "guid | null",
+    "note": "string | null"
+  }
+}
+```
+
+Response:
+
+```json
+{
+  "status": 201,
+  "body": {
+    "id": "guid",
+    "goalId": "guid",
+    "amount": "decimal",
+    "sourceJarId": "guid | null",
+    "createdAt": "datetime",
+    "goal": {
+      "savedAmount": "decimal",
+      "progressPercentage": "decimal",
+      "status": "string"
+    }
+  }
+}
+```
+
+### `GET /api/v1/goals/{id}/contributions`
+
+List các contribution của một goal (paginated).
+
+Request:
+
+```json
+{
+  "auth": "Bearer User",
+  "route": { "id": "guid" },
+  "query": { "page": "int", "pageSize": "int" }
+}
+```
+
+Response: paginated envelope (xem [conventions.md §5](./conventions.md)).
+
+### `GET /api/v1/spending-limits/{id}`
+
+Chi tiết một spending limit kèm thông tin spend hiện tại trong kỳ và progress so với ngưỡng cảnh báo.
+
+Request:
+
+```json
+{
+  "auth": "Bearer User",
+  "route": { "id": "guid" }
+}
+```
+
+Response:
+
+```json
+{
+  "status": 200,
+  "body": {
+    "id": "guid",
+    "jarId": "guid | null",
+    "categoryId": "guid | null",
+    "limitAmount": "decimal",
+    "period": "Daily | Monthly",
+    "alertAtPercentage": "decimal",
+    "isActive": "boolean",
+    "currentSpend": "decimal",
+    "spendPercentage": "decimal",
+    "isOverLimit": "boolean",
+    "isAlertTriggered": "boolean"
+  }
+}
+```
+
+### Bổ sung field cho endpoint list jar
+
+`GET /api/v1/jars` (đã có) phải trả thêm field `status` (`Active | Paused | Archived`) cho mỗi jar — hiện chưa có trong response, sẽ bổ sung khi controller refactor.

@@ -1,5 +1,7 @@
 # Tổng Quan Dự Án
 
+> Convention API/contract & các quyết định scope v1 (Transfer, Casso flow, sign convention, error envelope) được chốt tại [conventions.md](./conventions.md). File này tập trung mô tả product vision và phạm vi.
+
 ## 1. Giới thiệu
 
 Đây là dự án xây dựng **hệ thống quản lý tài chính cá nhân** theo định hướng tự động hóa, tập trung vào việc giúp người dùng:
@@ -224,6 +226,21 @@ Ngoài các thao tác trực tiếp từ User và Admin, hệ thống còn cần
 - đề xuất hành động phù hợp để người dùng đạt mục tiêu tiết kiệm;
 - cơ chế cảnh báo nhiều lớp để giảm nguy cơ vượt hạn mức mà không được thông báo;
 - xử lý dữ liệu đồng bộ giữa nhiều thiết bị.
+
+### 10.1 Background jobs (đã chốt scope v1)
+
+Các job nền dưới đây là phần "hệ thống chủ động" của ứng dụng. Chi tiết spec tại [conventions.md §12](./conventions.md):
+
+- **ReminderDispatcherJob** — sinh notification khi reminder đến hạn (chạy theo cron).
+- **LimitAlertJob** — phát hiện chi tiêu sắp/đã vượt hạn mức và tạo notification `SpendingAlert`.
+- **BroadcastFanoutJob** — fan-out broadcast của admin thành notification cho từng user.
+- **ImportJobProcessor** — xử lý parsing file import ở background, không block request.
+
+### 10.2 Tính năng đẩy lùi sang backlog (KHÔNG có ở v1)
+
+- **Transfer transaction** (chuyển tiền giữa 2 jar bằng một bản ghi transaction). v1 chỉ hỗ trợ `Income`/`Expense`; chuyển tiền vào jar dùng endpoint `POST /api/v1/jars/{id}/allocate`.
+- **Realtime push notification** (SignalR/WebSocket). v1 chỉ DB-based, FE poll `/notifications`.
+- **Shared jar / mời thành viên cùng quản lý ví** — đẩy về phase 2 (đã ghi ở user story `optional`).
 
 ## 11. Yêu cầu kỹ thuật
 

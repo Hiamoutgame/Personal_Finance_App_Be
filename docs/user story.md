@@ -1,5 +1,7 @@
 # User Stories
 
+> Quy ước API/contract liên quan đến các story dưới đây (route, JSON case, enum values, error envelope, sign convention cho `amount`...) được định nghĩa tại [conventions.md](./conventions.md). Story nào nói "transfer between jars" được hiểu theo §11 của conventions.md: **dùng endpoint riêng `POST /api/v1/jars/{id}/allocate`, KHÔNG tạo Transaction type `Transfer`** (Transfer không có ở v1, được dời sang backlog).
+
 ## Mục đích tài liệu
 
 Tài liệu này tổng hợp lại các user story và admin story của dự án theo hướng ưu tiên triển khai. Mỗi story được mô tả theo 3 phần:
