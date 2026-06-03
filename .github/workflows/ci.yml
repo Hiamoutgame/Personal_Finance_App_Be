@@ -18,10 +18,10 @@ jobs:
         with:
           dotnet-version: '8.0.x'
 
-      - name: Create appsettings.Production.json
+      - name: Create appsettings.json
         env:
           APPSETTINGS_JSON: ${{ secrets.APPSETTINGS_PRODUCTION }}
-        run: echo "$APPSETTINGS_JSON" > Personal_Finance_Management/Personal_Finance_Management.Api/appsettings.Production.json
+        run: echo "$APPSETTINGS_JSON" > Personal_Finance_Management/Personal_Finance_Management.Api/appsettings.json
 
       - name: Restore dependencies
         run: dotnet restore Personal_Finance_Management/Personal_Finance_Management.sln
