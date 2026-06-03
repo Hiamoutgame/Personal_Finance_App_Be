@@ -2,9 +2,11 @@
 
 on:
   push:
-    branches: [fix-be-limit]
+    branches:
+      - '**' # Chạy trên mọi nhánh
   pull_request:
-    branches: [fix-be-limit]
+    branches:
+      - '**' # Chạy cho PR tới mọi nhánh
 
 jobs:
   build-and-test:
@@ -18,10 +20,10 @@ jobs:
         with:
           dotnet-version: '8.0.x'
 
-      - name: Create appsettings.json
+      - name: Create appsettings.Production.json
         env:
           APPSETTINGS_JSON: ${{ secrets.APPSETTINGS_PRODUCTION }}
-        run: echo "$APPSETTINGS_JSON" > Personal_Finance_Management/Personal_Finance_Management.Api/appsettings.json
+        run: echo "$APPSETTINGS_JSON" > Personal_Finance_Management/Personal_Finance_Management.Api/appsettings.Production.json
 
       - name: Restore dependencies
         run: dotnet restore Personal_Finance_Management/Personal_Finance_Management.sln
