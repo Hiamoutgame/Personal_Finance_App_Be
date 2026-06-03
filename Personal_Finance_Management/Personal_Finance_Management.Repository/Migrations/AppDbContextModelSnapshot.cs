@@ -301,7 +301,7 @@ namespace Personal_Finance_Management.Repository.Migrations
                         .ValueGeneratedOnAdd()
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)")
-                        .HasDefaultValue("casso")
+                        .HasDefaultValue("sepay")
                         .HasColumnName("provider_code");
 
                     b.Property<string>("ReturnUrl")
@@ -646,9 +646,6 @@ namespace Personal_Finance_Management.Repository.Migrations
 
                     b.HasIndex("SyncStatus")
                         .HasDatabaseName("ix_financial_accounts_sync_status");
-
-                    b.HasIndex("UserId")
-                        .HasDatabaseName("ix_financial_accounts_user_id");
 
                     b.HasIndex("UserId")
                         .IsUnique()

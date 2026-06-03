@@ -5,6 +5,7 @@ using Personal_Finance_Management.Repository.Constants;
 using Personal_Finance_Management.Repository.Entity;
 using Personal_Finance_Management.Repository.Enum;
 using Personal_Finance_Management.Service.Base;
+using Personal_Finance_Management.Service.Common.Constants;
 using Personal_Finance_Management.Service.Validations;
 using BaseResponse = Personal_Finance_Management.Service.Base.Response;
 
@@ -112,7 +113,7 @@ public class Service : IService
             .FirstOrDefaultAsync(x => x.Id == request.UserId && x.Role.Code == AppRoles.Codes.User);
 
         return user is null
-            ? throw AppValidationException.NotFound("User not found.", "id", "USER_NOT_FOUND")
+            ? throw AppValidationException.NotFound("User not found.", "id", ErrorCodes.UserNotFound)
             : ToAdminUserResponse(user);
     }
 
@@ -153,7 +154,7 @@ public class Service : IService
             .FirstOrDefaultAsync(x => x.Id == request.UserId && x.Role.Code == AppRoles.Codes.User);
 
         if (user == null)
-            throw AppValidationException.NotFound("User not found.", "id", "USER_NOT_FOUND");
+            throw AppValidationException.NotFound("User not found.", "id", ErrorCodes.UserNotFound);
 
         user.Status = ServiceTextHelper.NormalizeEnum<AccountStatus>(request.Status!);
         user.StatusReason = request.StatusReason;

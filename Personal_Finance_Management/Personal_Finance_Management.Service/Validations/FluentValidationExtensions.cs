@@ -1,4 +1,5 @@
 using FluentValidation;
+using Personal_Finance_Management.Service.Common.Constants;
 
 namespace Personal_Finance_Management.Service.Validations;
 
@@ -13,7 +14,7 @@ public static class FluentValidationExtensions
             throw AppValidationException.BadRequest(
                 "Request body is required.",
                 "body",
-                "REQUIRED");
+                ErrorCodes.Required);
         }
 
         var result = await validator.ValidateAsync(request);

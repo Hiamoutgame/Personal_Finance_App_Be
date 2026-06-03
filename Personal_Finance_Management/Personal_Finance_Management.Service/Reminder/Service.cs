@@ -3,7 +3,9 @@ using Microsoft.EntityFrameworkCore;
 using Personal_Finance_Management.Repository;
 using Personal_Finance_Management.Repository.Enum;
 using Personal_Finance_Management.Service.Base;
+using Personal_Finance_Management.Service.Common.Constants;
 using Personal_Finance_Management.Service.Validations;
+using ServiceEnums = Personal_Finance_Management.Service.Common.Enums;
 
 namespace Personal_Finance_Management.Service.Reminder;
 
@@ -31,7 +33,7 @@ public class Service : IService
         var userIdGuid = GetCurrentUserId();
         var remindersFromDb = await _appDbContext.Reminders
             .AsNoTracking()
-            .Where(r => r.UserId == userIdGuid && r.Status == "Active")
+            .Where(r => r.UserId == userIdGuid && r.Status == ServiceEnums.ReminderStatus.Active)
             .OrderBy(r => r.CreatedAt)
             .ToListAsync();
         
@@ -77,7 +79,7 @@ public class Service : IService
             && (x.OwnerUserId == null || x.OwnerUserId == userIdGuid));
         if (!categoryExists)
         {
-            throw AppValidationException.NotFound("Không tìm thấy danh mục này.", "categoryId", "CATEGORY_NOT_FOUND");
+            throw AppValidationException.NotFound("Không tìm thấy danh mục này.", "categoryId", ErrorCodes.CategoryNotFound);
         }
     }
     
@@ -95,7 +97,7 @@ public class Service : IService
         CategoryId = request.CategoryId,
         NotifyDaysBefore = request.NotifyDaysBefore, 
         Note = request.Note,
-        Status = "Active",                
+        Status = ServiceEnums.ReminderStatus.Active,
         CreatedAt = now,
         UpdatedAt = now
     };
@@ -133,7 +135,7 @@ public class Service : IService
     
     if (reminder == null)
     {
-        throw AppValidationException.NotFound("Không tìm thấy nhắc nhở này.", "id", "REMINDER_NOT_FOUND");
+        throw AppValidationException.NotFound("Không tìm thấy nhắc nhở này.", "id", ErrorCodes.ReminderNotFound);
     }
     
     if (request.Title != null) reminder.Title = request.Title;
@@ -182,7 +184,7 @@ public class Service : IService
         
         if (reminder == null)
         {
-            throw AppValidationException.NotFound("Không tìm thấy nhắc nhở này.", "id", "REMINDER_NOT_FOUND");
+            throw AppValidationException.NotFound("Không tìm thấy nhắc nhở này.", "id", ErrorCodes.ReminderNotFound);
         }
         
         var now = DateTimeOffset.UtcNow;

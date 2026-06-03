@@ -1,3 +1,4 @@
+using Personal_Finance_Management.Service.Common.Constants;
 using BroadcastService = Personal_Finance_Management.Service.broadcast;
 
 namespace Personal_Finance_Management.Api.Jobs;
@@ -20,10 +21,10 @@ public class BroadcastDispatchBackgroundService : BackgroundService
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        var intervalSeconds = _configuration.GetValue("BroadcastDispatch:IntervalSeconds", 60);
+        var intervalSeconds = _configuration.GetValue(ConfigKeys.BroadcastDispatch.IntervalSeconds, IntegrationDefaults.BroadcastDispatchIntervalSeconds);
         if (intervalSeconds <= 0)
         {
-            intervalSeconds = 60;
+            intervalSeconds = IntegrationDefaults.BroadcastDispatchIntervalSeconds;
         }
 
         using var timer = new PeriodicTimer(TimeSpan.FromSeconds(intervalSeconds));

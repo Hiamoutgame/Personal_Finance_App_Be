@@ -2,26 +2,27 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using Microsoft.Extensions.Configuration;
+using Personal_Finance_Management.Service.Common.Constants;
 using Personal_Finance_Management.Service.Validations;
 
-namespace Personal_Finance_Management.Service.Casso;
+namespace Personal_Finance_Management.Service.Sepay;
 
-public interface ICassoTokenProtector
+public interface ISepayTokenProtector
 {
-    string Protect(CassoStoredToken token);
-    CassoStoredToken Unprotect(string protectedValue);
+    string Protect(SepayStoredToken token);
+    SepayStoredToken Unprotect(string protectedValue);
 }
 
-public class CassoTokenProtector : ICassoTokenProtector
+public class SepayTokenProtector : ISepayTokenProtector
 {
     private readonly IConfiguration _configuration;
 
-    public CassoTokenProtector(IConfiguration configuration)
+    public SepayTokenProtector(IConfiguration configuration)
     {
         _configuration = configuration;
     }
 
-    public string Protect(CassoStoredToken token)
+    public string Protect(SepayStoredToken token)
     {
         var json = JsonSerializer.Serialize(token);
         var plaintext = Encoding.UTF8.GetBytes(json);
@@ -41,17 +42,17 @@ public class CassoTokenProtector : ICassoTokenProtector
                + Convert.ToBase64String(ciphertext);
     }
 
-    public CassoStoredToken Unprotect(string protectedValue)
+    public SepayStoredToken Unprotect(string protectedValue)
     {
         if (string.IsNullOrWhiteSpace(protectedValue))
         {
-            throw AppValidationException.BadRequest("Casso token is missing.", "accessTokenRef", "CASSO_TOKEN_MISSING");
+            throw AppValidationException.BadRequest(ErrorMessages.SepayTokenMissing, "accessTokenRef", ErrorCodes.SepayTokenMissing);
         }
 
         var parts = protectedValue.Split(':');
         if (parts.Length != 4 || parts[0] != "v1")
         {
-            throw AppValidationException.BadRequest("Casso token format is invalid.", "accessTokenRef", "CASSO_TOKEN_INVALID");
+            throw AppValidationException.BadRequest(ErrorMessages.SepayTokenFormatInvalid, "accessTokenRef", ErrorCodes.SepayTokenInvalid);
         }
 
         var nonce = Convert.FromBase64String(parts[1]);
@@ -62,10 +63,10 @@ public class CassoTokenProtector : ICassoTokenProtector
         using var aes = new AesGcm(ResolveKey(), tag.Length);
         aes.Decrypt(nonce, ciphertext, tag, plaintext);
 
-        var token = JsonSerializer.Deserialize<CassoStoredToken>(Encoding.UTF8.GetString(plaintext));
+        var token = JsonSerializer.Deserialize<SepayStoredToken>(Encoding.UTF8.GetString(plaintext));
         if (token == null || string.IsNullOrWhiteSpace(token.accessToken))
         {
-            throw AppValidationException.BadRequest("Casso token payload is invalid.", "accessTokenRef", "CASSO_TOKEN_INVALID");
+            throw AppValidationException.BadRequest(ErrorMessages.SepayTokenPayloadInvalid, "accessTokenRef", ErrorCodes.SepayTokenInvalid);
         }
 
         return token;
@@ -73,11 +74,11 @@ public class CassoTokenProtector : ICassoTokenProtector
 
     private byte[] ResolveKey()
     {
-        var configuredKey = _configuration["Casso:TokenEncryptionKey"]
+        var configuredKey = _configuration[ConfigKeys.Sepay.TokenEncryptionKey]
                             ?? _configuration["JwtOptions:SecretKey"];
         if (string.IsNullOrWhiteSpace(configuredKey))
         {
-            throw AppValidationException.BadRequest("Casso token encryption key is not configured.", "Casso:TokenEncryptionKey", "CASSO_CONFIG_MISSING");
+            throw AppValidationException.BadRequest(ErrorMessages.SepayTokenEncryptionKeyMissing, ConfigKeys.Sepay.TokenEncryptionKey, ErrorCodes.SepayConfigMissing);
         }
 
         return SHA256.HashData(Encoding.UTF8.GetBytes(configuredKey));

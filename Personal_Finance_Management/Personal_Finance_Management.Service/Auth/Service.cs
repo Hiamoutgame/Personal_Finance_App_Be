@@ -7,6 +7,7 @@ using Personal_Finance_Management.Repository.Constants;
 using Personal_Finance_Management.Repository.Entity;
 using Personal_Finance_Management.Repository.Enum;
 using Personal_Finance_Management.Service.Base;
+using Personal_Finance_Management.Service.Common.Constants;
 using ValidationService = Personal_Finance_Management.Service.Validations;
 using JwtService = Personal_Finance_Management.Service.JwtService;
 
@@ -66,13 +67,13 @@ public class Service : IService
         {
             new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
             new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
-            new Claim("id", user.Id.ToString()),
+            new Claim(AppClaimTypes.Id, user.Id.ToString()),
             new Claim(ClaimTypes.Name, user.Username),
-            new Claim("username", user.Username),
+            new Claim(AppClaimTypes.Username, user.Username),
             new Claim(ClaimTypes.Email, user.Email),
-            new Claim("firstName", user.FirstName),
-            new Claim("lastName", user.LastName),
-            new Claim("isOnboardingCompleted", user.IsOnboardingCompleted ? "true" : "false"),
+            new Claim(AppClaimTypes.FirstName, user.FirstName),
+            new Claim(AppClaimTypes.LastName, user.LastName),
+            new Claim(AppClaimTypes.IsOnboardingCompleted, user.IsOnboardingCompleted ? "true" : "false"),
             new Claim(ClaimTypes.Role, role.Code)
         });
 
@@ -120,22 +121,22 @@ public class Service : IService
         if (user is null || !BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
         {
             throw ValidationService.AppValidationException.BadRequest(
-                "Email hoặc mật khẩu không đúng.",
+                ErrorMessages.InvalidLoginCredentials,
                 "email",
-                "INVALID_LOGIN_CREDENTIALS");
+                ErrorCodes.InvalidLoginCredentials);
         }
 
         var token = _jwtService.GenerateAccessToken(new[]
         {
             new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
             new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
-            new Claim("id", user.Id.ToString()),
+            new Claim(AppClaimTypes.Id, user.Id.ToString()),
             new Claim(ClaimTypes.Name, user.Username),
-            new Claim("username", user.Username),
+            new Claim(AppClaimTypes.Username, user.Username),
             new Claim(ClaimTypes.Email, user.Email),
-            new Claim("firstName", user.FirstName),
-            new Claim("lastName", user.LastName),
-            new Claim("isOnboardingCompleted", user.IsOnboardingCompleted ? "true" : "false"),
+            new Claim(AppClaimTypes.FirstName, user.FirstName),
+            new Claim(AppClaimTypes.LastName, user.LastName),
+            new Claim(AppClaimTypes.IsOnboardingCompleted, user.IsOnboardingCompleted ? "true" : "false"),
             new Claim(ClaimTypes.Role, user.Role.Code)
         });
         

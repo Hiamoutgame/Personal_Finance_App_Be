@@ -3,6 +3,8 @@ using Microsoft.EntityFrameworkCore;
 using Personal_Finance_Management.Repository;
 using Personal_Finance_Management.Repository.Entity;
 using Personal_Finance_Management.Service.Base;
+using Personal_Finance_Management.Service.Common.Constants;
+using Personal_Finance_Management.Service.Common.Enums;
 using Personal_Finance_Management.Service.Validations;
 
 
@@ -55,7 +57,7 @@ public class Service : IService
                 currentSpent = await _appDbContext.Transactions
                     .Where(t => t.UserId == userId
                                 && !t.IsDeleted
-                                && t.Type == "Expense"
+                                && t.Type == TransactionType.Expense
                                 && t.FromJarId == limit.JarId.Value
                                 && t.ToJarId == null
                                 && t.FinancialAccountId == null
@@ -71,7 +73,7 @@ public class Service : IService
                 currentSpent = await _appDbContext.Transactions
                     .Where(t => t.UserId == userId
                                 && !t.IsDeleted
-                                && t.Type == "Expense"
+                                && t.Type == TransactionType.Expense
                                 && t.CategoryId == limit.CategoryId.Value
                                 && t.TransactionDate >= limit.ResetAt)
                     .SumAsync(t => (decimal?)t.TransactionsAmount) ?? 0m;
@@ -102,12 +104,12 @@ public class Service : IService
         var userId = GetCurrentUserId();
         if (request.LimitAmount <= 0)
         {
-            throw AppValidationException.BadRequest("Limit amount must be greater than zero.", "limitAmount", "INVALID_LIMIT_AMOUNT");
+            throw AppValidationException.BadRequest(ErrorMessages.InvalidLimitAmount, "limitAmount", ErrorCodes.InvalidLimitAmount);
         }
 
         if (request.AlertAtPercentage <= 0 || request.AlertAtPercentage > 100)
         {
-            throw AppValidationException.BadRequest("Alert percentage must be between 1 and 100.", "alertAtPercentage", "INVALID_ALERT_PERCENTAGE");
+            throw AppValidationException.BadRequest(ErrorMessages.InvalidAlertPercentage, "alertAtPercentage", ErrorCodes.InvalidAlertPercentage);
         }
 
         var now = DateTimeOffset.UtcNow;
@@ -132,7 +134,7 @@ public class Service : IService
                 && (x.OwnerUserId == null || x.OwnerUserId == userId));
             if (!categoryExists)
             {
-                throw AppValidationException.NotFound("Category not found.", "targetId", "CATEGORY_NOT_FOUND");
+                throw AppValidationException.NotFound("Category not found.", "targetId", ErrorCodes.CategoryNotFound);
             }
 
             limit.CategoryId = request.TargetId;
@@ -145,7 +147,7 @@ public class Service : IService
                 && x.UserId == userId);
             if (!jarExists)
             {
-                throw AppValidationException.NotFound("Jar not found.", "targetId", "JAR_NOT_FOUND");
+                throw AppValidationException.NotFound("Jar not found.", "targetId", ErrorCodes.JarNotFound);
             }
 
             limit.JarId = request.TargetId;
@@ -153,7 +155,7 @@ public class Service : IService
 
         if (limit.CategoryId == null && limit.JarId == null)
         {
-            throw AppValidationException.BadRequest("Invalid limit target type.", "targetType", "INVALID_LIMIT_TARGET_TYPE");
+            throw AppValidationException.BadRequest(ErrorMessages.InvalidLimitTargetType, "targetType", ErrorCodes.InvalidLimitTargetType);
         }
         
         _appDbContext.SpendingLimits.Add(limit);
@@ -184,7 +186,7 @@ public class Service : IService
         {
             if (request.LimitAmount.Value <= 0)
             {
-                throw AppValidationException.BadRequest("Limit amount must be greater than zero.", "limitAmount", "INVALID_LIMIT_AMOUNT");
+                throw AppValidationException.BadRequest(ErrorMessages.InvalidLimitAmount, "limitAmount", ErrorCodes.InvalidLimitAmount);
             }
             limit.LimitAmount = request.LimitAmount.Value;
         }
@@ -193,7 +195,7 @@ public class Service : IService
         {
             if (request.AlertAtPercentage.Value <= 0 || request.AlertAtPercentage.Value > 100)
             {
-                throw AppValidationException.BadRequest("Alert percentage must be between 1 and 100.", "alertAtPercentage", "INVALID_ALERT_PERCENTAGE");
+                throw AppValidationException.BadRequest(ErrorMessages.InvalidAlertPercentage, "alertAtPercentage", ErrorCodes.InvalidAlertPercentage);
             }
             limit.AlertAtPercentage = request.AlertAtPercentage.Value;
         }

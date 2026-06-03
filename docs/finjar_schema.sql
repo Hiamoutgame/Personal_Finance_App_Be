@@ -162,7 +162,7 @@ CREATE INDEX ix_financial_accounts_sync_status
 CREATE TABLE bank_connection_sessions (
     id            UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id       UUID         NOT NULL REFERENCES accounts(id),
-    provider_code VARCHAR(50)  NOT NULL DEFAULT 'casso',
+    provider_code VARCHAR(50)  NOT NULL DEFAULT 'sepay',
     state         VARCHAR(150) NOT NULL UNIQUE,
     code_verifier TEXT         NULL,
     return_url    TEXT         NULL,

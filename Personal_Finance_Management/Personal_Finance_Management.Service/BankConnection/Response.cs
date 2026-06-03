@@ -2,7 +2,7 @@ namespace Personal_Finance_Management.Service.BankConnection;
 
 public class Response
 {
-    public class StartCassoConnectionResponse
+    public class StartSepayConnectionResponse
     {
         public required bool success { get; set; }
         public required string message { get; set; }
@@ -14,7 +14,7 @@ public class Response
         public required List<Guid> financialAccountIds { get; set; }
     }
 
-    public class CassoCallbackResponse
+    public class SepayCallbackResponse
     {
         public required bool success { get; set; }
         public required string message { get; set; }

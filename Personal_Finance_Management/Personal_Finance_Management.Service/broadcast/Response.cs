@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Personal_Finance_Management.Service.Common.Enums;
 
 namespace Personal_Finance_Management.Service.broadcast
 {
@@ -13,7 +14,7 @@ namespace Personal_Finance_Management.Service.broadcast
             public string Title { get; set; } = null!;
             public string Body { get; set; } = null!;
             public string TargetAudience { get; set; } = "All";
-            public string Status { get; set; } = "Queued";
+            public string Status { get; set; } = BroadcastStatus.Queued;
             public DateTimeOffset? ScheduledAt { get; set; }
             public DateTimeOffset? SentAt { get; set; }
             public int TargetCount { get; set; } = 0;

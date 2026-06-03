@@ -5,7 +5,9 @@ using Microsoft.Extensions.Configuration;
 using Personal_Finance_Management.Repository;
 using Personal_Finance_Management.Repository.Entity;
 using Personal_Finance_Management.Service.Base;
-using Personal_Finance_Management.Service.Casso;
+using Personal_Finance_Management.Service.Common.Constants;
+using Personal_Finance_Management.Service.Common.Enums;
+using Personal_Finance_Management.Service.Sepay;
 using Personal_Finance_Management.Service.Validations;
 using BankSyncRequest = Personal_Finance_Management.Service.BankSync.Request;
 using BankSyncService = Personal_Finance_Management.Service.BankSync.IService;
@@ -18,38 +20,38 @@ public class Service : IService
     private readonly AppDbContext _dbContext;
     private readonly IHttpContextAccessor _httpContext;
     private readonly IConfiguration _configuration;
-    private readonly ICassoClient _cassoClient;
-    private readonly ICassoTokenProtector _tokenProtector;
+    private readonly ISepayClient _sepayClient;
+    private readonly ISepayTokenProtector _tokenProtector;
     private readonly BankSyncService _bankSyncService;
 
     public Service(
         AppDbContext dbContext,
         IHttpContextAccessor httpContext,
         IConfiguration configuration,
-        ICassoClient cassoClient,
-        ICassoTokenProtector tokenProtector,
+        ISepayClient sepayClient,
+        ISepayTokenProtector tokenProtector,
         BankSyncService bankSyncService)
     {
         _dbContext = dbContext;
         _httpContext = httpContext;
         _configuration = configuration;
-        _cassoClient = cassoClient;
+        _sepayClient = sepayClient;
         _tokenProtector = tokenProtector;
         _bankSyncService = bankSyncService;
     }
 
-    public async Task<Response.StartCassoConnectionResponse> StartCassoConnection(Request.StartCassoConnectionRequest request)
+    public async Task<Response.StartSepayConnectionResponse> StartSepayConnection(Request.StartSepayConnectionRequest request)
     {
         var userId = ServiceClaimHelper.GetRequiredUserId(_httpContext);
         var userExists = await _dbContext.Accounts.AnyAsync(x => x.Id == userId);
         if (!userExists)
         {
-            throw AppValidationException.NotFound("User not found.", "userId", "USER_NOT_FOUND");
+            throw AppValidationException.NotFound("User not found.", "userId", ErrorCodes.UserNotFound);
         }
 
         if (!HasOAuthClientConfigured())
         {
-            return await StartCassoConnectionWithApiKey(userId, request);
+            return await StartSepayConnectionWithApiKey(userId, request);
         }
 
         var redirectUri = ResolveRedirectUri();
@@ -59,13 +61,13 @@ public class Service : IService
         {
             Id = Guid.NewGuid(),
             UserId = userId,
-            ProviderCode = "casso",
+            ProviderCode = ProviderCodes.Sepay,
             State = state,
             CodeVerifier = null,
             ReturnUrl = NormalizeReturnUrl(request?.returnUrl),
             IsDefault = request?.isDefault ?? false,
             AutoSync = request?.autoSync ?? true,
-            Status = "Pending",
+            Status = BankConnectionSessionStatus.Pending,
             ExpiresAt = expiresAt,
             CreatedAt = DateTimeOffset.UtcNow,
             UpdatedAt = DateTimeOffset.UtcNow
@@ -74,77 +76,77 @@ public class Service : IService
         _dbContext.BankConnectionSessions.Add(session);
         await _dbContext.SaveChangesAsync();
 
-        return new Response.StartCassoConnectionResponse
+        return new Response.StartSepayConnectionResponse
         {
             success = true,
-            message = "Casso OAuth connection session created.",
+            message = "SePay OAuth connection session created.",
             connectionMode = "OAuth",
             sessionId = session.Id,
-            authorizationUrl = _cassoClient.BuildAuthorizationUrl(state, redirectUri),
+            authorizationUrl = _sepayClient.BuildAuthorizationUrl(state, redirectUri),
             expiresAt = expiresAt,
             financialAccountId = null,
             financialAccountIds = new List<Guid>()
         };
     }
 
-    public async Task<Response.CassoCallbackResponse> HandleCassoCallback(string? code, string? state, string? error)
+    public async Task<Response.SepayCallbackResponse> HandleSepayCallback(string? code, string? state, string? error)
     {
         if (string.IsNullOrWhiteSpace(state))
         {
-            throw AppValidationException.BadRequest("Casso callback state is required.", "state", "CASSO_STATE_REQUIRED");
+            throw AppValidationException.BadRequest(ErrorMessages.SepayStateRequired, "state", ErrorCodes.SepayStateRequired);
         }
 
         var session = await _dbContext.BankConnectionSessions
-            .FirstOrDefaultAsync(x => x.State == state && x.ProviderCode == "casso");
+            .FirstOrDefaultAsync(x => x.State == state && x.ProviderCode == ProviderCodes.Sepay);
         if (session == null)
         {
-            throw AppValidationException.BadRequest("Casso connection session not found.", "state", "CASSO_SESSION_NOT_FOUND");
+            throw AppValidationException.BadRequest(ErrorMessages.SepaySessionNotFound, "state", ErrorCodes.SepaySessionNotFound);
         }
 
         if (!string.IsNullOrWhiteSpace(error))
         {
-            session.Status = "Failed";
+            session.Status = BankConnectionSessionStatus.Failed;
             session.ErrorMessage = error;
             session.UpdatedAt = DateTimeOffset.UtcNow;
             await _dbContext.SaveChangesAsync();
-            return BuildCallbackResponse(false, "Casso authorization failed.", session, null);
+            return BuildCallbackResponse(false, "SePay authorization failed.", session, null);
         }
 
         if (session.ExpiresAt <= DateTimeOffset.UtcNow)
         {
-            session.Status = "Expired";
+            session.Status = BankConnectionSessionStatus.Expired;
             session.ErrorMessage = "Session expired.";
             session.UpdatedAt = DateTimeOffset.UtcNow;
             await _dbContext.SaveChangesAsync();
-            return BuildCallbackResponse(false, "Casso connection session expired.", session, null);
+            return BuildCallbackResponse(false, "SePay connection session expired.", session, null);
         }
 
-        if (session.Status != "Pending")
+        if (session.Status != BankConnectionSessionStatus.Pending)
         {
-            return BuildCallbackResponse(false, "Casso connection session was already used.", session, null);
+            return BuildCallbackResponse(false, "SePay connection session was already used.", session, null);
         }
 
         if (string.IsNullOrWhiteSpace(code))
         {
-            session.Status = "Failed";
+            session.Status = BankConnectionSessionStatus.Failed;
             session.ErrorMessage = "Authorization code is missing.";
             session.UpdatedAt = DateTimeOffset.UtcNow;
             await _dbContext.SaveChangesAsync();
-            return BuildCallbackResponse(false, "Casso authorization code is missing.", session, null);
+            return BuildCallbackResponse(false, "SePay authorization code is missing.", session, null);
         }
 
-        var token = await _cassoClient.ExchangeCodeForTokenAsync(code, ResolveRedirectUri());
-        var accounts = await _cassoClient.GetAccountsAsync(token.accessToken);
+        var token = await _sepayClient.ExchangeCodeForTokenAsync(code, ResolveRedirectUri());
+        var accounts = await _sepayClient.GetAccountsAsync(token.accessToken);
         if (accounts.Count == 0)
         {
-            session.Status = "Failed";
-            session.ErrorMessage = "No Casso bank account found.";
+            session.Status = BankConnectionSessionStatus.Failed;
+            session.ErrorMessage = "No SePay bank account found.";
             session.UpdatedAt = DateTimeOffset.UtcNow;
             await _dbContext.SaveChangesAsync();
-            return BuildCallbackResponse(false, "No Casso bank account found.", session, null);
+            return BuildCallbackResponse(false, "No SePay bank account found.", session, null);
         }
 
-        var storedToken = _tokenProtector.Protect(new CassoStoredToken
+        var storedToken = _tokenProtector.Protect(new SepayStoredToken
         {
             accessToken = token.accessToken,
             refreshToken = token.refreshToken,
@@ -153,14 +155,14 @@ public class Service : IService
         });
 
         await using var databaseTransaction = await _dbContext.Database.BeginTransactionAsync();
-        var linkedFinancialAccountIds = await UpsertCassoFinancialAccounts(
+        var linkedFinancialAccountIds = await UpsertSepayFinancialAccounts(
             session.UserId,
             accounts,
             storedToken,
             token.expiresAt,
             session.IsDefault);
 
-        session.Status = "Completed";
+        session.Status = BankConnectionSessionStatus.Completed;
         session.CompletedAt = DateTimeOffset.UtcNow;
         session.UpdatedAt = DateTimeOffset.UtcNow;
         await _dbContext.SaveChangesAsync();
@@ -193,21 +195,21 @@ public class Service : IService
         var firstLinkedAccountId = linkedFinancialAccountIds.Count > 0
             ? linkedFinancialAccountIds[0]
             : (Guid?)null;
-        return BuildCallbackResponse(true, "Casso bank account linked.", session, firstLinkedAccountId);
+        return BuildCallbackResponse(true, "SePay bank account linked.", session, firstLinkedAccountId);
     }
 
-    private async Task<Response.StartCassoConnectionResponse> StartCassoConnectionWithApiKey(
+    private async Task<Response.StartSepayConnectionResponse> StartSepayConnectionWithApiKey(
         Guid userId,
-        Request.StartCassoConnectionRequest? request)
+        Request.StartSepayConnectionRequest? request)
     {
-        var accounts = await _cassoClient.GetAccountsAsync(null);
+        var accounts = await _sepayClient.GetAccountsAsync(null);
         if (accounts.Count == 0)
         {
-            throw AppValidationException.BadRequest("No Casso bank account found.", "casso", "CASSO_ACCOUNT_NOT_FOUND");
+            throw AppValidationException.BadRequest(ErrorMessages.SepayAccountNotFound, "sepay", ErrorCodes.SepayAccountNotFound);
         }
 
         await using var databaseTransaction = await _dbContext.Database.BeginTransactionAsync();
-        var linkedFinancialAccountIds = await UpsertCassoFinancialAccounts(
+        var linkedFinancialAccountIds = await UpsertSepayFinancialAccounts(
             userId,
             accounts,
             accessTokenRef: null,
@@ -240,10 +242,10 @@ public class Service : IService
             }
         }
 
-        return new Response.StartCassoConnectionResponse
+        return new Response.StartSepayConnectionResponse
         {
             success = true,
-            message = "Casso bank accounts linked with API key.",
+            message = "SePay bank accounts linked with API key.",
             connectionMode = "ApiKey",
             sessionId = null,
             authorizationUrl = null,
@@ -253,9 +255,9 @@ public class Service : IService
         };
     }
 
-    private async Task<List<Guid>> UpsertCassoFinancialAccounts(
+    private async Task<List<Guid>> UpsertSepayFinancialAccounts(
         Guid userId,
-        IReadOnlyList<CassoAccount> accounts,
+        IReadOnlyList<SepayAccount> accounts,
         string? accessTokenRef,
         DateTimeOffset? tokenExpiresAt,
         bool markFirstAsDefault)
@@ -264,20 +266,20 @@ public class Service : IService
 
         for (var index = 0; index < accounts.Count; index++)
         {
-            var cassoAccount = accounts[index];
+            var sepayAccount = accounts[index];
             var existingOwnerAccount = await _dbContext.FinancialAccounts
-                .FirstOrDefaultAsync(x => x.ProviderCode == "casso"
-                                          && x.ExternalAccountId == cassoAccount.externalId
+                .FirstOrDefaultAsync(x => x.ProviderCode == ProviderCodes.Sepay
+                                          && x.ExternalAccountId == sepayAccount.externalId
                                           && x.UserId != userId
                                           && x.IsActive);
             if (existingOwnerAccount != null)
             {
-                throw AppValidationException.Conflict("Casso bank account is already linked to another user.", "externalAccountId", "CASSO_ACCOUNT_ALREADY_LINKED");
+                throw AppValidationException.Conflict(ErrorMessages.SepayAccountAlreadyLinked, "externalAccountId", ErrorCodes.SepayAccountAlreadyLinked);
             }
 
             var financialAccount = await _dbContext.FinancialAccounts
-                .FirstOrDefaultAsync(x => x.ProviderCode == "casso"
-                                          && x.ExternalAccountId == cassoAccount.externalId
+                .FirstOrDefaultAsync(x => x.ProviderCode == ProviderCodes.Sepay
+                                          && x.ExternalAccountId == sepayAccount.externalId
                                           && x.UserId == userId);
             if (financialAccount == null)
             {
@@ -285,24 +287,24 @@ public class Service : IService
                 {
                     Id = Guid.NewGuid(),
                     UserId = userId,
-                    AccountType = "Bank",
-                    ConnectionMode = "LinkedApi",
-                    Currency = "VND",
+                    AccountType = FinancialAccountType.Bank,
+                    ConnectionMode = ConnectionMode.LinkedApi,
+                    Currency = CurrencyDefaults.Vnd,
                     CreatedAt = DateTimeOffset.UtcNow,
                     IsActive = true
                 };
                 _dbContext.FinancialAccounts.Add(financialAccount);
             }
 
-            financialAccount.Name = cassoAccount.bankName ?? cassoAccount.name;
-            financialAccount.ProviderCode = "casso";
-            financialAccount.ProviderName = "Casso";
-            financialAccount.ExternalAccountId = cassoAccount.externalId;
-            financialAccount.ExternalAccountRef = cassoAccount.accountNumber;
-            financialAccount.MaskedAccountNumber = ServiceTextHelper.MaskTrailing(cassoAccount.accountNumber);
-            financialAccount.AccountHolderName = cassoAccount.accountHolderName;
-            financialAccount.CurrentBalance = cassoAccount.balance ?? financialAccount.CurrentBalance;
-            financialAccount.SyncStatus = "Synced";
+            financialAccount.Name = sepayAccount.bankName ?? sepayAccount.name;
+            financialAccount.ProviderCode = ProviderCodes.Sepay;
+            financialAccount.ProviderName = ProviderCodes.SepayDisplay;
+            financialAccount.ExternalAccountId = sepayAccount.externalId;
+            financialAccount.ExternalAccountRef = sepayAccount.accountNumber;
+            financialAccount.MaskedAccountNumber = ServiceTextHelper.MaskTrailing(sepayAccount.accountNumber);
+            financialAccount.AccountHolderName = sepayAccount.accountHolderName;
+            financialAccount.CurrentBalance = sepayAccount.balance ?? financialAccount.CurrentBalance;
+            financialAccount.SyncStatus = SyncStatus.Synced;
             financialAccount.LastSyncedAt = DateTimeOffset.UtcNow;
             financialAccount.LastSyncError = null;
             financialAccount.AccessTokenRef = accessTokenRef;
@@ -330,22 +332,22 @@ public class Service : IService
 
     private bool HasOAuthClientConfigured()
     {
-        var connectionMode = _configuration["Casso:ConnectionMode"];
+        var connectionMode = _configuration[ConfigKeys.Sepay.ConnectionMode];
         if (string.Equals(connectionMode, "ApiKey", StringComparison.OrdinalIgnoreCase))
         {
             return false;
         }
 
-        return !string.IsNullOrWhiteSpace(_configuration["Casso:ClientId"])
-               && !string.IsNullOrWhiteSpace(_configuration["Casso:ClientSecret"]);
+        return !string.IsNullOrWhiteSpace(_configuration[ConfigKeys.Sepay.ClientId])
+               && !string.IsNullOrWhiteSpace(_configuration[ConfigKeys.Sepay.ClientSecret]);
     }
 
     private string ResolveRedirectUri()
     {
-        var redirectUri = _configuration["Casso:RedirectUri"];
+        var redirectUri = _configuration[ConfigKeys.Sepay.RedirectUri];
         if (string.IsNullOrWhiteSpace(redirectUri))
         {
-            throw AppValidationException.BadRequest("Casso redirect URI is not configured.", "Casso:RedirectUri", "CASSO_CONFIG_MISSING");
+            throw AppValidationException.BadRequest(ErrorMessages.SepayRedirectUriMissing, ConfigKeys.Sepay.RedirectUri, ErrorCodes.SepayConfigMissing);
         }
 
         return redirectUri;
@@ -355,11 +357,11 @@ public class Service : IService
     {
         if (string.IsNullOrWhiteSpace(returnUrl))
         {
-            return _configuration["Casso:DefaultReturnUrl"];
+            return _configuration[ConfigKeys.Sepay.DefaultReturnUrl];
         }
 
         var normalized = returnUrl.Trim();
-        var allowedPrefix = _configuration["Casso:AllowedReturnUrlPrefix"];
+        var allowedPrefix = _configuration[ConfigKeys.Sepay.AllowedReturnUrlPrefix];
         if (!string.IsNullOrWhiteSpace(allowedPrefix)
             && normalized.StartsWith(allowedPrefix, StringComparison.OrdinalIgnoreCase))
         {
@@ -371,10 +373,10 @@ public class Service : IService
             return normalized;
         }
 
-        return _configuration["Casso:DefaultReturnUrl"];
+        return _configuration[ConfigKeys.Sepay.DefaultReturnUrl];
     }
 
-    private static Response.CassoCallbackResponse BuildCallbackResponse(
+    private static Response.SepayCallbackResponse BuildCallbackResponse(
         bool success,
         string message,
         BankConnectionSession session,
@@ -384,10 +386,10 @@ public class Service : IService
         if (!string.IsNullOrWhiteSpace(redirectUrl))
         {
             var separator = redirectUrl.Contains('?') ? "&" : "?";
-            redirectUrl = $"{redirectUrl}{separator}cassoStatus={(success ? "success" : "failed")}";
+            redirectUrl = $"{redirectUrl}{separator}sepayStatus={(success ? "success" : "failed")}";
         }
 
-        return new Response.CassoCallbackResponse
+        return new Response.SepayCallbackResponse
         {
             success = success,
             message = message,

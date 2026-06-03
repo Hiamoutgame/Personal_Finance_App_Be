@@ -27,52 +27,49 @@ public class GlobalExceptionHandlerMiddleware
         }
         catch (AppValidationException ex)
         {
-            await WriteErrorResponse(context, ex.StatusCode, ex.Message, ex.Details);
+            await WriteErrorResponse(context, ex.StatusCode, ex.Code, ex.Message, ex.Field, ex.Details);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Unhandled exception occurred while processing request {Path}", context.Request.Path);
+            _logger.LogError(ex, "Unhandled exception while processing {Method} {Path}",
+                context.Request.Method, context.Request.Path);
 
             if (context.Response.HasStarted)
             {
-                _logger.LogWarning("The response has already started, the global exception middleware will not write an error response");
+                _logger.LogWarning("Response already started; global exception middleware will not write an error response");
                 throw;
             }
 
-            var statusCode = MapStatusCode(ex);
-            var message = ResolveClientMessage(ex, statusCode);
+            var (statusCode, code) = MapUnknown(ex);
+            var message = statusCode >= StatusCodes.Status500InternalServerError
+                ? "Internal server error."
+                : ex.Message;
 
             await WriteErrorResponse(
                 context,
                 statusCode,
+                code,
                 message,
-                _environment.IsDevelopment() ? new { detail = ex.Message } : null);
+                field: null,
+                details: _environment.IsDevelopment() ? new { detail = ex.Message } : null);
         }
     }
 
-    private static int MapStatusCode(Exception ex)
+    private static (int statusCode, string code) MapUnknown(Exception ex) => ex switch
     {
-        return ex switch
-        {
-            ArgumentException => StatusCodes.Status400BadRequest,
-            InvalidOperationException => StatusCodes.Status400BadRequest,
-            UnauthorizedAccessException => StatusCodes.Status401Unauthorized,
-            KeyNotFoundException => StatusCodes.Status404NotFound,
-            _ => StatusCodes.Status500InternalServerError
-        };
-    }
-
-    private static string ResolveClientMessage(Exception ex, int statusCode)
-    {
-        return statusCode >= StatusCodes.Status500InternalServerError
-            ? "Internal server error."
-            : ex.Message;
-    }
+        ArgumentException => (StatusCodes.Status400BadRequest, "BAD_REQUEST"),
+        InvalidOperationException => (StatusCodes.Status400BadRequest, "BAD_REQUEST"),
+        UnauthorizedAccessException => (StatusCodes.Status401Unauthorized, "UNAUTHORIZED"),
+        KeyNotFoundException => (StatusCodes.Status404NotFound, "NOT_FOUND"),
+        _ => (StatusCodes.Status500InternalServerError, "INTERNAL_ERROR")
+    };
 
     private static async Task WriteErrorResponse(
         HttpContext context,
         int statusCode,
-        string error,
+        string code,
+        string message,
+        string? field,
         object? details)
     {
         context.Response.StatusCode = statusCode;
@@ -80,13 +77,18 @@ public class GlobalExceptionHandlerMiddleware
 
         var body = new
         {
-            success = false,
-            error,
-            message = error,
+            code,
+            message,
+            field,
             details,
             traceId = context.TraceIdentifier
         };
 
-        await context.Response.WriteAsync(JsonSerializer.Serialize(body));
+        await context.Response.WriteAsync(
+            JsonSerializer.Serialize(body, new JsonSerializerOptions
+            {
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull
+            }));
     }
 }

@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Personal_Finance_Management.Repository;
 using Personal_Finance_Management.Service.Base;
+using Personal_Finance_Management.Service.Common.Constants;
 using Personal_Finance_Management.Service.Validations;
 
 namespace Personal_Finance_Management.Service.FinancialAccount;
@@ -65,23 +66,23 @@ public class Service : IService
 
         if (string.IsNullOrWhiteSpace(accountName))
         {
-            throw AppValidationException.BadRequest("Financial account name is required", "name", "FINANCIAL_ACCOUNT_NAME_REQUIRED");
+            throw AppValidationException.BadRequest(ErrorMessages.FinancialAccountNameRequired, "name", ErrorCodes.FinancialAccountNameRequired);
         }
 
         if (accountName.Length > 100)
         {
-            throw AppValidationException.BadRequest("Financial account name is too long", "name", "FINANCIAL_ACCOUNT_NAME_TOO_LONG");
+            throw AppValidationException.BadRequest(ErrorMessages.FinancialAccountNameTooLong, "name", ErrorCodes.FinancialAccountNameTooLong);
         }
 
         if (string.IsNullOrWhiteSpace(accountType)
             || !new[] { "Cash", "Bank", "EWallet", "Other" }.Contains(accountType))
         {
-            throw AppValidationException.BadRequest("Invalid financial account type", "accountType", "INVALID_FINANCIAL_ACCOUNT_TYPE");
+            throw AppValidationException.BadRequest(ErrorMessages.InvalidFinancialAccountType, "accountType", ErrorCodes.InvalidFinancialAccountType);
         }
 
         if (currency.Length != 3 || currency.Any(x => !char.IsLetter(x)))
         {
-            throw AppValidationException.BadRequest("Currency must be a 3-letter code, for example VND", "currency", "INVALID_CURRENCY");
+            throw AppValidationException.BadRequest(ErrorMessages.InvalidCurrency, "currency", ErrorCodes.InvalidCurrency);
         }
 
         currency = currency.ToUpperInvariant();
@@ -89,7 +90,7 @@ public class Service : IService
         var existedAccount = _dbContext.FinancialAccounts.FirstOrDefault(x => x.UserId == userIdGuid && x.Name == accountName);
         if (existedAccount != null)
         {
-            throw AppValidationException.Conflict("Financial account already exists", "name", "FINANCIAL_ACCOUNT_ALREADY_EXISTS");
+            throw AppValidationException.Conflict(ErrorMessages.FinancialAccountAlreadyExists, "name", ErrorCodes.FinancialAccountAlreadyExists);
         }
 
         await using var dbTransaction = await _dbContext.Database.BeginTransactionAsync();
@@ -149,32 +150,32 @@ public class Service : IService
 
         if (string.IsNullOrWhiteSpace(bankName))
         {
-            throw AppValidationException.BadRequest("Bank name is required", "bankName", "BANK_NAME_REQUIRED");
+            throw AppValidationException.BadRequest(ErrorMessages.BankNameRequired, "bankName", ErrorCodes.BankNameRequired);
         }
 
         if (bankName.Length > 100)
         {
-            throw AppValidationException.BadRequest("Bank name is too long", "bankName", "BANK_NAME_TOO_LONG");
+            throw AppValidationException.BadRequest(ErrorMessages.BankNameTooLong, "bankName", ErrorCodes.BankNameTooLong);
         }
 
         if (bankCode?.Length > 50)
         {
-            throw AppValidationException.BadRequest("Bank code is too long", "bankCode", "BANK_CODE_TOO_LONG");
+            throw AppValidationException.BadRequest(ErrorMessages.BankCodeTooLong, "bankCode", ErrorCodes.BankCodeTooLong);
         }
 
         if (string.IsNullOrWhiteSpace(accountNumber))
         {
-            throw AppValidationException.BadRequest("Bank account number is required", "accountNumber", "BANK_ACCOUNT_NUMBER_REQUIRED");
+            throw AppValidationException.BadRequest(ErrorMessages.BankAccountNumberRequired, "accountNumber", ErrorCodes.BankAccountNumberRequired);
         }
 
         if (accountNumber.Length > 50)
         {
-            throw AppValidationException.BadRequest("Bank account number is too long", "accountNumber", "BANK_ACCOUNT_NUMBER_TOO_LONG");
+            throw AppValidationException.BadRequest(ErrorMessages.BankAccountNumberTooLong, "accountNumber", ErrorCodes.BankAccountNumberTooLong);
         }
 
         if (accountHolderName?.Length > 150)
         {
-            throw AppValidationException.BadRequest("Account holder name is too long", "accountHolderName", "ACCOUNT_HOLDER_NAME_TOO_LONG");
+            throw AppValidationException.BadRequest(ErrorMessages.AccountHolderNameTooLong, "accountHolderName", ErrorCodes.AccountHolderNameTooLong);
         }
 
         var existedLinkedAccount = _dbContext.FinancialAccounts.FirstOrDefault(x =>
@@ -186,7 +187,7 @@ public class Service : IService
 
         if (existedLinkedAccount != null)
         {
-            throw AppValidationException.Conflict("Linked bank account already exists", "accountNumber", "LINKED_ACCOUNT_ALREADY_EXISTS");
+            throw AppValidationException.Conflict(ErrorMessages.LinkedAccountAlreadyExists, "accountNumber", ErrorCodes.LinkedAccountAlreadyExists);
         }
 
         var maskedAccountNumber = ServiceTextHelper.MaskTrailing(accountNumber);
@@ -204,8 +205,8 @@ public class Service : IService
             Name = bankName,
             AccountType = "Bank",
             ConnectionMode = "LinkedApi",
-            ProviderCode = "casso",
-            ProviderName = "Casso",
+            ProviderCode = ProviderCodes.Sepay,
+            ProviderName = ProviderCodes.SepayDisplay,
             ExternalAccountId = accountNumber,
             ExternalAccountRef = accountNumber,
             MaskedAccountNumber = maskedAccountNumber,
@@ -257,13 +258,13 @@ public class Service : IService
         var query = _dbContext.FinancialAccounts.FirstOrDefault(x => x.Id == id && x.UserId == userIdGuid);
         if (query == null)
         {
-            throw AppValidationException.NotFound("Financial account not found", "financialAccountId", "FINANCIAL_ACCOUNT_NOT_FOUND");
+            throw AppValidationException.NotFound("Financial account not found", "financialAccountId", ErrorCodes.FinancialAccountNotFound);
         }
 
         if (string.Equals(query.ConnectionMode, "LinkedApi", StringComparison.OrdinalIgnoreCase)
             && request.currentBalance.HasValue)
         {
-            throw AppValidationException.BadRequest("Linked bank account balance cannot be updated manually.", "currentBalance", "LINKED_ACCOUNT_BALANCE_READ_ONLY");
+            throw AppValidationException.BadRequest(ErrorMessages.LinkedAccountBalanceReadOnly, "currentBalance", ErrorCodes.LinkedAccountBalanceReadOnly);
         }
 
         await using var dbTransaction = await _dbContext.Database.BeginTransactionAsync();
@@ -303,7 +304,7 @@ public class Service : IService
         var financialAccount = _dbContext.FinancialAccounts.FirstOrDefault(x => x.Id == id && x.UserId == userIdGuid);
         if (financialAccount == null)
         {
-            throw AppValidationException.NotFound("Financial account not found", "financialAccountId", "FINANCIAL_ACCOUNT_NOT_FOUND");
+            throw AppValidationException.NotFound("Financial account not found", "financialAccountId", ErrorCodes.FinancialAccountNotFound);
         }
 
         financialAccount.IsActive = false;

@@ -2,8 +2,9 @@ namespace Personal_Finance_Management.Service.BankSync;
 
 public class Response
 {
-    public class CassoTransactionsResponse
+    public class SepayTransactionsResponse
     {
+        public bool success { get; set; } = true;
         public required int receivedCount { get; set; }
         public required int createdCount { get; set; }
         public required int skippedCount { get; set; }

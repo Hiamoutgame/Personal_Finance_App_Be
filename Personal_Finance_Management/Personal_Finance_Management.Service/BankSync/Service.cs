@@ -1,11 +1,11 @@
-using System.Text.Json;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Personal_Finance_Management.Repository;
-using Personal_Finance_Management.Repository.Entity;
 using Personal_Finance_Management.Service.Base;
-using Personal_Finance_Management.Service.Casso;
+using Personal_Finance_Management.Service.Common.Constants;
+using Personal_Finance_Management.Service.Common.Enums;
+using Personal_Finance_Management.Service.Sepay;
 using Personal_Finance_Management.Service.Validations;
 using FinancialAccountEntity = Personal_Finance_Management.Repository.Entity.FinancialAccount;
 
@@ -16,24 +16,24 @@ public class Service : IService
     private readonly AppDbContext _dbContext;
     private readonly IHttpContextAccessor _httpContext;
     private readonly IConfiguration _configuration;
-    private readonly ICassoClient _cassoClient;
-    private readonly ICassoTokenProtector _tokenProtector;
+    private readonly ISepayClient _sepayClient;
+    private readonly ISepayTokenProtector _tokenProtector;
 
     public Service(
         AppDbContext dbContext,
         IHttpContextAccessor httpContext,
         IConfiguration configuration,
-        ICassoClient cassoClient,
-        ICassoTokenProtector tokenProtector)
+        ISepayClient sepayClient,
+        ISepayTokenProtector tokenProtector)
     {
         _dbContext = dbContext;
         _httpContext = httpContext;
         _configuration = configuration;
-        _cassoClient = cassoClient;
+        _sepayClient = sepayClient;
         _tokenProtector = tokenProtector;
     }
 
-    public async Task<Response.CassoTransactionsResponse> SyncLinkedAccount(
+    public async Task<Response.SepayTransactionsResponse> SyncLinkedAccount(
         Guid financialAccountId,
         Request.SyncLinkedAccountRequest request)
     {
@@ -41,7 +41,7 @@ public class Service : IService
         return await SyncLinkedAccountForUser(financialAccountId, userId, request);
     }
 
-    public async Task<Response.CassoTransactionsResponse> SyncLinkedAccountForUser(
+    public async Task<Response.SepayTransactionsResponse> SyncLinkedAccountForUser(
         Guid financialAccountId,
         Guid userId,
         Request.SyncLinkedAccountRequest request)
@@ -52,141 +52,172 @@ public class Service : IService
             .FirstOrDefaultAsync(x => x.Id == financialAccountId && x.UserId == userId && x.IsActive);
         if (financialAccount == null)
         {
-            throw AppValidationException.NotFound("Financial account not found.", "financialAccountId", "FINANCIAL_ACCOUNT_NOT_FOUND");
+            throw AppValidationException.NotFound(ErrorMessages.FinancialAccountNotFound, "financialAccountId", ErrorCodes.FinancialAccountNotFound);
         }
 
-        if (!string.Equals(financialAccount.ConnectionMode, "LinkedApi", StringComparison.OrdinalIgnoreCase))
+        if (!string.Equals(financialAccount.ConnectionMode, ConnectionMode.LinkedApi, StringComparison.OrdinalIgnoreCase))
         {
-            throw AppValidationException.BadRequest("Only linked bank account can sync Casso transactions.", "financialAccountId", "CASSO_SYNC_LINKED_ACCOUNT_REQUIRED");
+            throw AppValidationException.BadRequest(ErrorMessages.SepaySyncLinkedAccountRequired, "financialAccountId", ErrorCodes.SepaySyncLinkedAccountRequired);
         }
 
-        var accessToken = ResolveAccessToken(financialAccount);
         try
         {
-            if (request.triggerProviderSync && !string.IsNullOrWhiteSpace(financialAccount.ExternalAccountRef))
-            {
-                await _cassoClient.TriggerSyncAsync(accessToken, financialAccount.ExternalAccountRef);
-            }
-
-            IReadOnlyList<CassoTransactionRecord> records;
-            if (!string.IsNullOrWhiteSpace(financialAccount.ExternalAccountId)
-                && financialAccount.ExternalAccountId != financialAccount.ExternalAccountRef)
-            {
-                records = await _cassoClient.GetAccountTransactionsAsync(
-                    accessToken,
-                    financialAccount.ExternalAccountId,
-                    request.fromDate,
-                    request.toDate,
-                    request.page,
-                    request.pageSize,
-                    request.sort);
-            }
-            else
-            {
-                records = await _cassoClient.GetTransactionsAsync(
-                    accessToken,
-                    request.fromDate,
-                    request.toDate,
-                    request.page,
-                    request.pageSize,
-                    request.sort);
-            }
-
-            return await UpsertRecordsForAccount(financialAccount, records.Select(x => x.payload).ToList(), "Casso transactions synced.");
+            var records = await FetchTransactionsWithRefresh(financialAccount, request);
+            return await UpsertRecordsForAccount(financialAccount, records, "SePay transactions synced.");
         }
         catch (AppValidationException)
         {
-            financialAccount.SyncStatus = "Error";
-            financialAccount.LastSyncError = "Casso sync failed.";
+            financialAccount.SyncStatus = SyncStatus.Error;
+            financialAccount.LastSyncError = "SePay sync failed.";
             financialAccount.UpdatedAt = DateTimeOffset.UtcNow;
             await _dbContext.SaveChangesAsync();
             throw;
         }
     }
 
-    public async Task<Response.CassoTransactionsResponse> ProcessCassoWebhook(
-        Request.CassoWebhookRequest request,
-        string? secureToken,
-        string? cassoSignature)
+    public async Task<Response.SepayTransactionsResponse> ProcessSepayWebhook(
+        Request.SepayWebhookRequest request,
+        string? authorizationHeader)
     {
         if (request == null)
         {
-            throw AppValidationException.BadRequest("Request body is required.", "body", "REQUIRED");
+            throw AppValidationException.BadRequest("Request body is required.", "body", ErrorCodes.Required);
         }
 
-        ValidateWebhookSecurity(secureToken, cassoSignature);
+        ValidateWebhookAuthorization(authorizationHeader);
 
-        if (request.error != 0)
+        var parsed = ParseWebhookTransaction(request);
+        if (parsed == null)
         {
-            return new Response.CassoTransactionsResponse
+            return new Response.SepayTransactionsResponse
             {
+                success = true,
                 receivedCount = 0,
                 createdCount = 0,
                 skippedCount = 0,
-                message = "Casso webhook ignored because error is not zero."
+                message = "SePay webhook ignored: invalid payload."
             };
         }
 
-        var records = ExtractWebhookRecords(request.data);
         var createdCount = 0;
         var skippedCount = 0;
         await using var databaseTransaction = await _dbContext.Database.BeginTransactionAsync();
 
-        foreach (var record in records)
+        var matchedAccounts = await _dbContext.FinancialAccounts
+            .Where(x => x.ProviderCode == ProviderCodes.Sepay
+                        && x.ConnectionMode == ConnectionMode.LinkedApi
+                        && x.IsActive
+                        && (x.ExternalAccountRef == parsed.AccountRef
+                            || x.ExternalAccountId == parsed.AccountRef
+                            || x.MaskedAccountNumber == parsed.AccountRef))
+            .ToListAsync();
+
+        if (matchedAccounts.Count > 1)
         {
-            var parsed = ParseTransaction(record);
-            if (parsed == null || string.IsNullOrWhiteSpace(parsed.AccountRef))
-            {
-                skippedCount++;
-                continue;
-            }
+            throw AppValidationException.Conflict(ErrorMessages.SepayAccountConflict, "accountNumber", ErrorCodes.SepayAccountConflict);
+        }
 
-            var matchedAccounts = await _dbContext.FinancialAccounts
-                .Where(x => x.ProviderCode == "casso"
-                            && x.ConnectionMode == "LinkedApi"
-                            && x.IsActive
-                            && (x.ExternalAccountRef == parsed.AccountRef
-                                || x.ExternalAccountId == parsed.AccountRef
-                                || x.MaskedAccountNumber == parsed.AccountRef))
-                .ToListAsync();
-
-            if (matchedAccounts.Count > 1)
-            {
-                throw AppValidationException.Conflict("Multiple linked financial accounts match Casso account.", "accountNumber", "CASSO_ACCOUNT_CONFLICT");
-            }
-
-            if (matchedAccounts.Count == 0)
-            {
-                skippedCount++;
-                continue;
-            }
-
+        if (matchedAccounts.Count == 0)
+        {
+            skippedCount++;
+        }
+        else
+        {
             var created = await AddTransactionIfMissing(matchedAccounts[0], parsed);
-            if (created)
-            {
-                createdCount++;
-            }
-            else
-            {
-                skippedCount++;
-            }
+            if (created) createdCount++;
+            else skippedCount++;
         }
 
         await _dbContext.SaveChangesAsync();
         await databaseTransaction.CommitAsync();
 
-        return new Response.CassoTransactionsResponse
+        return new Response.SepayTransactionsResponse
         {
-            receivedCount = records.Count,
+            success = true,
+            receivedCount = 1,
             createdCount = createdCount,
             skippedCount = skippedCount,
-            message = "Casso webhook processed."
+            message = "SePay webhook processed."
         };
     }
 
-    private async Task<Response.CassoTransactionsResponse> UpsertRecordsForAccount(
+    private async Task<IReadOnlyList<SepayTransactionRecord>> FetchTransactionsWithRefresh(
         FinancialAccountEntity financialAccount,
-        IReadOnlyList<JsonElement> records,
+        Request.SyncLinkedAccountRequest request)
+    {
+        var accessToken = ResolveAccessToken(financialAccount);
+
+        try
+        {
+            return await FetchTransactionsOnce(financialAccount, accessToken, request);
+        }
+        catch (AppValidationException ex) when (ex.Code == ErrorCodes.SepayTokenInvalid)
+        {
+            var refreshed = await TryRefreshToken(financialAccount);
+            if (refreshed == null)
+            {
+                throw;
+            }
+
+            return await FetchTransactionsOnce(financialAccount, refreshed, request);
+        }
+    }
+
+    private async Task<IReadOnlyList<SepayTransactionRecord>> FetchTransactionsOnce(
+        FinancialAccountEntity financialAccount,
+        string? accessToken,
+        Request.SyncLinkedAccountRequest request)
+    {
+        if (!string.IsNullOrWhiteSpace(financialAccount.ExternalAccountId)
+            && financialAccount.ExternalAccountId != financialAccount.ExternalAccountRef)
+        {
+            return await _sepayClient.GetAccountTransactionsAsync(
+                accessToken,
+                financialAccount.ExternalAccountId,
+                request.fromDate,
+                request.toDate,
+                request.page,
+                request.pageSize,
+                request.sort);
+        }
+
+        return await _sepayClient.GetTransactionsAsync(
+            accessToken,
+            request.fromDate,
+            request.toDate,
+            request.page,
+            request.pageSize,
+            request.sort);
+    }
+
+    private async Task<string?> TryRefreshToken(FinancialAccountEntity financialAccount)
+    {
+        if (string.IsNullOrWhiteSpace(financialAccount.AccessTokenRef)) return null;
+        if (!financialAccount.AccessTokenRef.StartsWith("v1:", StringComparison.Ordinal)) return null;
+
+        var stored = _tokenProtector.Unprotect(financialAccount.AccessTokenRef);
+        if (string.IsNullOrWhiteSpace(stored.refreshToken)) return null;
+
+        var refreshed = await _sepayClient.RefreshTokenAsync(stored.refreshToken);
+        var newStored = new SepayStoredToken
+        {
+            accessToken = refreshed.accessToken,
+            refreshToken = refreshed.refreshToken ?? stored.refreshToken,
+            tokenType = refreshed.tokenType,
+            expiresAt = refreshed.expiresAt
+        };
+
+        financialAccount.AccessTokenRef = _tokenProtector.Protect(newStored);
+        financialAccount.TokenExpiresAt = refreshed.expiresAt;
+        financialAccount.UpdatedAt = DateTimeOffset.UtcNow;
+        await _dbContext.SaveChangesAsync();
+
+        return refreshed.accessToken;
+    }
+
+    private async Task<Response.SepayTransactionsResponse> UpsertRecordsForAccount(
+        FinancialAccountEntity financialAccount,
+        IReadOnlyList<SepayTransactionRecord> records,
         string message)
     {
         var createdCount = 0;
@@ -195,7 +226,7 @@ public class Service : IService
 
         foreach (var record in records)
         {
-            var parsed = ParseTransaction(record);
+            var parsed = ParseSyncTransaction(record);
             if (parsed == null)
             {
                 skippedCount++;
@@ -212,17 +243,11 @@ public class Service : IService
             }
 
             var created = await AddTransactionIfMissing(financialAccount, parsed);
-            if (created)
-            {
-                createdCount++;
-            }
-            else
-            {
-                skippedCount++;
-            }
+            if (created) createdCount++;
+            else skippedCount++;
         }
 
-        financialAccount.SyncStatus = "Synced";
+        financialAccount.SyncStatus = SyncStatus.Synced;
         financialAccount.LastSyncedAt = DateTimeOffset.UtcNow;
         financialAccount.LastSyncError = null;
         financialAccount.UpdatedAt = DateTimeOffset.UtcNow;
@@ -230,8 +255,9 @@ public class Service : IService
         await _dbContext.SaveChangesAsync();
         await databaseTransaction.CommitAsync();
 
-        return new Response.CassoTransactionsResponse
+        return new Response.SepayTransactionsResponse
         {
+            success = true,
             receivedCount = records.Count,
             createdCount = createdCount,
             skippedCount = skippedCount,
@@ -239,16 +265,13 @@ public class Service : IService
         };
     }
 
-    private async Task<bool> AddTransactionIfMissing(FinancialAccountEntity financialAccount, ParsedCassoTransaction parsed)
+    private async Task<bool> AddTransactionIfMissing(FinancialAccountEntity financialAccount, ParsedSepayTransaction parsed)
     {
         var existedTransaction = await _dbContext.Transactions.AnyAsync(x =>
             x.FinancialAccountId == financialAccount.Id
             && x.ExternalTransactionId == parsed.ExternalTransactionId
             && !x.IsDeleted);
-        if (existedTransaction)
-        {
-            return false;
-        }
+        if (existedTransaction) return false;
 
         _dbContext.Transactions.Add(new Repository.Entity.Transaction
         {
@@ -258,12 +281,12 @@ public class Service : IService
             CategoryId = null,
             FromJarId = null,
             ToJarId = null,
-            Type = parsed.Amount > 0 ? "Income" : "Expense",
-            TransactionsAmount = Math.Abs(parsed.Amount),
+            Type = parsed.Type,
+            TransactionsAmount = parsed.AmountAbs,
             Note = parsed.Description,
             RawDescription = parsed.Description,
             TransactionDate = parsed.TransactionDate,
-            SourceType = "Imported",
+            SourceType = SourceTypes.Imported,
             ExternalTransactionId = parsed.ExternalTransactionId,
             RawPayloadJson = parsed.RawJson,
             PostedAt = DateTimeOffset.UtcNow,
@@ -278,16 +301,16 @@ public class Service : IService
         {
             financialAccount.CurrentBalance = parsed.RunningBalance.Value;
         }
-        else if (parsed.Amount > 0)
+        else if (parsed.Type == TransactionType.Income)
         {
-            financialAccount.CurrentBalance += Math.Abs(parsed.Amount);
+            financialAccount.CurrentBalance += parsed.AmountAbs;
         }
         else
         {
-            financialAccount.CurrentBalance -= Math.Abs(parsed.Amount);
+            financialAccount.CurrentBalance -= parsed.AmountAbs;
         }
 
-        financialAccount.SyncStatus = "Synced";
+        financialAccount.SyncStatus = SyncStatus.Synced;
         financialAccount.LastSyncedAt = DateTimeOffset.UtcNow;
         financialAccount.LastSyncError = null;
         financialAccount.LastSyncCursor = parsed.ExternalTransactionId;
@@ -297,98 +320,133 @@ public class Service : IService
 
     private string? ResolveAccessToken(FinancialAccountEntity financialAccount)
     {
-        if (string.IsNullOrWhiteSpace(financialAccount.AccessTokenRef))
-        {
-            return null;
-        }
-
-        if (!financialAccount.AccessTokenRef.StartsWith("v1:", StringComparison.Ordinal))
-        {
-            return null;
-        }
+        if (string.IsNullOrWhiteSpace(financialAccount.AccessTokenRef)) return null;
+        if (!financialAccount.AccessTokenRef.StartsWith("v1:", StringComparison.Ordinal)) return null;
 
         var token = _tokenProtector.Unprotect(financialAccount.AccessTokenRef);
         return token.accessToken;
     }
 
-    private void ValidateWebhookSecurity(string? secureToken, string? cassoSignature)
+    private void ValidateWebhookAuthorization(string? authorizationHeader)
     {
-        var configuredSecureToken = _configuration["Casso:WebhookSecureToken"]
-                                    ?? _configuration["Casso:SecureToken"]
-                                    ?? _configuration["CasooOptions:WebhookSecureToken"]
-                                    ?? _configuration["CasooOptions:SecureToken"];
-        if (string.IsNullOrWhiteSpace(configuredSecureToken))
+        var configuredKey = _configuration[ConfigKeys.Sepay.WebhookApiKey];
+        if (string.IsNullOrWhiteSpace(configuredKey))
         {
-            throw AppValidationException.BadRequest("Casso webhook secure token is not configured.", "secure-token", "CASSO_WEBHOOK_UNAUTHORIZED");
+            throw AppValidationException.BadRequest(ErrorMessages.SepayWebhookTokenMissing, "Authorization", ErrorCodes.SepayWebhookUnauthorized);
         }
 
-        if (secureToken?.Trim() != configuredSecureToken.Trim())
+        if (string.IsNullOrWhiteSpace(authorizationHeader))
         {
-            throw AppValidationException.BadRequest("Invalid Casso secure token.", "secure-token", "CASSO_WEBHOOK_UNAUTHORIZED");
+            throw AppValidationException.BadRequest(ErrorMessages.SepayWebhookVerificationHeaderRequired, "Authorization", ErrorCodes.SepayWebhookUnauthorized);
         }
-    }
 
-    private static List<JsonElement> ExtractWebhookRecords(JsonElement data)
-    {
-        var records = new List<JsonElement>();
-        if (data.ValueKind == JsonValueKind.Object)
+        var trimmed = authorizationHeader.Trim();
+        string providedKey;
+        if (trimmed.StartsWith("Apikey ", StringComparison.OrdinalIgnoreCase))
         {
-            records.Add(data.Clone());
+            providedKey = trimmed.Substring("Apikey ".Length).Trim();
         }
-        else if (data.ValueKind == JsonValueKind.Array)
+        else if (trimmed.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
         {
-            foreach (var item in data.EnumerateArray())
-            {
-                records.Add(item.Clone());
-            }
+            providedKey = trimmed.Substring("Bearer ".Length).Trim();
         }
         else
         {
-            throw AppValidationException.BadRequest("Casso webhook data is invalid.", "data", "CASSO_WEBHOOK_INVALID");
+            providedKey = trimmed;
         }
 
-        return records;
+        if (providedKey != configuredKey.Trim())
+        {
+            throw AppValidationException.BadRequest(ErrorMessages.SepayWebhookTokenInvalid, "Authorization", ErrorCodes.SepayWebhookUnauthorized);
+        }
     }
 
-    private static ParsedCassoTransaction? ParseTransaction(JsonElement item)
+    private static ParsedSepayTransaction? ParseWebhookTransaction(Request.SepayWebhookRequest request)
     {
-        var amount = ReadDecimal(item, "amount");
-        if (!amount.HasValue || amount.Value == 0)
+        if (request.id <= 0) return null;
+        if (request.transferAmount <= 0) return null;
+
+        var type = string.Equals(request.transferType, "in", StringComparison.OrdinalIgnoreCase)
+            ? TransactionType.Income
+            : TransactionType.Expense;
+
+        var transactionDate = DateTimeOffset.UtcNow;
+        if (!string.IsNullOrWhiteSpace(request.transactionDate)
+            && DateTimeOffset.TryParse(request.transactionDate, out var parsedDate))
         {
-            return null;
+            transactionDate = parsedDate.ToUniversalTime();
         }
 
-        var externalTransactionId = ReadFlexibleString(item, "reference")
-                                    ?? ReadFlexibleString(item, "tid")
-                                    ?? ReadFlexibleString(item, "id")
-                                    ?? ReadFlexibleString(item, "privateId");
-        if (string.IsNullOrWhiteSpace(externalTransactionId))
+        var description = !string.IsNullOrWhiteSpace(request.content) ? request.content : request.description;
+
+        return new ParsedSepayTransaction
         {
-            return null;
+            Type = type,
+            AmountAbs = Math.Abs(request.transferAmount),
+            ExternalTransactionId = request.id.ToString(),
+            AccountRef = request.accountNumber ?? request.subAccount,
+            TransactionDate = transactionDate,
+            Description = description,
+            RunningBalance = request.accumulated,
+            RawJson = System.Text.Json.JsonSerializer.Serialize(request)
+        };
+    }
+
+    private static ParsedSepayTransaction? ParseSyncTransaction(SepayTransactionRecord record)
+    {
+        var item = record.payload;
+        var amount = ReadDecimal(item, "amount")
+                     ?? ReadDecimal(item, "transferAmount")
+                     ?? ReadDecimal(item, "transfer_amount");
+        if (!amount.HasValue || amount.Value == 0) return null;
+
+        var externalTransactionId = ReadFlexibleString(item, "id")
+                                    ?? ReadFlexibleString(item, "reference_code")
+                                    ?? ReadFlexibleString(item, "referenceCode")
+                                    ?? ReadFlexibleString(item, "tid");
+        if (string.IsNullOrWhiteSpace(externalTransactionId)) return null;
+
+        var transferType = ReadFlexibleString(item, "transferType")
+                           ?? ReadFlexibleString(item, "transfer_type");
+
+        string type;
+        decimal amountAbs;
+        if (!string.IsNullOrWhiteSpace(transferType))
+        {
+            type = string.Equals(transferType, "in", StringComparison.OrdinalIgnoreCase)
+                ? TransactionType.Income
+                : TransactionType.Expense;
+            amountAbs = Math.Abs(amount.Value);
+        }
+        else
+        {
+            type = amount.Value > 0 ? TransactionType.Income : TransactionType.Expense;
+            amountAbs = Math.Abs(amount.Value);
         }
 
         var transactionDate = DateTimeOffset.UtcNow;
-        var transactionDateText = ReadFlexibleString(item, "transactionDateTime")
-                                  ?? ReadFlexibleString(item, "when")
-                                  ?? ReadFlexibleString(item, "transactionDate");
+        var transactionDateText = ReadFlexibleString(item, "transactionDate")
+                                  ?? ReadFlexibleString(item, "transaction_date")
+                                  ?? ReadFlexibleString(item, "when");
         if (!string.IsNullOrWhiteSpace(transactionDateText)
             && DateTimeOffset.TryParse(transactionDateText, out var parsedDate))
         {
             transactionDate = parsedDate.ToUniversalTime();
         }
 
-        return new ParsedCassoTransaction
+        return new ParsedSepayTransaction
         {
-            Amount = amount.Value,
+            Type = type,
+            AmountAbs = amountAbs,
             ExternalTransactionId = externalTransactionId,
             AccountRef = ReadFlexibleString(item, "accountNumber")
-                         ?? ReadFlexibleString(item, "subAccId")
-                         ?? ReadFlexibleString(item, "bank_sub_acc_id")
-                         ?? ReadFlexibleString(item, "bankSubAccId"),
+                         ?? ReadFlexibleString(item, "account_number")
+                         ?? ReadFlexibleString(item, "subAccount"),
             TransactionDate = transactionDate,
-            Description = ReadFlexibleString(item, "description"),
-            RunningBalance = ReadDecimal(item, "runningBalance")
-                             ?? ReadDecimal(item, "cusum_balance"),
+            Description = ReadFlexibleString(item, "content")
+                          ?? ReadFlexibleString(item, "description"),
+            RunningBalance = ReadDecimal(item, "accumulated")
+                             ?? ReadDecimal(item, "runningBalance"),
             RawJson = item.GetRawText()
         };
     }
@@ -397,45 +455,43 @@ public class Service : IService
     {
         if (request == null)
         {
-            throw AppValidationException.BadRequest("Request body is required.", "body", "REQUIRED");
+            throw AppValidationException.BadRequest("Request body is required.", "body", ErrorCodes.Required);
         }
 
         if (request.page <= 0)
         {
-            throw AppValidationException.BadRequest("Page must be greater than zero.", "page", "CASSO_SYNC_INVALID");
+            throw AppValidationException.BadRequest(ErrorMessages.PageMustBeGreaterThanZero, "page", ErrorCodes.SepaySyncInvalid);
         }
 
         if (request.pageSize <= 0 || request.pageSize > 100)
         {
-            throw AppValidationException.BadRequest("Page size must be between 1 and 100.", "pageSize", "CASSO_SYNC_INVALID");
+            throw AppValidationException.BadRequest(ErrorMessages.PageSizeBetween1And100, "pageSize", ErrorCodes.SepaySyncInvalid);
         }
     }
 
-    private static string? ReadFlexibleString(JsonElement element, string propertyName)
+    private static string? ReadFlexibleString(System.Text.Json.JsonElement element, string propertyName)
     {
-        if (!element.TryGetProperty(propertyName, out var value))
-        {
-            return null;
-        }
+        if (!element.TryGetProperty(propertyName, out var value)) return null;
 
         return value.ValueKind switch
         {
-            JsonValueKind.String => value.GetString(),
-            JsonValueKind.Number => value.GetRawText(),
+            System.Text.Json.JsonValueKind.String => value.GetString(),
+            System.Text.Json.JsonValueKind.Number => value.GetRawText(),
             _ => null
         };
     }
 
-    private static decimal? ReadDecimal(JsonElement element, string propertyName)
+    private static decimal? ReadDecimal(System.Text.Json.JsonElement element, string propertyName)
     {
-        return element.TryGetProperty(propertyName, out var value) && value.ValueKind == JsonValueKind.Number
+        return element.TryGetProperty(propertyName, out var value) && value.ValueKind == System.Text.Json.JsonValueKind.Number
             ? value.GetDecimal()
             : null;
     }
 
-    private class ParsedCassoTransaction
+    private class ParsedSepayTransaction
     {
-        public required decimal Amount { get; set; }
+        public required string Type { get; set; }
+        public required decimal AmountAbs { get; set; }
         public required string ExternalTransactionId { get; set; }
         public string? AccountRef { get; set; }
         public required DateTimeOffset TransactionDate { get; set; }

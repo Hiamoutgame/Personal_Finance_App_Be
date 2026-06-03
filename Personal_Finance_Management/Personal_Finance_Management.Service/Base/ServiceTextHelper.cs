@@ -1,3 +1,4 @@
+using Personal_Finance_Management.Service.Common.Constants;
 using Personal_Finance_Management.Service.Validations;
 
 namespace Personal_Finance_Management.Service.Base;
@@ -9,7 +10,7 @@ public static class ServiceTextHelper
         var normalizedValue = value?.Trim();
         if (string.IsNullOrWhiteSpace(normalizedValue))
         {
-            throw AppValidationException.BadRequest(message, field, "REQUIRED");
+            throw AppValidationException.BadRequest(message, field, ErrorCodes.Required);
         }
 
         return normalizedValue;

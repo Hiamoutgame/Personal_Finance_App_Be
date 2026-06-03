@@ -1,8 +1,8 @@
 using System.Text.Json;
 
-namespace Personal_Finance_Management.Service.Casso;
+namespace Personal_Finance_Management.Service.Sepay;
 
-public class CassoTokenResponse
+public class SepayTokenResponse
 {
     public string accessToken { get; set; } = null!;
     public string? refreshToken { get; set; }
@@ -11,7 +11,7 @@ public class CassoTokenResponse
     public DateTimeOffset? expiresAt { get; set; }
 }
 
-public class CassoStoredToken
+public class SepayStoredToken
 {
     public string accessToken { get; set; } = null!;
     public string? refreshToken { get; set; }
@@ -19,11 +19,11 @@ public class CassoStoredToken
     public DateTimeOffset? expiresAt { get; set; }
 }
 
-public class CassoAccount
+public class SepayAccount
 {
     public string externalId { get; set; } = null!;
     public string? accountNumber { get; set; }
-    public string name { get; set; } = "Casso bank account";
+    public string name { get; set; } = "SePay bank account";
     public string? bankName { get; set; }
     public string? bankCode { get; set; }
     public string? accountHolderName { get; set; }
@@ -31,7 +31,7 @@ public class CassoAccount
     public string rawJson { get; set; } = "{}";
 }
 
-public class CassoTransactionRecord
+public class SepayTransactionRecord
 {
     public JsonElement payload { get; set; }
 }

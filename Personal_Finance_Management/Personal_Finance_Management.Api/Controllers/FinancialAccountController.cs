@@ -49,26 +49,36 @@ public class FinancialAccountController : ControllerBase
         return Ok(result);
     }
 
-    [HttpPost("casso/connect")]
+    [HttpPost("sepay/connect")]
     [ApiExplorerSettings(IgnoreApi = true)]
-    public async Task<IActionResult> StartCassoConnection([FromBody] BankConnectionRequest.StartCassoConnectionRequest request)
+    public async Task<IActionResult> StartSepayConnection([FromBody] BankConnectionRequest.StartSepayConnectionRequest request)
     {
-        var result = await _bankConnectionService.StartCassoConnection(request);
+        var result = await _bankConnectionService.StartSepayConnection(request);
         return Ok(result);
     }
 
     [AllowAnonymous]
-    [HttpGet("casso/callback")]
+    [HttpGet("sepay/callback")]
     [ApiExplorerSettings(IgnoreApi = true)]
-    public async Task<IActionResult> HandleCassoCallback([FromQuery] string? code, [FromQuery] string? state, [FromQuery] string? error)
+    public async Task<IActionResult> HandleSepayCallback([FromQuery] string? code, [FromQuery] string? state, [FromQuery] string? error)
     {
-        var result = await _bankConnectionService.HandleCassoCallback(code, state, error);
+        var result = await _bankConnectionService.HandleSepayCallback(code, state, error);
         if (!string.IsNullOrWhiteSpace(result.redirectUrl))
         {
             return Redirect(result.redirectUrl);
         }
 
         return result.success ? Ok(result) : BadRequest(result);
+    }
+
+    [AllowAnonymous]
+    [HttpPost("sepay/webhook")]
+    [ApiExplorerSettings(IgnoreApi = true)]
+    public async Task<IActionResult> ProcessSepayWebhook([FromBody] BankSyncRequest.SepayWebhookRequest request)
+    {
+        var authorization = Request.Headers["Authorization"].FirstOrDefault();
+        var result = await _bankSyncService.ProcessSepayWebhook(request, authorization);
+        return Ok(result);
     }
 
     [HttpPost("{id}/sync")]

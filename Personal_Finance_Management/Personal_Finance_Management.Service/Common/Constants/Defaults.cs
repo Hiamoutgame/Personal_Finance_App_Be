@@ -9,7 +9,7 @@ public static class PaginationDefaults
 
 public static class IntegrationDefaults
 {
-    public const int CassoTimeoutSeconds = 30;
+    public const int SepayTimeoutSeconds = 30;
     public const int GoogleAiTimeoutSeconds = 300;
     public const int BroadcastDispatchIntervalSeconds = 60;
 }

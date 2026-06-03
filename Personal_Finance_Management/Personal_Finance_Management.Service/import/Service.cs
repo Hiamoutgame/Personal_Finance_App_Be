@@ -4,6 +4,8 @@ using System.Text.Json;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Personal_Finance_Management.Service.Base;
+using Personal_Finance_Management.Service.Common.Constants;
+using TxEnums = Personal_Finance_Management.Service.Common.Enums;
 using Personal_Finance_Management.Service.Validations;
 using ValidationServices = Personal_Finance_Management.Service.Validations;
 using OcrService = Personal_Finance_Management.Service.ocr;
@@ -108,7 +110,7 @@ namespace Personal_Finance_Management.Service.import
                     RowIndex = 0,
                     TransactionDate = preview.Transaction.Date,
                     Amount = preview.Transaction.Amount,
-                    Type = "Expense",
+                    Type = TxEnums.TransactionType.Expense,
                     RawDescription = preview.Transaction.MerchantName,
                     EditedNote = preview.Transaction.Note,
                     EditedCategoryId = preview.Transaction.SuggestedCategoryId,
@@ -208,7 +210,7 @@ namespace Personal_Finance_Management.Service.import
 
             if (draft is null)
             {
-                throw AppValidationException.NotFound("Import draft not found.", "id", "IMPORT_DRAFT_NOT_FOUND");
+                throw AppValidationException.NotFound(ErrorMessages.ImportDraftNotFound, "id", ErrorCodes.ImportDraftNotFound);
             }
 
             return await UpdateDraft(draft, request);
@@ -231,7 +233,7 @@ namespace Personal_Finance_Management.Service.import
 
             if (draft is null)
             {
-                throw AppValidationException.NotFound("Import draft not found.", "draftId", "IMPORT_DRAFT_NOT_FOUND");
+                throw AppValidationException.NotFound(ErrorMessages.ImportDraftNotFound, "draftId", ErrorCodes.ImportDraftNotFound);
             }
 
             return await UpdateDraft(draft, request);
@@ -259,7 +261,7 @@ namespace Personal_Finance_Management.Service.import
 
             if (job is null)
             {
-                throw AppValidationException.NotFound("Import not found.", "id", "IMPORT_NOT_FOUND");
+                throw AppValidationException.NotFound(ErrorMessages.ImportNotFound, "id", ErrorCodes.ImportNotFound);
             }
 
             if (job.Status == "Completed")
@@ -311,7 +313,7 @@ namespace Personal_Finance_Management.Service.import
                         && item.Status == "Active");
                 if (sourceJar is null)
                 {
-                    throw AppValidationException.NotFound("Jar not found.", "fromJarId", "JAR_NOT_FOUND");
+                    throw AppValidationException.NotFound("Jar not found.", "fromJarId", ErrorCodes.JarNotFound);
                 }
             }
 
@@ -333,13 +335,13 @@ namespace Personal_Finance_Management.Service.import
                     await EnsureCategoryCanBeUsed(userId, draft.EditedCategoryId.Value);
                 }
 
-                var transactionType = draft.Type ?? "Expense";
+                var transactionType = draft.Type ?? TxEnums.TransactionType.Expense;
                 var amount = draft.Amount!.Value;
                 var transactionDate = draft.TransactionDate!.Value;
                 Guid? transactionFinancialAccountId = null;
                 Guid? transactionFromJarId = null;
 
-                if (transactionType == "Expense")
+                if (transactionType == TxEnums.TransactionType.Expense)
                 {
                     var draftJarId = request.FromJarId ?? draft.EditedJarId;
                     if (draftJarId.HasValue)
@@ -353,7 +355,7 @@ namespace Personal_Finance_Management.Service.import
 
                         if (jar is null)
                         {
-                            throw AppValidationException.NotFound("Jar not found.", "fromJarId", "JAR_NOT_FOUND");
+                            throw AppValidationException.NotFound("Jar not found.", "fromJarId", ErrorCodes.JarNotFound);
                         }
 
                         if (jar.Balance < amount)
@@ -361,7 +363,7 @@ namespace Personal_Finance_Management.Service.import
                             throw AppValidationException.BadRequest(
                                 "Insufficient jar balance.",
                                 "fromJarId",
-                                "INSUFFICIENT_JAR_BALANCE");
+                                ErrorCodes.InsufficientJarBalance);
                         }
 
                         jar.Balance -= amount;
@@ -523,15 +525,15 @@ namespace Personal_Finance_Management.Service.import
             Request.UpdateImportDraftRequest request)
         {
             if (request.Type is not null
-                && request.Type != "Income"
-                && request.Type != "Expense")
+                && request.Type != TxEnums.TransactionType.Income
+                && request.Type != TxEnums.TransactionType.Expense)
             {
-                throw AppValidationException.BadRequest("Invalid draft transaction type.", "type", "INVALID_TRANSACTION_TYPE");
+                throw AppValidationException.BadRequest(ErrorMessages.InvalidDraftTransactionType, "type", ErrorCodes.InvalidTransactionType);
             }
 
             if (request.Amount.HasValue && request.Amount.Value <= 0)
             {
-                throw AppValidationException.BadRequest("Amount must be greater than zero.", "amount", "INVALID_AMOUNT");
+                throw AppValidationException.BadRequest(ErrorMessages.AmountMustBeGreaterThanZero, "amount", ErrorCodes.InvalidAmount);
             }
 
             if (request.EditedCategoryId.HasValue)
@@ -542,7 +544,7 @@ namespace Personal_Finance_Management.Service.import
                     && category.DeletedAt == null);
                 if (!categoryExists)
                 {
-                    throw AppValidationException.NotFound("Category not found.", "editedCategoryId", "CATEGORY_NOT_FOUND");
+                    throw AppValidationException.NotFound("Category not found.", "editedCategoryId", ErrorCodes.CategoryNotFound);
                 }
             }
 
@@ -554,7 +556,7 @@ namespace Personal_Finance_Management.Service.import
                     && jar.UserId == userId);
                 if (!jarExists)
                 {
-                    throw AppValidationException.NotFound("Jar not found.", "editedJarId", "JAR_NOT_FOUND");
+                    throw AppValidationException.NotFound("Jar not found.", "editedJarId", ErrorCodes.JarNotFound);
                 }
             }
 
@@ -638,7 +640,7 @@ namespace Personal_Finance_Management.Service.import
                     "DRAFT_TRANSACTION_DATE_REQUIRED");
             }
 
-            if (draft.Type is not "Income" and not "Expense")
+            if (draft.Type is not TxEnums.TransactionType.Income and not TxEnums.TransactionType.Expense)
             {
                 throw AppValidationException.BadRequest(
                     "Draft transaction type is invalid.",
@@ -660,7 +662,7 @@ namespace Personal_Finance_Management.Service.import
                 throw AppValidationException.NotFound(
                     "Category not found.",
                     "editedCategoryId",
-                    "CATEGORY_NOT_FOUND");
+                    ErrorCodes.CategoryNotFound);
             }
         }
 
@@ -689,7 +691,7 @@ namespace Personal_Finance_Management.Service.import
                     MerchantName = receipt?.MerchantName,
                     Amount = receipt?.TotalAmount,
                     Date = receipt?.TransactionDate,
-                    Type = "Expense",
+                    Type = TxEnums.TransactionType.Expense,
                     SuggestedCategoryId = receipt?.SuggestedCategoryId,
                     SuggestedCategoryName = receipt?.SuggestedCategoryName,
                     MatchedBy = receipt?.CategoryMatchedBy,
@@ -750,7 +752,7 @@ namespace Personal_Finance_Management.Service.import
 
             if (job is null)
             {
-                throw AppValidationException.NotFound("Import not found.", "id", "IMPORT_NOT_FOUND");
+                throw AppValidationException.NotFound(ErrorMessages.ImportNotFound, "id", ErrorCodes.ImportNotFound);
             }
 
             return job;

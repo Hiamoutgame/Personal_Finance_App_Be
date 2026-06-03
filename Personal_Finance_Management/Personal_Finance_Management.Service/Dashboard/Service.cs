@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Personal_Finance_Management.Repository;
 using Personal_Finance_Management.Service.Base;
+using Personal_Finance_Management.Service.Common.Enums;
 
 namespace Personal_Finance_Management.Service.Dashboard;
 
@@ -33,10 +34,10 @@ public class Service : IService
             .Where(x => x.UserId == userIdGuid)
             .SumAsync(x => x.CurrentBalance);
         var totalIncome = await _dbContext.Transactions
-            .Where(x => x.UserId == userIdGuid && !x.IsDeleted && x.Type == "Income")
+            .Where(x => x.UserId == userIdGuid && !x.IsDeleted && x.Type == TransactionType.Income)
             .SumAsync(x => (decimal?)x.TransactionsAmount) ?? 0m;
         var totalExpense = await _dbContext.Transactions
-            .Where(x => x.UserId == userIdGuid && !x.IsDeleted && x.Type == "Expense")
+            .Where(x => x.UserId == userIdGuid && !x.IsDeleted && x.Type == TransactionType.Expense)
             .SumAsync(x => (decimal?)x.TransactionsAmount) ?? 0m;
         var BalanceSummaryResponse = new Response.BalanceSummaryResponse
         {
@@ -67,7 +68,7 @@ public class Service : IService
             spent = _dbContext.Transactions
                 .Where(t => t.UserId == userIdGuid
                             && !t.IsDeleted
-                            && t.Type == "Expense"
+                            && t.Type == TransactionType.Expense
                             && t.FromJarId == j.Id)
                 .Sum(s => (decimal?)s.TransactionsAmount) ?? 0,
         });
@@ -91,7 +92,7 @@ public class Service : IService
                 .Where(t => t.UserId == userIdGuid
                             && !t.IsDeleted
                             && t.CategoryId == c.Id
-                            && t.Type == "Expense")
+                            && t.Type == TransactionType.Expense)
                 .Sum(s => (decimal?)s.TransactionsAmount) ?? 0
 
         });

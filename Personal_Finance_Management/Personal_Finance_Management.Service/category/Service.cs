@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Personal_Finance_Management.Repository;
 using Personal_Finance_Management.Repository.Entity;
 using Personal_Finance_Management.Service.Base;
+using Personal_Finance_Management.Service.Common.Constants;
 using Personal_Finance_Management.Service.Validations;
 
 namespace Personal_Finance_Management.Service.category
@@ -65,7 +66,7 @@ namespace Personal_Finance_Management.Service.category
         {
             if (request is null)
             {
-                throw AppValidationException.BadRequest("Request body is required.", "body", "REQUIRED");
+                throw AppValidationException.BadRequest("Request body is required.", "body", ErrorCodes.Required);
             }
 
             var userIdGuid = GetCurrentUserId();
@@ -94,7 +95,7 @@ namespace Personal_Finance_Management.Service.category
         {
             if (request is null)
             {
-                throw AppValidationException.BadRequest("Request body is required.", "body", "REQUIRED");
+                throw AppValidationException.BadRequest("Request body is required.", "body", ErrorCodes.Required);
             }
 
             var userIdGuid = GetCurrentUserId();
@@ -175,7 +176,7 @@ namespace Personal_Finance_Management.Service.category
         {
             if (request is null)
             {
-                throw AppValidationException.BadRequest("Request body is required.", "body", "REQUIRED");
+                throw AppValidationException.BadRequest("Request body is required.", "body", ErrorCodes.Required);
             }
 
             var name = NormalizeRequiredName(request.Name);
@@ -207,7 +208,7 @@ namespace Personal_Finance_Management.Service.category
         {
             if (request is null)
             {
-                throw AppValidationException.BadRequest("Request body is required.", "body", "REQUIRED");
+                throw AppValidationException.BadRequest("Request body is required.", "body", ErrorCodes.Required);
             }
 
             var category = await GetDefaultCategoryOrThrow(id);
@@ -271,7 +272,7 @@ namespace Personal_Finance_Management.Service.category
 
             if (category is null)
             {
-                throw AppValidationException.NotFound("Category not found.", "id", "CATEGORY_NOT_FOUND");
+                throw AppValidationException.NotFound("Category not found.", "id", ErrorCodes.CategoryNotFound);
             }
 
             return category;
@@ -288,7 +289,7 @@ namespace Personal_Finance_Management.Service.category
 
             if (category is null)
             {
-                throw AppValidationException.NotFound("Category not found.", "id", "CATEGORY_NOT_FOUND");
+                throw AppValidationException.NotFound("Category not found.", "id", ErrorCodes.CategoryNotFound);
             }
 
             return category;

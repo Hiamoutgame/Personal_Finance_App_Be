@@ -4,12 +4,14 @@ using Personal_Finance_Management.Api.Extensions;
 using Personal_Finance_Management.Api.Jobs;
 using Personal_Finance_Management.Api.Middlewares;
 using Personal_Finance_Management.Repository;
+using Personal_Finance_Management.Service.Common.Constants;
+using Serilog;
 using AdminService = Personal_Finance_Management.Service.Admin;
 using authService = Personal_Finance_Management.Service.Auth;
 using BroadcastService = Personal_Finance_Management.Service.broadcast;
 using BankConnectionService = Personal_Finance_Management.Service.BankConnection;
 using BankSyncService = Personal_Finance_Management.Service.BankSync;
-using CassoService = Personal_Finance_Management.Service.Casso;
+using SepayService = Personal_Finance_Management.Service.Sepay;
 using CategoryService = Personal_Finance_Management.Service.category;
 using ImportService = Personal_Finance_Management.Service.import;
 using jwtService = Personal_Finance_Management.Service.JwtService;
@@ -32,6 +34,21 @@ using dashboardService = Personal_Finance_Management.Service.Dashboard;
 var builder = WebApplication.CreateBuilder(args);
 const string FrontendCorsPolicy = "FrontendCorsPolicy";
 
+builder.Host.UseSerilog((context, services, configuration) => configuration
+    .ReadFrom.Configuration(context.Configuration)
+    .ReadFrom.Services(services)
+    .Enrich.FromLogContext()
+    .Enrich.WithMachineName()
+    .Enrich.WithThreadId()
+    .WriteTo.Console(outputTemplate:
+        "[{Timestamp:HH:mm:ss} {Level:u3}] {CorrelationId} {UserId} {SourceContext} {Message:lj}{NewLine}{Exception}")
+    .WriteTo.File(
+        path: "logs/app-.log",
+        rollingInterval: RollingInterval.Day,
+        retainedFileCountLimit: 14,
+        outputTemplate:
+        "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] {CorrelationId} {UserId} {SourceContext} {Message:lj}{NewLine}{Exception}"));
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy(FrontendCorsPolicy, policy =>
@@ -47,6 +64,8 @@ builder.Services.AddCors(options =>
 
 builder.Services.AddControllers();
 builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<Personal_Finance_Management.Service.Base.ICurrentUserAccessor,
+    Personal_Finance_Management.Service.Base.CurrentUserAccessor>();
 builder.Services.Configure<ApiBehaviorOptions>(options =>
 {
     options.SuppressModelStateInvalidFilter = true;
@@ -87,14 +106,13 @@ builder.Services.AddScoped<AdminService.IService, AdminService.Service>();
 builder.Services.AddScoped<AIService.IService, AIService.Service>();
 builder.Services.AddScoped<BankConnectionService.IService, BankConnectionService.Service>();
 builder.Services.AddScoped<BankSyncService.IService, BankSyncService.Service>();
-builder.Services.AddScoped<CassoService.ICassoTokenProtector, CassoService.CassoTokenProtector>();
+builder.Services.AddScoped<SepayService.ISepayTokenProtector, SepayService.SepayTokenProtector>();
 builder.Services.AddScoped<DatabaseSeedService>();
 builder.Services.AddHostedService<BroadcastDispatchBackgroundService>();
-builder.Services.AddHttpClient<CassoService.ICassoClient, CassoService.CassoClient>(client =>
+builder.Services.AddHttpClient<SepayService.ISepayClient, SepayService.SepayClient>(client =>
 {
-    var timeoutSeconds = builder.Configuration.GetValue<int?>("Casso:TimeoutSeconds")
-                         ?? builder.Configuration.GetValue<int?>("CasooOptions:TimeoutSeconds")
-                         ?? 30;
+    var timeoutSeconds = builder.Configuration.GetValue<int?>(ConfigKeys.Sepay.TimeoutSeconds)
+                         ?? IntegrationDefaults.SepayTimeoutSeconds;
     client.Timeout = TimeSpan.FromSeconds(timeoutSeconds);
 });
 builder.Services.AddHttpClient<OcrService.IService, OcrService.Service>(client =>
@@ -114,7 +132,9 @@ if (app.Configuration.GetValue<bool>("SeedAccounts:Enabled"))
     await app.SeedConfiguredAccountsAsync();
 }
 
+app.UseMiddleware<CorrelationIdMiddleware>();
 app.UseMiddleware<GlobalExceptionHandlerMiddleware>();
+app.UseSerilogRequestLogging();
 
 var enableSwagger = app.Environment.IsDevelopment()
                     || app.Configuration.GetValue<bool>("EnableSwagger");

@@ -11,18 +11,23 @@ public static class ConfigKeys
         public const string ExpiryMinutes = "Jwt:ExpiryMinutes";
     }
 
-    public static class Casso
+    public static class Sepay
     {
-        public const string Section = "Casso";
-        public const string WebhookSecureToken = "Casso:WebhookSecureToken";
-        public const string TimeoutSeconds = "Casso:TimeoutSeconds";
-    }
-
-    public static class CasooOptions
-    {
-        public const string Section = "CasooOptions";
-        public const string SecureToken = "CasooOptions:SecureToken";
-        public const string TimeoutSeconds = "CasooOptions:TimeoutSeconds";
+        public const string Section = "Sepay";
+        public const string ConnectionMode = "Sepay:ConnectionMode";
+        public const string ClientId = "Sepay:ClientId";
+        public const string ClientSecret = "Sepay:ClientSecret";
+        public const string RedirectUri = "Sepay:RedirectUri";
+        public const string DefaultReturnUrl = "Sepay:DefaultReturnUrl";
+        public const string AllowedReturnUrlPrefix = "Sepay:AllowedReturnUrlPrefix";
+        public const string Scope = "Sepay:Scope";
+        public const string BaseUrl = "Sepay:BaseUrl";
+        public const string AuthorizationUrl = "Sepay:AuthorizationUrl";
+        public const string TokenUrl = "Sepay:TokenUrl";
+        public const string ApiKey = "Sepay:ApiKey";
+        public const string WebhookApiKey = "Sepay:WebhookApiKey";
+        public const string TokenEncryptionKey = "Sepay:TokenEncryptionKey";
+        public const string TimeoutSeconds = "Sepay:TimeoutSeconds";
     }
 
     public static class GoogleAi

@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Personal_Finance_Management.Repository;
 using Personal_Finance_Management.Repository.Enum;
 using Personal_Finance_Management.Service.Base;
+using Personal_Finance_Management.Service.Common.Constants;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Formats.Bmp;
 using SixLabors.ImageSharp.Formats.Jpeg;
@@ -29,7 +30,7 @@ public class ValidationServices : IServices
     {
         if (request is null)
         {
-            throw AppValidationException.BadRequest("Request body is required.", "body", "REQUIRED");
+            throw AppValidationException.BadRequest("Request body is required.", "body", ErrorCodes.Required);
         }
 
         var validationResults = new List<ValidationResult>();
@@ -46,7 +47,7 @@ public class ValidationServices : IServices
                     })
                 .ToArray();
 
-            throw AppValidationException.BadRequest("Invalid form data.", errors, "FORM_INVALID");
+            throw AppValidationException.BadRequest(ErrorMessages.FormInvalid, errors, ErrorCodes.FormInvalid);
         }
 
         return Task.FromResult(request);
@@ -61,37 +62,37 @@ public class ValidationServices : IServices
 
         if (string.IsNullOrWhiteSpace(username))
         {
-            throw AppValidationException.BadRequest("Username is required.", "username", "REQUIRED");
+            throw AppValidationException.BadRequest("Username is required.", "username", ErrorCodes.Required);
         }
 
         if (string.IsNullOrWhiteSpace(email))
         {
-            throw AppValidationException.BadRequest("Email is required.", "email", "REQUIRED");
+            throw AppValidationException.BadRequest("Email is required.", "email", ErrorCodes.Required);
         }
 
         if (string.IsNullOrWhiteSpace(request.Password))
         {
-            throw AppValidationException.BadRequest("Password is required.", "password", "REQUIRED");
+            throw AppValidationException.BadRequest("Password is required.", "password", ErrorCodes.Required);
         }
 
         if (string.IsNullOrWhiteSpace(request.FirstName))
         {
-            throw AppValidationException.BadRequest("First name is required.", "firstName", "REQUIRED");
+            throw AppValidationException.BadRequest("First name is required.", "firstName", ErrorCodes.Required);
         }
 
         if (string.IsNullOrWhiteSpace(request.LastName))
         {
-            throw AppValidationException.BadRequest("Last name is required.", "lastName", "REQUIRED");
+            throw AppValidationException.BadRequest("Last name is required.", "lastName", ErrorCodes.Required);
         }
 
         if (await _dbContext.Accounts.AnyAsync(a => a.Username.ToLower() == username.ToLower()))
         {
-            throw AppValidationException.Conflict("Username already exists.", "username", "AUTH_CONFLICT");
+            throw AppValidationException.Conflict(ErrorMessages.UsernameAlreadyExists, "username", ErrorCodes.AuthConflict);
         }
 
         if (await _dbContext.Accounts.AnyAsync(a => a.Email.ToLower() == email))
         {
-            throw AppValidationException.Conflict("Email already exists.", "email", "AUTH_CONFLICT");
+            throw AppValidationException.Conflict(ErrorMessages.EmailAlreadyExists, "email", ErrorCodes.AuthConflict);
         }
     }
 
@@ -111,20 +112,20 @@ public class ValidationServices : IServices
 
         if (request.File.Length == 0)
         {
-            throw AppValidationException.BadRequest("Image file is required.", "file", "REQUIRED");
+            throw AppValidationException.BadRequest("Image file is required.", "file", ErrorCodes.Required);
         }
 
         const long maxSizeInBytes = 10 * 1024 * 1024;
         if (request.File.Length > maxSizeInBytes)
         {
-            throw AppValidationException.BadRequest("File size is too large. Maximum allowed size is 10MB.", "file", "FILE_TOO_LARGE");
+            throw AppValidationException.BadRequest("File size is too large. Maximum allowed size is 10MB.", "file", ErrorCodes.FileTooLarge);
         }
 
         var extension = Path.GetExtension(request.File.FileName).ToLowerInvariant();
         var supportedExtensions = new HashSet<string> { ".jpg", ".jpeg", ".png", ".bmp", ".pdf" };
         if (!supportedExtensions.Contains(extension))
         {
-            throw AppValidationException.BadRequest("Unsupported file extension. Only JPG, JPEG, PNG, BMP, and PDF are allowed.", "file", "UNSUPPORTED_FILE_EXTENSION");
+            throw AppValidationException.BadRequest("Unsupported file extension. Only JPG, JPEG, PNG, BMP, and PDF are allowed.", "file", ErrorCodes.UnsupportedFileExtension);
         }
 
         var layout = request.Layout?.Trim();
@@ -139,7 +140,7 @@ public class ValidationServices : IServices
 
             if (!supportedLayouts.Contains(layout))
             {
-                throw AppValidationException.BadRequest("Unsupported OCR layout. Only none, invoice, and document are allowed.", "layout", "UNSUPPORTED_OCR_LAYOUT");
+                throw AppValidationException.BadRequest("Unsupported OCR layout. Only none, invoice, and document are allowed.", "layout", ErrorCodes.UnsupportedOcrLayout);
             }
         }
 
@@ -155,24 +156,24 @@ public class ValidationServices : IServices
 
             if (format is not (JpegFormat or PngFormat or BmpFormat))
             {
-                throw AppValidationException.BadRequest("Unsupported image format. Only JPG, JPEG, PNG, and BMP are allowed.", "file", "UNSUPPORTED_IMAGE_FORMAT");
+                throw AppValidationException.BadRequest(ErrorMessages.UnsupportedImageFormat, "file", ErrorCodes.UnsupportedImageFormat);
             }
 
             await using var identifyStream = request.File.OpenReadStream();
             var imageInfo = await Image.IdentifyAsync(identifyStream);
             if (imageInfo is null)
             {
-                throw AppValidationException.BadRequest("Invalid image file.", "file", "INVALID_IMAGE");
+                throw AppValidationException.BadRequest(ErrorMessages.InvalidImage, "file", ErrorCodes.InvalidImage);
             }
 
             if (imageInfo.Width > 5000 || imageInfo.Height > 5000)
             {
-                throw AppValidationException.BadRequest("Image dimensions are too large. Maximum allowed size is 5000x5000 pixels.", "file", "IMAGE_DIMENSIONS_TOO_LARGE");
+                throw AppValidationException.BadRequest(ErrorMessages.ImageDimensionsTooLarge, "file", ErrorCodes.ImageDimensionsTooLarge);
             }
         }
         catch (UnknownImageFormatException)
         {
-            throw AppValidationException.BadRequest("Invalid image file.", "file", "INVALID_IMAGE");
+            throw AppValidationException.BadRequest(ErrorMessages.InvalidImage, "file", ErrorCodes.InvalidImage);
         }
     }
 
@@ -190,7 +191,7 @@ public class ValidationServices : IServices
     {
         if (request is null)
         {
-            throw AppValidationException.BadRequest("Request body is required.", "body", "REQUIRED");
+            throw AppValidationException.BadRequest("Request body is required.", "body", ErrorCodes.Required);
         }
 
         ValidateRequiredText(request.Title, "title", "Reminder title is required.");
@@ -200,7 +201,7 @@ public class ValidationServices : IServices
         ValidateNotifyDaysBefore(request.NotifyDaysBefore, "notifyDaysBefore");
         if (request.StartDate.Date < DateTimeOffset.UtcNow.Date)
         {
-            throw AppValidationException.BadRequest("Reminder start date cannot be in the past.", "startDate", "REMINDER_START_DATE_IN_PAST");
+            throw AppValidationException.BadRequest(ErrorMessages.ReminderStartDateInPast, "startDate", ErrorCodes.ReminderStartDateInPast);
         }
 
         return Task.CompletedTask;
@@ -210,7 +211,7 @@ public class ValidationServices : IServices
     {
         if (request is null)
         {
-            throw AppValidationException.BadRequest("Request body is required.", "body", "REQUIRED");
+            throw AppValidationException.BadRequest("Request body is required.", "body", ErrorCodes.Required);
         }
 
         if (request.Title is not null)
@@ -243,17 +244,17 @@ public class ValidationServices : IServices
     {
         if (request is null)
         {
-            throw AppValidationException.BadRequest("Request query is required.", "query", "REQUIRED");
+            throw AppValidationException.BadRequest("Request query is required.", "query", ErrorCodes.Required);
         }
 
         if (request.PageIndex <= 0)
         {
-            throw AppValidationException.BadRequest("Page index must be greater than zero.", "pageIndex", "INVALID_PAGE_INDEX");
+            throw AppValidationException.BadRequest("Page index must be greater than zero.", "pageIndex", ErrorCodes.InvalidPageIndex);
         }
 
         if (request.PageSize <= 0)
         {
-            throw AppValidationException.BadRequest("Page size must be greater than zero.", "pageSize", "INVALID_PAGE_SIZE");
+            throw AppValidationException.BadRequest("Page size must be greater than zero.", "pageSize", ErrorCodes.InvalidPageSize);
         }
 
         if (!string.IsNullOrWhiteSpace(request.Status))
@@ -268,12 +269,12 @@ public class ValidationServices : IServices
     {
         if (request is null)
         {
-            throw AppValidationException.BadRequest("Request body is required.", "body", "REQUIRED");
+            throw AppValidationException.BadRequest("Request body is required.", "body", ErrorCodes.Required);
         }
 
         if (request.UserId == Guid.Empty)
         {
-            throw AppValidationException.BadRequest("User id is required.", "userId", "REQUIRED");
+            throw AppValidationException.BadRequest("User id is required.", "userId", ErrorCodes.Required);
         }
 
         ValidateEnumValue<AccountStatus>(request.Status, "status", "INVALID_ACCOUNT_STATUS", required: true);
@@ -290,7 +291,7 @@ public class ValidationServices : IServices
     {
         if (amount < 0)
         {
-            throw AppValidationException.BadRequest("Reminder amount must be greater than or equal to zero.", field, "INVALID_REMINDER_AMOUNT");
+            throw AppValidationException.BadRequest(ErrorMessages.InvalidReminderAmount, field, ErrorCodes.InvalidReminderAmount);
         }
     }
 
@@ -298,7 +299,7 @@ public class ValidationServices : IServices
     {
         if (dayOfMonth.HasValue && (dayOfMonth.Value < 1 || dayOfMonth.Value > 31))
         {
-            throw AppValidationException.BadRequest("Day of month must be between 1 and 31.", field, "INVALID_DAY_OF_MONTH");
+            throw AppValidationException.BadRequest(ErrorMessages.InvalidDayOfMonth, field, ErrorCodes.InvalidDayOfMonth);
         }
     }
 
@@ -306,7 +307,7 @@ public class ValidationServices : IServices
     {
         if (notifyDaysBefore.HasValue && notifyDaysBefore.Value < 0)
         {
-            throw AppValidationException.BadRequest("Notify days before must be greater than or equal to zero.", field, "INVALID_NOTIFY_DAYS_BEFORE");
+            throw AppValidationException.BadRequest(ErrorMessages.InvalidNotifyDaysBefore, field, ErrorCodes.InvalidNotifyDaysBefore);
         }
     }
 
@@ -317,7 +318,7 @@ public class ValidationServices : IServices
         {
             if (required)
             {
-                throw AppValidationException.BadRequest($"{field} is required.", field, "REQUIRED");
+                throw AppValidationException.BadRequest($"{field} is required.", field, ErrorCodes.Required);
             }
 
             return;

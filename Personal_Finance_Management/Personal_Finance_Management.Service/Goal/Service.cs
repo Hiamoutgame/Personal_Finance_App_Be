@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Personal_Finance_Management.Repository;
 using Personal_Finance_Management.Repository.Entity;
 using Personal_Finance_Management.Service.Base;
+using Personal_Finance_Management.Service.Common.Constants;
 using Personal_Finance_Management.Service.Validations;
 
 namespace Personal_Finance_Management.Service.goal;
@@ -117,7 +118,7 @@ public class Service : IService
 
         if (request.LinkedJarId.HasValue && linkedJar == null)
         {
-            throw AppValidationException.NotFound("Jar not found.", "linkedJarId", "JAR_NOT_FOUND");
+            throw AppValidationException.NotFound("Jar not found.", "linkedJarId", ErrorCodes.JarNotFound);
         }
 
         var now = DateTimeOffset.UtcNow;
@@ -194,17 +195,17 @@ public class Service : IService
         
         if (request.Title != null && string.IsNullOrWhiteSpace(request.Title))
         {
-            throw AppValidationException.BadRequest("Goal title is required.", "title", "GOAL_TITLE_REQUIRED");
+            throw AppValidationException.BadRequest(ErrorMessages.GoalTitleRequired, "title", ErrorCodes.GoalTitleRequired);
         }
 
         if (request.TargetAmount.HasValue && request.TargetAmount.Value <= 0)
         {
-            throw AppValidationException.BadRequest("Target amount must be greater than zero.", "targetAmount", "INVALID_GOAL_TARGET_AMOUNT");
+            throw AppValidationException.BadRequest(ErrorMessages.InvalidGoalTargetAmount, "targetAmount", ErrorCodes.InvalidGoalTargetAmount);
         }
 
         if (request.DueDate.HasValue && request.DueDate.Value.Date < DateTime.UtcNow.Date)
         {
-            throw AppValidationException.BadRequest("Goal due date cannot be in the past.", "dueDate", "GOAL_DUE_DATE_IN_PAST");
+            throw AppValidationException.BadRequest(ErrorMessages.GoalDueDateInPast, "dueDate", ErrorCodes.GoalDueDateInPast);
         }
 
         if (request.LinkedJarId.HasValue)
@@ -212,7 +213,7 @@ public class Service : IService
             var jarExists = await _appDbContext.Jars.AnyAsync(x => x.Id == request.LinkedJarId.Value && x.UserId == userId);
             if (!jarExists)
             {
-                throw AppValidationException.NotFound("Jar not found.", "linkedJarId", "JAR_NOT_FOUND");
+                throw AppValidationException.NotFound("Jar not found.", "linkedJarId", ErrorCodes.JarNotFound);
             }
         }
 
@@ -267,17 +268,17 @@ public class Service : IService
     {
         if (string.IsNullOrWhiteSpace(title))
         {
-            throw AppValidationException.BadRequest("Goal title is required.", "title", "GOAL_TITLE_REQUIRED");
+            throw AppValidationException.BadRequest(ErrorMessages.GoalTitleRequired, "title", ErrorCodes.GoalTitleRequired);
         }
 
         if (targetAmount <= 0)
         {
-            throw AppValidationException.BadRequest("Target amount must be greater than zero.", "targetAmount", "INVALID_GOAL_TARGET_AMOUNT");
+            throw AppValidationException.BadRequest(ErrorMessages.InvalidGoalTargetAmount, "targetAmount", ErrorCodes.InvalidGoalTargetAmount);
         }
 
         if (dueDate.Date < DateTime.UtcNow.Date)
         {
-            throw AppValidationException.BadRequest("Goal due date cannot be in the past.", "dueDate", "GOAL_DUE_DATE_IN_PAST");
+            throw AppValidationException.BadRequest(ErrorMessages.GoalDueDateInPast, "dueDate", ErrorCodes.GoalDueDateInPast);
         }
     }
 }

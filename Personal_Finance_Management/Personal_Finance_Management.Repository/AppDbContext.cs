@@ -253,7 +253,7 @@ public class AppDbContext : DbContext
             builder.Property(b => b.ProviderCode)
                 .IsRequired()
                 .HasMaxLength(50)
-                .HasDefaultValue("casso");
+                .HasDefaultValue("sepay");
 
             builder.Property(b => b.State)
                 .IsRequired()

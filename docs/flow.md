@@ -384,10 +384,10 @@ Render mỗi item:
 CTA:
 
 - `Thêm nguồn tiền thủ công`.
-- `Liên kết ngân hàng qua Casso`.
+- `Liên kết ngân hàng qua SePay`.
 - `Sửa`.
 - `Xóa/Ngừng theo dõi`.
-- `Sync Casso` nếu account là `LinkedApi`.
+- `Sync SePay` nếu account là `LinkedApi`.
 
 ### 7.2 Tạo nguồn tiền thủ công
 
@@ -414,7 +414,7 @@ Sau response:
 - refresh `GET /FinancialAccount`;
 - nếu đang ở dashboard thì refresh dashboard.
 
-### 7.3 Liên kết ngân hàng/Casso
+### 7.3 Liên kết ngân hàng/SePay
 
 Modal/form:
 
@@ -441,7 +441,7 @@ Sau response:
 UX:
 
 - Không cho nhập/sửa balance thủ công đối với linked account.
-- Gắn nút `Sync Casso` để kéo giao dịch.
+- Gắn nút `Sync SePay` để kéo giao dịch.
 
 ### 7.4 Sửa nguồn tiền
 
@@ -814,11 +814,11 @@ Ghi chú:
 
 ---
 
-## 11. Casso sync flow
+## 11. SePay sync flow
 
-> **Quyết định**: FE mới nên dùng OAuth flow `POST /api/v1/financial-accounts/casso/connect` + sync qua `POST /api/v1/financial-accounts/{id}/sync`. Endpoint legacy `/Transactions/Casso` dưới đây là **@deprecated**, vẫn còn để backward compat và để Casso webhook gọi vào, sẽ bị xóa ở phase refactor tiếp theo.
+> **Quyết định**: FE dùng OAuth flow `POST /api/v1/financial-accounts/sepay/connect` + sync qua `POST /api/v1/financial-accounts/{id}/sync`. SePay đẩy webhook vào `POST /api/v1/financial-accounts/sepay/webhook` để cập nhật realtime. Provider cũ Casso đã bị xóa khỏi codebase.
 
-### 11.1 User bấm sync linked account (legacy, deprecated)
+### 11.1 User bấm sync linked account
 
 Màn dùng: `/accounts` hoặc account detail.
 
@@ -827,17 +827,21 @@ Màn dùng: `/accounts` hoặc account detail.
 - account `connectionMode = LinkedApi`;
 - account active.
 
-API (legacy):
+API:
 
 ```http
-GET /Transactions/Casso?financialAccountId={id}&page=1&pageSize=50&sort=ASC
+POST /api/v1/financial-accounts/{id}/sync
 Authorization: Bearer <token>
+Content-Type: application/json
+
+{
+  "fromDate": "2026-01-01",
+  "toDate": null,
+  "page": 1,
+  "pageSize": 50,
+  "sort": "ASC"
+}
 ```
-
-Optional query:
-
-- `fromDate`;
-- `toDate`.
 
 Sau response:
 
@@ -846,15 +850,24 @@ Sau response:
 - refresh account balance;
 - refresh dashboard.
 
-### 11.2 Webhook Casso (deprecated, vẫn nhận webhook)
+### 11.2 Webhook SePay
 
 Endpoint:
 
 ```http
-POST /Transactions/Casso
+POST /api/v1/financial-accounts/sepay/webhook
+Authorization: Apikey <Sepay:WebhookApiKey>
 ```
 
-FE không gọi API này. Đây là endpoint để Casso/server ngoài gọi vào backend.
+FE không gọi API này. Đây là endpoint để SePay (server ngoài) đẩy event giao dịch vào backend.
+
+Yêu cầu phản hồi:
+
+- HTTP 200 hoặc 201;
+- body JSON chứa `"success": true`;
+- hoàn tất trong vòng 30s.
+
+Nếu không, SePay sẽ retry tối đa 7 lần theo Fibonacci (tổng cửa sổ 5h). Dedup theo trường `id` của payload (lưu vào `transactions.external_transaction_id`).
 
 ---
 

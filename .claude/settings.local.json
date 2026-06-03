@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dotnet build *)",
+      "Read(//Users/dev/**)",
+      "Bash(ls \"f:\\\\\\\\Coding\\\\\\\\Project\\\\\\\\prj_pied\\\\\\\\Personal_Finance_App_Be\")"
+    ]
+  }
+}

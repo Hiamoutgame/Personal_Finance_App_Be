@@ -2,7 +2,7 @@ namespace Personal_Finance_Management.Service.BankConnection;
 
 public class Request
 {
-    public class StartCassoConnectionRequest
+    public class StartSepayConnectionRequest
     {
         public string? returnUrl { get; set; }
         public bool? isDefault { get; set; }

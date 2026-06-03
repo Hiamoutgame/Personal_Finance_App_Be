@@ -2,17 +2,16 @@ namespace Personal_Finance_Management.Service.BankSync;
 
 public interface IService
 {
-    Task<Response.CassoTransactionsResponse> SyncLinkedAccount(
+    Task<Response.SepayTransactionsResponse> SyncLinkedAccount(
         Guid financialAccountId,
         Request.SyncLinkedAccountRequest request);
 
-    Task<Response.CassoTransactionsResponse> SyncLinkedAccountForUser(
+    Task<Response.SepayTransactionsResponse> SyncLinkedAccountForUser(
         Guid financialAccountId,
         Guid userId,
         Request.SyncLinkedAccountRequest request);
 
-    Task<Response.CassoTransactionsResponse> ProcessCassoWebhook(
-        Request.CassoWebhookRequest request,
-        string? secureToken,
-        string? cassoSignature);
+    Task<Response.SepayTransactionsResponse> ProcessSepayWebhook(
+        Request.SepayWebhookRequest request,
+        string? authorizationHeader);
 }

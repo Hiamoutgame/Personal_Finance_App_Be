@@ -6,7 +6,7 @@ public class BankConnectionSession : BaseEntity, IAudictableEntity
 {
     public Guid UserId { get; set; }
     public Account User { get; set; } = null!;
-    public string ProviderCode { get; set; } = "casso";
+    public string ProviderCode { get; set; } = "sepay";
     public string State { get; set; } = null!;
     public string? CodeVerifier { get; set; }
     public string? ReturnUrl { get; set; }

@@ -7,6 +7,8 @@ using Microsoft.Extensions.Logging;
 using Personal_Finance_Management.Repository;
 using Personal_Finance_Management.Repository.Entity;
 using Personal_Finance_Management.Service.Base;
+using Personal_Finance_Management.Service.Common.Constants;
+using Personal_Finance_Management.Service.Common.Enums;
 using Personal_Finance_Management.Service.Validations;
 using JsonSerializer = System.Text.Json.JsonSerializer;
 
@@ -36,7 +38,7 @@ public class Service : IService
     {
         if (request is null)
         {
-            throw AppValidationException.BadRequest("Request body is required.", "body", "REQUIRED");
+            throw AppValidationException.BadRequest("Request body is required.", "body", ErrorCodes.Required);
         }
 
         var message = ServiceTextHelper.NormalizeRequiredText(request.Message, "message", "Message is required.");
@@ -133,7 +135,7 @@ public class Service : IService
     {
         if (request is null)
         {
-            throw AppValidationException.BadRequest("Request body is required.", "body", "REQUIRED");
+            throw AppValidationException.BadRequest("Request body is required.", "body", ErrorCodes.Required);
         }
 
         var adminId = GetCurrentAdminId();
@@ -266,7 +268,7 @@ public class Service : IService
 
         var jars = await _dbContext.Jars
             .AsNoTracking()
-            .Where(jar => jar.UserId == userId && jar.Status == "Active")
+            .Where(jar => jar.UserId == userId && jar.Status == JarStatus.Active)
             .Select(jar => new
             {
                 jar.Name,
@@ -293,15 +295,15 @@ public class Service : IService
             .ToListAsync();
 
         var incomeThisMonth = monthTransactions
-            .Where(transaction => transaction.Type == "Income")
+            .Where(transaction => transaction.Type == TransactionType.Income)
             .Sum(transaction => Math.Abs(transaction.TransactionsAmount));
 
         var expenseThisMonth = monthTransactions
-            .Where(transaction => transaction.Type == "Expense")
+            .Where(transaction => transaction.Type == TransactionType.Expense)
             .Sum(transaction => Math.Abs(transaction.TransactionsAmount));
 
         var topCategories = monthTransactions
-            .Where(transaction => transaction.Type == "Expense")
+            .Where(transaction => transaction.Type == TransactionType.Expense)
             .GroupBy(transaction => transaction.CategoryName ?? "Uncategorized")
             .Select(group => new
             {

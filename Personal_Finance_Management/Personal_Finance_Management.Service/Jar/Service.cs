@@ -2,6 +2,8 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Personal_Finance_Management.Repository;
 using Personal_Finance_Management.Service.Base;
+using Personal_Finance_Management.Service.Common.Constants;
+using Personal_Finance_Management.Service.Common.Enums;
 using Personal_Finance_Management.Service.Validations;
 
 namespace Personal_Finance_Management.Service.Jar;
@@ -99,7 +101,7 @@ public class Service : IService
         var jar = _dbContext.Jars.FirstOrDefault(x => x.Id == id && x.UserId == userIdGuid);
         if (jar == null)
         {
-            throw AppValidationException.NotFound("Jar not found.", "id", "JAR_NOT_FOUND");
+            throw AppValidationException.NotFound("Jar not found.", "id", ErrorCodes.JarNotFound);
         }
 
         jar.Name = request.name ?? jar.Name;
@@ -129,7 +131,7 @@ public class Service : IService
         var jar = _dbContext.Jars.FirstOrDefault(x => x.Id == id && x.UserId == userIdGuid);
         if (jar == null)
         {
-            throw AppValidationException.NotFound("Jar not found.", "id", "JAR_NOT_FOUND");
+            throw AppValidationException.NotFound("Jar not found.", "id", ErrorCodes.JarNotFound);
         }
 
         if (jar.Balance != 0)
@@ -140,7 +142,7 @@ public class Service : IService
                 "JAR_BALANCE_MUST_BE_ZERO");
         }
 
-        jar.Status = "Archived";
+        jar.Status = JarStatus.Archived;
         await _dbContext.SaveChangesAsync();
         var result = new Response.DeleteJarResponse
         {

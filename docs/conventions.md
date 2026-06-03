@@ -152,7 +152,7 @@ Các enum dưới đây phải khớp giữa code, docs và DB check-constraint.
 - **Transfer transaction**: **KHÔNG có** ở v1. Schema vẫn giữ field `from_jar_id` / `to_jar_id` để hỗ trợ allocate giữa các jar trong tương lai, nhưng `Transaction.type` chỉ là `Income` hoặc `Expense`. Mọi mô tả "Transfer" trong docs cũ phải bị loại bỏ hoặc chuyển sang backlog.
 - **Phân bổ tiền vào jar**: dùng endpoint riêng `POST /api/v1/jars/{id}/allocate` (không phải tạo một transaction `Transfer`). Endpoint này điều chỉnh `jar.balance` mà không tạo bản ghi `transactions`.
 - **Đóng góp vào goal**: dùng `POST /api/v1/goals/{id}/contributions`. Khi `sourceJarId` được chỉ định, server đồng thời giảm `jar.balance`.
-- **Casso flow**: chốt dùng `/api/v1/financial-accounts/casso/connect` → `/api/v1/financial-accounts/casso/callback` → `/api/v1/financial-accounts/{id}/sync`. Endpoint legacy `/Transactions/Casso` đánh dấu `@deprecated`, sẽ remove ở phase 2.
+- **SePay flow**: chốt dùng `/api/v1/financial-accounts/sepay/connect` → `/api/v1/financial-accounts/sepay/callback` → `/api/v1/financial-accounts/{id}/sync`. Webhook nhận trên `/api/v1/financial-accounts/sepay/webhook`. Endpoint legacy `/Transactions/Casso` đã bị **xóa** (provider cũ Casso không còn được hỗ trợ).
 - **Jar balance**: là **state lưu trên DB**, được cập nhật bởi service khi có allocate/transaction. Client không tự set `balance` qua PATCH.
 - **Goal progress**: `progressPercentage = min(100, round(savedAmount / targetAmount * 100, 2))`.
 
@@ -176,7 +176,7 @@ Các bảng có `is_deleted` / `deleted_at` (`transactions`, `categories`...): m
 ## 15. Idempotency
 
 - Endpoint nhập sao kê / import: client có thể truyền header `Idempotency-Key`. Server lưu key + checksum trong vòng 24h để chặn double-submit.
-- Casso webhook: dùng `external_transaction_id` làm dedupe key.
+- SePay webhook: dùng `id` (numeric) làm dedupe key, lưu vào `transactions.external_transaction_id`. Webhook bắt buộc reply `200/201` kèm body `{"success": true}` trong vòng 30s, nếu không SePay sẽ retry theo Fibonacci tối đa 7 lần.
 
 ---
 

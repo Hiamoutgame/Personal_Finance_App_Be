@@ -4,6 +4,8 @@ using Microsoft.Extensions.Configuration;
 using Personal_Finance_Management.Repository;
 using Personal_Finance_Management.Repository.Entity;
 using Personal_Finance_Management.Service.Base;
+using Personal_Finance_Management.Service.Common.Constants;
+using TxEnums = Personal_Finance_Management.Service.Common.Enums;
 using Personal_Finance_Management.Service.Validations;
 using System.Net.Http.Headers;
 using System.Text.Json;
@@ -34,12 +36,12 @@ public class Service : IService
 
         if (request.pageIndex <= 0)
         {
-            throw AppValidationException.BadRequest("Trang phải lớn hơn 0.", "pageIndex", "INVALID_PAGE_INDEX");
+            throw AppValidationException.BadRequest("Trang phải lớn hơn 0.", "pageIndex", ErrorCodes.InvalidPageIndex);
         }
 
         if (request.pageSize <= 0 || request.pageSize > 100)
         {
-            throw AppValidationException.BadRequest("Số dòng mỗi trang phải từ 1 đến 100.", "pageSize", "INVALID_PAGE_SIZE");
+            throw AppValidationException.BadRequest("Số dòng mỗi trang phải từ 1 đến 100.", "pageSize", ErrorCodes.InvalidPageSize);
         }
         
         var query = _dbContext.Transactions
@@ -155,7 +157,7 @@ public class Service : IService
 
         if (result == null)
         {
-            throw AppValidationException.NotFound("Không tìm thấy giao dịch.", "id", "TRANSACTION_NOT_FOUND");
+            throw AppValidationException.NotFound(ErrorMessages.TransactionNotFound, "id", ErrorCodes.TransactionNotFound);
         }
 
         return result;
@@ -172,20 +174,20 @@ public class Service : IService
 
         var now = DateTimeOffset.UtcNow;
         var transactionType = request.type?.Trim();
-        if (transactionType != "Income" && transactionType != "Expense" && transactionType != "Transfer")
+        if (transactionType != TxEnums.TransactionType.Income && transactionType != TxEnums.TransactionType.Expense && transactionType != "Transfer")
         {
-            throw AppValidationException.BadRequest("Loại giao dịch không hợp lệ.", "type", "INVALID_TRANSACTION_TYPE");
+            throw AppValidationException.BadRequest(ErrorMessages.InvalidTransactionType, "type", ErrorCodes.InvalidTransactionType);
         }
 
         if (request.transactionsAmount <= 0)
         {
-            throw AppValidationException.BadRequest("Số tiền giao dịch phải lớn hơn 0.", "transactionsAmount", "INVALID_TRANSACTION_AMOUNT");
+            throw AppValidationException.BadRequest(ErrorMessages.InvalidTransactionAmount, "transactionsAmount", ErrorCodes.InvalidTransactionAmount);
         }
 
         var transactionDate = transactionType == "Transfer" ? now : request.date;
         if (transactionType != "Transfer" && transactionDate > now)
         {
-            throw AppValidationException.BadRequest("Không thể tạo giao dịch trong tương lai.", "date", "TRANSACTION_DATE_IN_FUTURE");
+            throw AppValidationException.BadRequest(ErrorMessages.TransactionDateInFuture, "date", ErrorCodes.TransactionDateInFuture);
         }
 
         if (request.financialAccountId.HasValue)
@@ -194,10 +196,10 @@ public class Service : IService
                 .FirstOrDefaultAsync(x => x.Id == request.financialAccountId.Value && x.UserId == userIdGuid && x.IsActive);
             if (financialAccount == null)
             {
-                throw AppValidationException.NotFound("Không tìm thấy tài khoản tài chính.", "financialAccountId", "FINANCIAL_ACCOUNT_NOT_FOUND");
+                throw AppValidationException.NotFound("Không tìm thấy tài khoản tài chính.", "financialAccountId", ErrorCodes.FinancialAccountNotFound);
             }
 
-            if (financialAccount.ConnectionMode == "LinkedApi")
+            if (financialAccount.ConnectionMode == TxEnums.ConnectionMode.LinkedApi)
             {
                 throw AppValidationException.BadRequest(
                     "Không thể tạo giao dịch thủ công cho tài khoản ngân hàng đã liên kết.",
@@ -214,7 +216,7 @@ public class Service : IService
                 && (x.OwnerUserId == null || x.OwnerUserId == userIdGuid));
             if (!categoryExists)
             {
-                throw AppValidationException.NotFound("Không tìm thấy danh mục.", "categoryId", "CATEGORY_NOT_FOUND");
+                throw AppValidationException.NotFound(ErrorMessages.CategoryNotFound, "categoryId", ErrorCodes.CategoryNotFound);
             }
         }
 
@@ -236,7 +238,7 @@ public class Service : IService
             TransactionDate = transactionDate,
 
             // Source metadata
-            SourceType = "Manual",
+            SourceType = SourceTypes.Manual,
             RawDescription = null,
             ExternalTransactionId = null,
             RawPayloadJson = null,
@@ -255,7 +257,7 @@ public class Service : IService
             UpdatedAt = now,
         };
         _dbContext.Transactions.Add(transaction);
-        if(transaction.Type == "Expense")
+        if(transaction.Type == TxEnums.TransactionType.Expense)
         {
             // Pay for something by selected Jar
             if (transaction.FromJarId != null  && transaction.ToJarId == null && transaction.FinancialAccountId == null)
@@ -263,7 +265,7 @@ public class Service : IService
                 var jar = await _dbContext.Jars.FirstOrDefaultAsync(x => x.Id == transaction.FromJarId && x.UserId == userIdGuid);
                 if (jar == null)
                 {
-                    throw AppValidationException.NotFound("Không tìm thấy hũ.", "fromJarId", "JAR_NOT_FOUND");
+                    throw AppValidationException.NotFound(ErrorMessages.JarNotFound, "fromJarId", ErrorCodes.JarNotFound);
                 }
 
                 if (jar.Balance - transaction.TransactionsAmount >= 0)
@@ -273,12 +275,12 @@ public class Service : IService
                 else
                 {
                     throw AppValidationException.BadRequest(
-                        "Số tiền trong hũ không đủ để thực hiện giao dịch.",
+                        ErrorMessages.InsufficientJarBalance,
                         "fromJarId",
-                        "INSUFFICIENT_JAR_BALANCE");
+                        ErrorCodes.InsufficientJarBalance);
                 }
             }
-        }else if (transaction.Type == "Income")
+        }else if (transaction.Type == TxEnums.TransactionType.Income)
         {
             if (transaction.ToJarId == null && transaction.FromJarId == null 
                                             && transaction.FinancialAccountId != null)
@@ -286,7 +288,7 @@ public class Service : IService
                 var financialAccount = await _dbContext.FinancialAccounts.FirstOrDefaultAsync(x => x.Id == transaction.FinancialAccountId && x.UserId == userIdGuid && x.IsActive);
                 if (financialAccount == null)
                 {
-                    throw AppValidationException.NotFound("Không tìm thấy tài khoản tài chính.", "financialAccountId", "FINANCIAL_ACCOUNT_NOT_FOUND");
+                    throw AppValidationException.NotFound("Không tìm thấy tài khoản tài chính.", "financialAccountId", ErrorCodes.FinancialAccountNotFound);
                 }
 
                 financialAccount.CurrentBalance = financialAccount.CurrentBalance +  transaction.TransactionsAmount;
@@ -299,15 +301,15 @@ public class Service : IService
                 var toJar = await _dbContext.Jars.FirstOrDefaultAsync(x => x.Id == transaction.ToJarId && x.UserId == userIdGuid);
                 if (fromJar == null)
                 {
-                    throw AppValidationException.NotFound("Không tìm thấy hũ nguồn.", "fromJarId", "JAR_NOT_FOUND");
+                    throw AppValidationException.NotFound("Không tìm thấy hũ nguồn.", "fromJarId", ErrorCodes.JarNotFound);
                 }
                 if (toJar == null)
                 {
-                    throw AppValidationException.NotFound("Không tìm thấy hũ đích.", "toJarId", "JAR_NOT_FOUND");
+                    throw AppValidationException.NotFound("Không tìm thấy hũ đích.", "toJarId", ErrorCodes.JarNotFound);
                 }
                 if (fromJar.Id == toJar.Id)
                 {
-                    throw AppValidationException.BadRequest("Hũ nguồn và hũ đích phải khác nhau.", "toJarId", "INVALID_TRANSFER_TARGET");
+                    throw AppValidationException.BadRequest(ErrorMessages.TransferSourceTargetSame, "toJarId", ErrorCodes.InvalidTransferTarget);
                 }
 
                 if (fromJar.Balance - transaction.TransactionsAmount >= 0)
@@ -320,7 +322,7 @@ public class Service : IService
                     throw AppValidationException.BadRequest(
                         "Số tiền trong hũ nguồn không đủ để chuyển tiền.",
                         "fromJarId",
-                        "INSUFFICIENT_JAR_BALANCE");
+                        ErrorCodes.InsufficientJarBalance);
                 }
                 
             }
@@ -332,11 +334,11 @@ public class Service : IService
                 var finnacialAccount = await _dbContext.FinancialAccounts.FirstOrDefaultAsync(x => x.Id == transaction.FinancialAccountId && x.UserId == userIdGuid && x.IsActive);
                 if (toJar == null)
                 {
-                    throw AppValidationException.NotFound("Không tìm thấy hũ đích.", "toJarId", "JAR_NOT_FOUND");
+                    throw AppValidationException.NotFound("Không tìm thấy hũ đích.", "toJarId", ErrorCodes.JarNotFound);
                 }
                 if (finnacialAccount == null)
                 {
-                    throw AppValidationException.NotFound("Không tìm thấy tài khoản tài chính.", "financialAccountId", "FINANCIAL_ACCOUNT_NOT_FOUND");
+                    throw AppValidationException.NotFound("Không tìm thấy tài khoản tài chính.", "financialAccountId", ErrorCodes.FinancialAccountNotFound);
                 }
 
                 if (finnacialAccount.CurrentBalance - transaction.TransactionsAmount >= 0)
@@ -361,11 +363,11 @@ public class Service : IService
                 var finnacialAccount = await _dbContext.FinancialAccounts.FirstOrDefaultAsync(x => x.Id == transaction.FinancialAccountId && x.UserId == userIdGuid && x.IsActive);
                 if (fromJar == null)
                 {
-                    throw AppValidationException.NotFound("Không tìm thấy hũ nguồn.", "fromJarId", "JAR_NOT_FOUND");
+                    throw AppValidationException.NotFound("Không tìm thấy hũ nguồn.", "fromJarId", ErrorCodes.JarNotFound);
                 }
                 if (finnacialAccount == null)
                 {
-                    throw AppValidationException.NotFound("Không tìm thấy tài khoản tài chính.", "financialAccountId", "FINANCIAL_ACCOUNT_NOT_FOUND");
+                    throw AppValidationException.NotFound("Không tìm thấy tài khoản tài chính.", "financialAccountId", ErrorCodes.FinancialAccountNotFound);
                 }
 
                 if (fromJar.Balance - transaction.TransactionsAmount >= 0)
@@ -378,13 +380,13 @@ public class Service : IService
                     throw AppValidationException.BadRequest(
                         "Số tiền trong hũ nguồn không đủ để chuyển về tài khoản.",
                         "fromJarId",
-                        "INSUFFICIENT_JAR_BALANCE");
+                        ErrorCodes.InsufficientJarBalance);
                 }
                 
             }
             else
             {
-                throw AppValidationException.BadRequest("Thông tin chuyển tiền không hợp lệ.", "type", "INVALID_TRANSFER_TARGET");
+                throw AppValidationException.BadRequest(ErrorMessages.InvalidTransferInfo, "type", ErrorCodes.InvalidTransferTarget);
             }
         }
         
@@ -433,10 +435,10 @@ public class Service : IService
         }
         if (transaction.UserId != userIdGuid)
         {
-            throw AppValidationException.NotFound("Transaction not found.", "id", "TRANSACTION_NOT_FOUND");
+            throw AppValidationException.NotFound("Transaction not found.", "id", ErrorCodes.TransactionNotFound);
         }
 
-        if (transaction.SourceType != "Manual")
+        if (transaction.SourceType != SourceTypes.Manual)
         {
             throw AppValidationException.BadRequest(
                 "Linked bank transaction cannot be updated manually.",
@@ -454,7 +456,7 @@ public class Service : IService
 
         if (newTransactionsAmount.HasValue && newTransactionsAmount.Value <= 0)
         {
-            throw AppValidationException.BadRequest("Số tiền giao dịch phải lớn hơn 0.", "transactionsAmount", "INVALID_TRANSACTION_AMOUNT");
+            throw AppValidationException.BadRequest(ErrorMessages.InvalidTransactionAmount, "transactionsAmount", ErrorCodes.InvalidTransactionAmount);
         }
 
         if (newCategoryId.HasValue)
@@ -465,7 +467,7 @@ public class Service : IService
                 && (x.OwnerUserId == null || x.OwnerUserId == userIdGuid));
             if (!categoryExists)
             {
-                throw AppValidationException.NotFound("Không tìm thấy danh mục.", "categoryId", "CATEGORY_NOT_FOUND");
+                throw AppValidationException.NotFound(ErrorMessages.CategoryNotFound, "categoryId", ErrorCodes.CategoryNotFound);
             }
         }
 
@@ -475,14 +477,14 @@ public class Service : IService
         if (newTransactionsAmount.HasValue)
         {
             var updatedAmount = newTransactionsAmount.Value;
-            if (transaction.Type == "Expense")
+            if (transaction.Type == TxEnums.TransactionType.Expense)
             {
                 if (transaction.FromJarId != null && transaction.ToJarId == null && transaction.FinancialAccountId == null)
                 {
                     var fromJar = await _dbContext.Jars.FirstOrDefaultAsync(x => x.Id == transaction.FromJarId && x.UserId == userIdGuid);
                     if(fromJar == null)
                     {
-                        throw AppValidationException.NotFound("Jar not found.", "fromJarId", "JAR_NOT_FOUND");
+                        throw AppValidationException.NotFound("Jar not found.", "fromJarId", ErrorCodes.JarNotFound);
                     }
                     fromJar.Balance = fromJar.Balance + transaction.TransactionsAmount;
                     if (fromJar.Balance - updatedAmount >= 0)
@@ -495,26 +497,26 @@ public class Service : IService
                         throw AppValidationException.BadRequest(
                             "Số tiền trong hũ không đủ để cập nhật giao dịch.",
                             "transactionsAmount",
-                            "INSUFFICIENT_JAR_BALANCE");
+                            ErrorCodes.InsufficientJarBalance);
                     }
                 }
                 
             }
 
-            else if (transaction.Type == "Income")
+            else if (transaction.Type == TxEnums.TransactionType.Income)
             {
                 if (transaction.FromJarId == null && transaction.ToJarId == null && transaction.FinancialAccountId != null)
                 {
                     var financialAccount = await _dbContext.FinancialAccounts.FirstOrDefaultAsync(x => x.Id == transaction.FinancialAccountId && x.UserId == userIdGuid && x.IsActive);
                     if (financialAccount == null)
                     {
-                        throw AppValidationException.NotFound("Financial account not found.", "financialAccountId", "FINANCIAL_ACCOUNT_NOT_FOUND");
+                        throw AppValidationException.NotFound("Financial account not found.", "financialAccountId", ErrorCodes.FinancialAccountNotFound);
                     }
                     var isUse = await _dbContext.Transactions.AnyAsync(x =>
                         x.FinancialAccountId == financialAccount.Id
                         && x.UserId == userIdGuid
                         && x.Id != transaction.Id
-                        && x.Type != "Income"
+                        && x.Type != TxEnums.TransactionType.Income
                         && !x.IsDeleted);
                     if (isUse)
                     {
@@ -549,15 +551,15 @@ public class Service : IService
         {
             await CheckAndCompleteGoals(transaction.FromJarId.Value);
         }
-        if (transaction.Type == "Expense" && transaction.FromJarId != null)
+        if (transaction.Type == TxEnums.TransactionType.Expense && transaction.FromJarId != null)
         {
             await CheckJarLimit(transaction.FromJarId.Value);
         }
-        if (transaction.Type == "Expense" && transaction.CategoryId != null)
+        if (transaction.Type == TxEnums.TransactionType.Expense && transaction.CategoryId != null)
         {
             await CheckCategoryLimit(transaction.CategoryId.Value, userIdGuid);
         }
-        if (transaction.Type == "Expense"
+        if (transaction.Type == TxEnums.TransactionType.Expense
             && oldCategoryId.HasValue
             && oldCategoryId != transaction.CategoryId)
         {
@@ -592,10 +594,10 @@ public class Service : IService
         }
         if (transaction.UserId != userIdGuid)
         {
-            throw AppValidationException.NotFound("Transaction not found.", "id", "TRANSACTION_NOT_FOUND");
+            throw AppValidationException.NotFound("Transaction not found.", "id", ErrorCodes.TransactionNotFound);
         }
 
-        if (transaction.SourceType != "Manual")
+        if (transaction.SourceType != SourceTypes.Manual)
         {
             throw AppValidationException.BadRequest(
                 "Linked bank transaction cannot be deleted manually.",
@@ -607,28 +609,28 @@ public class Service : IService
 
         if (!transaction.IsDeleted)
         {
-            if (transaction.Type == "Expense")
+            if (transaction.Type == TxEnums.TransactionType.Expense)
             {
                 if (transaction.FromJarId != null && transaction.ToJarId == null && transaction.FinancialAccountId == null)
                 {
                     var fromJar = await _dbContext.Jars.FirstOrDefaultAsync(x => x.Id == transaction.FromJarId && x.UserId == userIdGuid);
                     if (fromJar == null)
                     {
-                        throw AppValidationException.NotFound("Jar not found.", "fromJarId", "JAR_NOT_FOUND");
+                        throw AppValidationException.NotFound("Jar not found.", "fromJarId", ErrorCodes.JarNotFound);
                     }
 
                     fromJar.Balance += transaction.TransactionsAmount;
                     fromJar.UpdatedAt = DateTimeOffset.UtcNow;
                 }
             }
-            else if (transaction.Type == "Income")
+            else if (transaction.Type == TxEnums.TransactionType.Income)
             {
                 if (transaction.FromJarId == null && transaction.ToJarId == null && transaction.FinancialAccountId != null)
                 {
                     var financialAccount = await _dbContext.FinancialAccounts.FirstOrDefaultAsync(x => x.Id == transaction.FinancialAccountId && x.UserId == userIdGuid && x.IsActive);
                     if (financialAccount == null)
                     {
-                        throw AppValidationException.NotFound("Financial account not found.", "financialAccountId", "FINANCIAL_ACCOUNT_NOT_FOUND");
+                        throw AppValidationException.NotFound("Financial account not found.", "financialAccountId", ErrorCodes.FinancialAccountNotFound);
                     }
 
                     financialAccount.CurrentBalance -= transaction.TransactionsAmount;
@@ -643,11 +645,11 @@ public class Service : IService
                     var toJar = await _dbContext.Jars.FirstOrDefaultAsync(x => x.Id == transaction.ToJarId && x.UserId == userIdGuid);
                     if (fromJar == null)
                     {
-                        throw AppValidationException.NotFound("Jar not found.", "fromJarId", "JAR_NOT_FOUND");
+                        throw AppValidationException.NotFound("Jar not found.", "fromJarId", ErrorCodes.JarNotFound);
                     }
                     if (toJar == null)
                     {
-                        throw AppValidationException.NotFound("Jar not found.", "toJarId", "JAR_NOT_FOUND");
+                        throw AppValidationException.NotFound("Jar not found.", "toJarId", ErrorCodes.JarNotFound);
                     }
 
                     if (toJar.Balance - transaction.TransactionsAmount < 0)
@@ -655,7 +657,7 @@ public class Service : IService
                         throw AppValidationException.BadRequest(
                             "Số tiền trong hũ đích không đủ để hoàn tác giao dịch.",
                             "toJarId",
-                            "INSUFFICIENT_JAR_BALANCE");
+                            ErrorCodes.InsufficientJarBalance);
                     }
 
                     toJar.Balance -= transaction.TransactionsAmount;
@@ -669,18 +671,18 @@ public class Service : IService
                     var financialAccount = await _dbContext.FinancialAccounts.FirstOrDefaultAsync(x => x.Id == transaction.FinancialAccountId && x.UserId == userIdGuid && x.IsActive);
                     if (toJar == null)
                     {
-                        throw AppValidationException.NotFound("Jar not found.", "toJarId", "JAR_NOT_FOUND");
+                        throw AppValidationException.NotFound("Jar not found.", "toJarId", ErrorCodes.JarNotFound);
                     }
                     if (financialAccount == null)
                     {
-                        throw AppValidationException.NotFound("Financial account not found.", "financialAccountId", "FINANCIAL_ACCOUNT_NOT_FOUND");
+                        throw AppValidationException.NotFound("Financial account not found.", "financialAccountId", ErrorCodes.FinancialAccountNotFound);
                     }
                     if (toJar.Balance - transaction.TransactionsAmount < 0)
                     {
                         throw AppValidationException.BadRequest(
                             "Số tiền trong hũ đích không đủ để hoàn tác giao dịch.",
                             "toJarId",
-                            "INSUFFICIENT_JAR_BALANCE");
+                            ErrorCodes.InsufficientJarBalance);
                     }
 
                     toJar.Balance -= transaction.TransactionsAmount;
@@ -694,11 +696,11 @@ public class Service : IService
                     var financialAccount = await _dbContext.FinancialAccounts.FirstOrDefaultAsync(x => x.Id == transaction.FinancialAccountId && x.UserId == userIdGuid && x.IsActive);
                     if (fromJar == null)
                     {
-                        throw AppValidationException.NotFound("Jar not found.", "fromJarId", "JAR_NOT_FOUND");
+                        throw AppValidationException.NotFound("Jar not found.", "fromJarId", ErrorCodes.JarNotFound);
                     }
                     if (financialAccount == null)
                     {
-                        throw AppValidationException.NotFound("Financial account not found.", "financialAccountId", "FINANCIAL_ACCOUNT_NOT_FOUND");
+                        throw AppValidationException.NotFound("Financial account not found.", "financialAccountId", ErrorCodes.FinancialAccountNotFound);
                     }
 
                     financialAccount.CurrentBalance -= transaction.TransactionsAmount;
@@ -723,11 +725,11 @@ public class Service : IService
         {
             await CheckAndCompleteGoals(transaction.FromJarId.Value);
         }
-        if (transaction.Type == "Expense" && transaction.FromJarId != null)
+        if (transaction.Type == TxEnums.TransactionType.Expense && transaction.FromJarId != null)
         {
             await CheckJarLimit(transaction.FromJarId.Value);
         }
-        if (transaction.Type == "Expense" && transaction.CategoryId != null)
+        if (transaction.Type == TxEnums.TransactionType.Expense && transaction.CategoryId != null)
         {
             await CheckCategoryLimit(transaction.CategoryId.Value, userIdGuid);
         }
@@ -747,7 +749,7 @@ public class Service : IService
 
         // Tìm các Goal đang Active gắn với Jar này
         var activeGoals = await _dbContext.Goals
-            .Where(g => g.LinkedJarId == jarId && g.Status == "Active")
+            .Where(g => g.LinkedJarId == jarId && g.Status == TxEnums.GoalStatus.Active)
             .ToListAsync();
 
         foreach (var goal in activeGoals)
@@ -756,14 +758,14 @@ public class Service : IService
             // Theo Option B: Chấp nhận hoàn thành cả khi đã quá hạn (DueDate)
             if (jar.Balance >= goal.TargetAmount)
             {
-                goal.Status = "Completed";
+                goal.Status = TxEnums.GoalStatus.Completed;
                 goal.UpdatedAt = DateTimeOffset.UtcNow;
 
                 // Tạo thông báo cho người dùng
                 var notification = new Notification
                 {
                     UserId = goal.UserId,
-                    Type = "GoalUpdate",
+                    Type = TxEnums.NotificationType.GoalUpdate,
                     Title = "Chúc mừng! Bạn đã hoàn thành mục tiêu",
                     Body = $"Mục tiêu '{goal.Title}' đã đạt được mức {goal.TargetAmount:N0}đ trong hũ {jar.Name}.",
                     IsRead = false,
@@ -837,7 +839,7 @@ public class Service : IService
                 var notification = new Repository.Entity.Notification()
                 {
                     UserId = item.UserId,
-                    Type = "SpendingAlert",
+                    Type = TxEnums.NotificationType.SpendingAlert,
                     Title = "Thông báo vượt ngưỡng!",
                     Body = $"Xin thông báo! bạn đã chạm ngưỡng {item.LimitAmount}đ giới hạn chi tiêu ở hũ {jar.Name}",
                     IsRead = false,
@@ -854,7 +856,7 @@ public class Service : IService
                 var notification = new Repository.Entity.Notification()
                 {
                     UserId = item.UserId,
-                    Type = "SpendingAlert",
+                    Type = TxEnums.NotificationType.SpendingAlert,
                     Title = "Thông báo vượt ngưỡng!",
                     Body = $"Xin thông báo! bạn đã chạm ngưỡng thông báo {item.AlertAtPercentage}% giới hạn chi tiêu ở hũ {jar.Name}",
                     IsRead = false,
@@ -874,7 +876,7 @@ public class Service : IService
         return (await _dbContext.Transactions
             .Where(t => t.UserId == userId
                         && !t.IsDeleted
-                        && t.Type == "Expense"
+                        && t.Type == TxEnums.TransactionType.Expense
                         && t.FromJarId == jarId
                         && t.ToJarId == null
                         && t.FinancialAccountId == null
@@ -904,7 +906,7 @@ public class Service : IService
                 var notification = new Repository.Entity.Notification()
                 {
                     UserId = item.UserId,
-                    Type = "SpendingAlert",
+                    Type = TxEnums.NotificationType.SpendingAlert,
                     Title = "Thong bao vuot nguong!",
                     Body = $"Ban da cham nguong {item.LimitAmount} gioi han chi tieu o danh muc {category.Name}",
                     IsRead = false,
@@ -920,7 +922,7 @@ public class Service : IService
                 var notification = new Repository.Entity.Notification()
                 {
                     UserId = item.UserId,
-                    Type = "SpendingAlert",
+                    Type = TxEnums.NotificationType.SpendingAlert,
                     Title = "Thong bao vuot nguong!",
                     Body = $"Ban da cham nguong thong bao {item.AlertAtPercentage}% gioi han chi tieu o danh muc {category.Name}",
                     IsRead = false,
@@ -940,7 +942,7 @@ public class Service : IService
         return (await _dbContext.Transactions
             .Where(t => t.UserId == userId
                         && !t.IsDeleted
-                        && t.Type == "Expense"
+                        && t.Type == TxEnums.TransactionType.Expense
                         && t.CategoryId == categoryId
                         && t.TransactionDate >= resetAt)
             .SumAsync(t => (decimal?)t.TransactionsAmount)) ?? 0m;
@@ -958,7 +960,7 @@ public class Service : IService
         var notification = new Notification
         {
             UserId = limit.UserId,
-            Type = "SpendingAlert",
+            Type = TxEnums.NotificationType.SpendingAlert,
             Title = title,
             Body = body,
             IsRead = false,
@@ -981,7 +983,7 @@ public class Service : IService
             .Entries<Notification>()
             .Any(entry => entry.State == EntityState.Added
                           && entry.Entity.UserId == userId
-                          && entry.Entity.Type == "SpendingAlert"
+                          && entry.Entity.Type == TxEnums.NotificationType.SpendingAlert
                           && entry.Entity.Body == body
                           && entry.Entity.MetadataJson != null
                           && entry.Entity.MetadataJson.Contains(limitIdMarker)
@@ -992,7 +994,7 @@ public class Service : IService
 
         var metadataList = await _dbContext.Notifications
             .Where(n => n.UserId == userId
-                        && n.Type == "SpendingAlert"
+                        && n.Type == TxEnums.NotificationType.SpendingAlert
                         && n.Body == body)
             .Select(n => n.MetadataJson)
             .ToListAsync();
@@ -1001,540 +1003,6 @@ public class Service : IService
             metadata != null
             && metadata.Contains(limitIdMarker)
             && metadata.Contains(targetIdMarker));
-    }
-    
-    public async Task<Response.CassoTransactionsResponse> ProcessCassoWebhook(
-        Request.CassoWebhookRequest request,
-        string? secureToken,
-        string? cassoSignature)
-    {
-        if (request is null)
-        {
-            throw AppValidationException.BadRequest("Request body is required.", "body", "REQUIRED");
-        }
-
-        var configuredSecureToken = _configuration["CasooOptions:SecureToken"]
-                                    ?? _configuration["CasooOptions:WebhookSecureToken"]
-                                    ?? _configuration["Casso:SecureToken"]
-                                    ?? _configuration["Casso:WebhookSecureToken"];
-        if (!string.IsNullOrWhiteSpace(configuredSecureToken)
-            && secureToken?.Trim() != configuredSecureToken.Trim())
-        {
-            throw AppValidationException.BadRequest("Invalid Casso secure token.", "secure-token", "CASSO_WEBHOOK_UNAUTHORIZED");
-        }
-
-        if (string.IsNullOrWhiteSpace(configuredSecureToken) && string.IsNullOrWhiteSpace(cassoSignature))
-        {
-            throw AppValidationException.BadRequest("Casso webhook verification header is required.", "secure-token", "CASSO_WEBHOOK_UNAUTHORIZED");
-        }
-
-        if (request.error != 0)
-        {
-            return new Response.CassoTransactionsResponse
-            {
-                receivedCount = 0,
-                createdCount = 0,
-                skippedCount = 0,
-                message = "Casso webhook ignored because error is not zero."
-            };
-        }
-
-        var cassoTransactions = new List<JsonElement>();
-        if (request.data.ValueKind == JsonValueKind.Object)
-        {
-            cassoTransactions.Add(request.data);
-        }
-        else if (request.data.ValueKind == JsonValueKind.Array)
-        {
-            foreach (var item in request.data.EnumerateArray())
-            {
-                cassoTransactions.Add(item);
-            }
-        }
-        else
-        {
-            throw AppValidationException.BadRequest("Casso webhook data is invalid.", "data", "CASSO_WEBHOOK_INVALID");
-        }
-
-        var createdCount = 0;
-        var skippedCount = 0;
-        await using var databaseTransaction = await _dbContext.Database.BeginTransactionAsync();
-
-        foreach (var item in cassoTransactions)
-        {
-            decimal amount;
-            if (item.TryGetProperty("amount", out var amountElement) && amountElement.ValueKind == JsonValueKind.Number)
-            {
-                amount = amountElement.GetDecimal();
-            }
-            else
-            {
-                skippedCount++;
-                continue;
-            }
-
-            if (amount == 0)
-            {
-                skippedCount++;
-                continue;
-            }
-
-            string? externalTransactionId = null;
-            if (item.TryGetProperty("reference", out var referenceElement))
-            {
-                externalTransactionId = referenceElement.GetString();
-            }
-            if (string.IsNullOrWhiteSpace(externalTransactionId) && item.TryGetProperty("tid", out var tidElement))
-            {
-                externalTransactionId = tidElement.GetString();
-            }
-            if (string.IsNullOrWhiteSpace(externalTransactionId) && item.TryGetProperty("id", out var idElement))
-            {
-                externalTransactionId = idElement.ValueKind == JsonValueKind.String
-                    ? idElement.GetString()
-                    : idElement.GetRawText();
-            }
-
-            if (string.IsNullOrWhiteSpace(externalTransactionId))
-            {
-                skippedCount++;
-                continue;
-            }
-
-            string? accountRef = null;
-            if (item.TryGetProperty("accountNumber", out var accountNumberElement))
-            {
-                accountRef = accountNumberElement.GetString();
-            }
-            if (string.IsNullOrWhiteSpace(accountRef) && item.TryGetProperty("subAccId", out var subAccIdElement))
-            {
-                accountRef = subAccIdElement.GetString();
-            }
-            if (string.IsNullOrWhiteSpace(accountRef) && item.TryGetProperty("bank_sub_acc_id", out var bankSubAccIdElement))
-            {
-                accountRef = bankSubAccIdElement.GetString();
-            }
-            if (string.IsNullOrWhiteSpace(accountRef) && item.TryGetProperty("bankSubAccId", out var bankSubAccIdCamelElement))
-            {
-                accountRef = bankSubAccIdCamelElement.GetString();
-            }
-
-            if (string.IsNullOrWhiteSpace(accountRef))
-            {
-                skippedCount++;
-                continue;
-            }
-
-            var matchedAccounts = await _dbContext.FinancialAccounts
-                .Where(x => x.ConnectionMode == "LinkedApi"
-                            && x.IsActive
-                            && (x.ExternalAccountRef == accountRef
-                                || x.MaskedAccountNumber == accountRef
-                                || x.ExternalAccountId == accountRef))
-                .ToListAsync();
-
-            if (matchedAccounts.Count > 1)
-            {
-                throw AppValidationException.Conflict("Multiple linked financial accounts match Casso account.", "accountNumber", "CASSO_ACCOUNT_CONFLICT");
-            }
-
-            if (matchedAccounts.Count == 0)
-            {
-                skippedCount++;
-                continue;
-            }
-
-            var financialAccount = matchedAccounts[0];
-            var existedTransaction = await _dbContext.Transactions.AnyAsync(x =>
-                x.FinancialAccountId == financialAccount.Id
-                && x.ExternalTransactionId == externalTransactionId
-                && !x.IsDeleted);
-            if (existedTransaction)
-            {
-                skippedCount++;
-                continue;
-            }
-
-            var transactionDate = DateTimeOffset.UtcNow;
-            if (item.TryGetProperty("transactionDateTime", out var transactionDateTimeElement)
-                && DateTimeOffset.TryParse(transactionDateTimeElement.GetString(), out var parsedTransactionDateTime))
-            {
-                transactionDate = parsedTransactionDateTime.ToUniversalTime();
-            }
-            else if (item.TryGetProperty("when", out var whenElement)
-                     && DateTimeOffset.TryParse(whenElement.GetString(), out var parsedWhen))
-            {
-                transactionDate = parsedWhen.ToUniversalTime();
-            }
-
-            string? description = null;
-            if (item.TryGetProperty("description", out var descriptionElement))
-            {
-                description = descriptionElement.GetString();
-            }
-
-            decimal? runningBalance = null;
-            if (item.TryGetProperty("runningBalance", out var runningBalanceElement)
-                && runningBalanceElement.ValueKind == JsonValueKind.Number)
-            {
-                runningBalance = runningBalanceElement.GetDecimal();
-            }
-            else if (item.TryGetProperty("cusum_balance", out var cusumBalanceElement)
-                     && cusumBalanceElement.ValueKind == JsonValueKind.Number)
-            {
-                runningBalance = cusumBalanceElement.GetDecimal();
-            }
-
-            _dbContext.Transactions.Add(new Repository.Entity.Transaction
-            {
-                Id = Guid.NewGuid(),
-                UserId = financialAccount.UserId,
-                FinancialAccountId = financialAccount.Id,
-                CategoryId = null,
-                FromJarId = null,
-                ToJarId = null,
-                Type = amount > 0 ? "Income" : "Expense",
-                TransactionsAmount = Math.Abs(amount),
-                Note = description,
-                RawDescription = description,
-                TransactionDate = transactionDate,
-                SourceType = "Imported",
-                ExternalTransactionId = externalTransactionId,
-                RawPayloadJson = item.GetRawText(),
-                PostedAt = DateTimeOffset.UtcNow,
-                ImportJobId = null,
-                IsDeleted = false,
-                DeletedAt = null,
-                CreatedAt = DateTimeOffset.UtcNow,
-                UpdatedAt = DateTimeOffset.UtcNow
-            });
-
-            if (runningBalance.HasValue)
-            {
-                financialAccount.CurrentBalance = runningBalance.Value;
-            }
-            else if (amount > 0)
-            {
-                financialAccount.CurrentBalance += Math.Abs(amount);
-            }
-            else
-            {
-                financialAccount.CurrentBalance -= Math.Abs(amount);
-            }
-
-            financialAccount.SyncStatus = "Synced";
-            financialAccount.LastSyncedAt = DateTimeOffset.UtcNow;
-            financialAccount.LastSyncError = null;
-            financialAccount.LastSyncCursor = externalTransactionId;
-            financialAccount.UpdatedAt = DateTimeOffset.UtcNow;
-            createdCount++;
-        }
-
-        await _dbContext.SaveChangesAsync();
-        await databaseTransaction.CommitAsync();
-
-        return new Response.CassoTransactionsResponse
-        {
-            receivedCount = cassoTransactions.Count,
-            createdCount = createdCount,
-            skippedCount = skippedCount,
-            message = "Casso webhook processed."
-        };
-    }
-
-    public async Task<Response.CassoTransactionsResponse> SyncCassoTransactions(Request.CassoSyncTransactionsRequest request)
-    {
-        if (request is null)
-        {
-            throw AppValidationException.BadRequest("Request body is required.", "body", "REQUIRED");
-        }
-
-        var userIdGuid = GetCurrentUserId();
-        if (request.financialAccountId == Guid.Empty)
-        {
-            throw AppValidationException.BadRequest("Financial account is required.", "financialAccountId", "REQUIRED");
-        }
-
-        if (request.page <= 0)
-        {
-            throw AppValidationException.BadRequest("Page must be greater than zero.", "page", "CASSO_SYNC_INVALID");
-        }
-
-        if (request.pageSize <= 0 || request.pageSize > 100)
-        {
-            throw AppValidationException.BadRequest("Page size must be between 1 and 100.", "pageSize", "CASSO_SYNC_INVALID");
-        }
-
-        var financialAccount = await _dbContext.FinancialAccounts
-            .FirstOrDefaultAsync(x => x.Id == request.financialAccountId && x.UserId == userIdGuid && x.IsActive);
-        if (financialAccount == null)
-        {
-            throw AppValidationException.NotFound("Financial account not found.", "financialAccountId", "FINANCIAL_ACCOUNT_NOT_FOUND");
-        }
-
-        if (financialAccount.ConnectionMode != "LinkedApi")
-        {
-            throw AppValidationException.BadRequest("Only linked bank account can sync Casso transactions.", "financialAccountId", "CASSO_SYNC_LINKED_ACCOUNT_REQUIRED");
-        }
-
-        var apiKey = _configuration["CasooOptions:ApiKey"] ?? _configuration["Casso:ApiKey"];
-        if (string.IsNullOrWhiteSpace(apiKey))
-        {
-            throw AppValidationException.BadRequest("Casso API key is not configured.", "CasooOptions:ApiKey", "CASSO_CONFIG_MISSING");
-        }
-
-        var baseUrlTransactions = _configuration["CasooOptions:BaseUrlTransactions"] ?? _configuration["Casso:BaseUrlTransactions"];
-        if (string.IsNullOrWhiteSpace(baseUrlTransactions))
-        {
-            throw AppValidationException.BadRequest("Casso transactions URL is not configured.", "CasooOptions:BaseUrlTransactions", "CASSO_CONFIG_MISSING");
-        }
-
-        var queryParams = new List<string>
-        {
-            $"page={request.page}",
-            $"pageSize={request.pageSize}",
-            $"sort={Uri.EscapeDataString(string.IsNullOrWhiteSpace(request.sort) ? "ASC" : request.sort.Trim().ToUpperInvariant())}"
-        };
-        if (request.fromDate.HasValue)
-        {
-            queryParams.Add($"fromDate={request.fromDate.Value:yyyy-MM-dd}");
-        }
-        if (request.toDate.HasValue)
-        {
-            queryParams.Add($"toDate={request.toDate.Value:yyyy-MM-dd}");
-        }
-
-        var requestUri = baseUrlTransactions
-                         + (baseUrlTransactions.Contains('?') ? "&" : "?")
-                         + string.Join("&", queryParams);
-
-        using var httpClient = new HttpClient
-        {
-            Timeout = TimeSpan.FromSeconds(_configuration.GetValue("CasooOptions:TimeoutSeconds", 30))
-        };
-        var authorizationValue = apiKey.Trim();
-        if (!authorizationValue.StartsWith("Apikey ", StringComparison.OrdinalIgnoreCase)
-            && !authorizationValue.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
-        {
-            authorizationValue = $"Apikey {authorizationValue}";
-        }
-        httpClient.DefaultRequestHeaders.Authorization = AuthenticationHeaderValue.Parse(authorizationValue);
-
-        using var cassoResponse = await httpClient.GetAsync(requestUri);
-        if (!cassoResponse.IsSuccessStatusCode)
-        {
-            financialAccount.SyncStatus = "Error";
-            financialAccount.LastSyncError = $"Casso request failed with status {(int)cassoResponse.StatusCode}.";
-            financialAccount.UpdatedAt = DateTimeOffset.UtcNow;
-            await _dbContext.SaveChangesAsync();
-            throw AppValidationException.BadRequest("Casso transaction sync failed.", "casso", "CASSO_SYNC_FAILED");
-        }
-
-        await using var responseStream = await cassoResponse.Content.ReadAsStreamAsync();
-        using var json = await JsonDocument.ParseAsync(responseStream);
-        if (!json.RootElement.TryGetProperty("error", out var errorElement)
-            || errorElement.GetInt32() != 0)
-        {
-            financialAccount.SyncStatus = "Error";
-            financialAccount.LastSyncError = "Casso response error is not zero.";
-            financialAccount.UpdatedAt = DateTimeOffset.UtcNow;
-            await _dbContext.SaveChangesAsync();
-            throw AppValidationException.BadRequest("Casso response is invalid.", "casso", "CASSO_RESPONSE_INVALID");
-        }
-
-        var records = new List<JsonElement>();
-        if (json.RootElement.TryGetProperty("data", out var dataElement)
-            && dataElement.ValueKind == JsonValueKind.Object
-            && dataElement.TryGetProperty("records", out var recordsElement)
-            && recordsElement.ValueKind == JsonValueKind.Array)
-        {
-            foreach (var record in recordsElement.EnumerateArray())
-            {
-                records.Add(record);
-            }
-        }
-        else if (json.RootElement.TryGetProperty("data", out var dataArrayElement)
-                 && dataArrayElement.ValueKind == JsonValueKind.Array)
-        {
-            foreach (var record in dataArrayElement.EnumerateArray())
-            {
-                records.Add(record);
-            }
-        }
-
-        var createdCount = 0;
-        var skippedCount = 0;
-        await using var databaseTransaction = await _dbContext.Database.BeginTransactionAsync();
-
-        foreach (var record in records)
-        {
-            decimal amount;
-            if (record.TryGetProperty("amount", out var amountElement) && amountElement.ValueKind == JsonValueKind.Number)
-            {
-                amount = amountElement.GetDecimal();
-            }
-            else
-            {
-                skippedCount++;
-                continue;
-            }
-
-            if (amount == 0)
-            {
-                skippedCount++;
-                continue;
-            }
-
-            string? recordAccountRef = null;
-            if (record.TryGetProperty("bankSubAccId", out var bankSubAccIdElement))
-            {
-                recordAccountRef = bankSubAccIdElement.GetString();
-            }
-            if (string.IsNullOrWhiteSpace(recordAccountRef) && record.TryGetProperty("bank_sub_acc_id", out var bankSubAccIdSnakeElement))
-            {
-                recordAccountRef = bankSubAccIdSnakeElement.GetString();
-            }
-            if (string.IsNullOrWhiteSpace(recordAccountRef) && record.TryGetProperty("accountNumber", out var accountNumberElement))
-            {
-                recordAccountRef = accountNumberElement.GetString();
-            }
-
-            if (!string.IsNullOrWhiteSpace(recordAccountRef)
-                && !string.IsNullOrWhiteSpace(financialAccount.ExternalAccountRef)
-                && recordAccountRef != financialAccount.ExternalAccountRef)
-            {
-                skippedCount++;
-                continue;
-            }
-
-            string? externalTransactionId = null;
-            if (record.TryGetProperty("reference", out var referenceElement))
-            {
-                externalTransactionId = referenceElement.GetString();
-            }
-            if (string.IsNullOrWhiteSpace(externalTransactionId) && record.TryGetProperty("tid", out var tidElement))
-            {
-                externalTransactionId = tidElement.GetString();
-            }
-            if (string.IsNullOrWhiteSpace(externalTransactionId) && record.TryGetProperty("id", out var idElement))
-            {
-                externalTransactionId = idElement.ValueKind == JsonValueKind.String
-                    ? idElement.GetString()
-                    : idElement.GetRawText();
-            }
-            if (string.IsNullOrWhiteSpace(externalTransactionId) && record.TryGetProperty("privateId", out var privateIdElement))
-            {
-                externalTransactionId = privateIdElement.ValueKind == JsonValueKind.String
-                    ? privateIdElement.GetString()
-                    : privateIdElement.GetRawText();
-            }
-
-            if (string.IsNullOrWhiteSpace(externalTransactionId))
-            {
-                skippedCount++;
-                continue;
-            }
-
-            var existedTransaction = await _dbContext.Transactions.AnyAsync(x =>
-                x.FinancialAccountId == financialAccount.Id
-                && x.ExternalTransactionId == externalTransactionId
-                && !x.IsDeleted);
-            if (existedTransaction)
-            {
-                skippedCount++;
-                continue;
-            }
-
-            var transactionDate = DateTimeOffset.UtcNow;
-            if (record.TryGetProperty("transactionDateTime", out var transactionDateTimeElement)
-                && DateTimeOffset.TryParse(transactionDateTimeElement.GetString(), out var parsedTransactionDateTime))
-            {
-                transactionDate = parsedTransactionDateTime.ToUniversalTime();
-            }
-            else if (record.TryGetProperty("when", out var whenElement)
-                     && DateTimeOffset.TryParse(whenElement.GetString(), out var parsedWhen))
-            {
-                transactionDate = parsedWhen.ToUniversalTime();
-            }
-            else if (record.TryGetProperty("transactionDate", out var transactionDateElement)
-                     && DateTimeOffset.TryParse(transactionDateElement.GetString(), out var parsedTransactionDate))
-            {
-                transactionDate = parsedTransactionDate.ToUniversalTime();
-            }
-
-            string? description = null;
-            if (record.TryGetProperty("description", out var descriptionElement))
-            {
-                description = descriptionElement.GetString();
-            }
-
-            decimal? runningBalance = null;
-            if (record.TryGetProperty("runningBalance", out var runningBalanceElement)
-                && runningBalanceElement.ValueKind == JsonValueKind.Number)
-            {
-                runningBalance = runningBalanceElement.GetDecimal();
-            }
-            else if (record.TryGetProperty("cusum_balance", out var cusumBalanceElement)
-                     && cusumBalanceElement.ValueKind == JsonValueKind.Number)
-            {
-                runningBalance = cusumBalanceElement.GetDecimal();
-            }
-
-            _dbContext.Transactions.Add(new Repository.Entity.Transaction
-            {
-                Id = Guid.NewGuid(),
-                UserId = userIdGuid,
-                FinancialAccountId = financialAccount.Id,
-                CategoryId = null,
-                FromJarId = null,
-                ToJarId = null,
-                Type = amount > 0 ? "Income" : "Expense",
-                TransactionsAmount = Math.Abs(amount),
-                Note = description,
-                RawDescription = description,
-                TransactionDate = transactionDate,
-                SourceType = "Imported",
-                ExternalTransactionId = externalTransactionId,
-                RawPayloadJson = record.GetRawText(),
-                PostedAt = DateTimeOffset.UtcNow,
-                ImportJobId = null,
-                IsDeleted = false,
-                DeletedAt = null,
-                CreatedAt = DateTimeOffset.UtcNow,
-                UpdatedAt = DateTimeOffset.UtcNow
-            });
-
-            if (runningBalance.HasValue)
-            {
-                financialAccount.CurrentBalance = runningBalance.Value;
-            }
-            else if (amount > 0)
-            {
-                financialAccount.CurrentBalance += Math.Abs(amount);
-            }
-            else
-            {
-                financialAccount.CurrentBalance -= Math.Abs(amount);
-            }
-
-            financialAccount.SyncStatus = "Synced";
-            financialAccount.LastSyncedAt = DateTimeOffset.UtcNow;
-            financialAccount.LastSyncError = null;
-            financialAccount.LastSyncCursor = externalTransactionId;
-            financialAccount.UpdatedAt = DateTimeOffset.UtcNow;
-            createdCount++;
-        }
-
-        await _dbContext.SaveChangesAsync();
-        await databaseTransaction.CommitAsync();
-
-        return new Response.CassoTransactionsResponse
-        {
-            receivedCount = records.Count,
-            createdCount = createdCount,
-            skippedCount = skippedCount,
-            message = "Casso transactions synced."
-        };
     }
 
     private Guid GetCurrentUserId()

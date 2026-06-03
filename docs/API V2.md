@@ -20,7 +20,7 @@ Các điểm dưới đây giải quyết những mâu thuẫn còn tồn đọn
 
 - **`Transaction.type` chỉ có `Income` và `Expense`**. Không có `Transfer` ở v1. Việc chuyển tiền giữa các jar được mô hình hóa bằng endpoint riêng (xem mục 11 dưới đây), không tạo bản ghi `transactions`.
 - **Sign convention `amount`**: API luôn nhận và trả **số dương**. Server tự suy dấu khi ghi DB theo `type`.
-- **Routes**: tất cả endpoint dưới `/api/v1/...`, kebab-case. Endpoint legacy như `/api/v1/transactions/Casso` được đánh dấu `@deprecated` và sẽ bị xóa ở phase tiếp theo.
+- **Routes**: tất cả endpoint dưới `/api/v1/...`, kebab-case. Endpoint legacy `/api/v1/transactions/Casso` đã bị **xóa**; FE/3rd-party dùng `POST /api/v1/financial-accounts/sepay/webhook` cho webhook và `POST /api/v1/financial-accounts/{id}/sync` cho sync thủ công.
 - **HTTP status**: POST tạo mới trả `201`, DELETE thành công trả `204`, validation lỗi trả `422` với error envelope chuẩn. Một số ví dụ trong tài liệu vẫn ghi `200` cho create/delete — đó là drift, sẽ được sửa khi controller refactor.
 - **Error envelope** (4xx/5xx): `{ code, message, field?, details? }`.
 - **`ImportJob.status`**: `Pending | Processing | AwaitingReview | Completed | Failed` (đồng bộ với schema).
@@ -341,7 +341,7 @@ Response:
 
 #### `POST /api/v1/financial-accounts/LinkApi`
 
-Legacy/manual mapping endpoint. FE mới nên dùng OAuth flow `POST /api/v1/financial-accounts/casso/connect` thay vì để user nhập `accountNumber`.
+Manual mapping endpoint — user nhập trực tiếp thông tin tài khoản ngân hàng (provider sẽ là `sepay` mặc định, nhưng không gọi OAuth). FE chính nên dùng OAuth flow `POST /api/v1/financial-accounts/sepay/connect`.
 
 Request:
 
@@ -379,11 +379,9 @@ Response:
 }
 ```
 
-#### `POST /api/v1/financial-accounts/casso/connect`
+#### `POST /api/v1/financial-accounts/sepay/connect`
 
-> Tam an khoi Swagger/API explorer. Khong expose cho FE trong MVP hien tai.
-
-Tạo phiên liên kết Casso cho user hiện tại và trả URL để FE redirect user sang Casso OAuth.
+Tạo phiên liên kết SePay cho user hiện tại và trả URL để FE redirect user sang SePay OAuth.
 
 Request:
 
@@ -414,15 +412,13 @@ Response:
 Ghi chú:
 
 - Backend tạo row `bank_connection_sessions` status `Pending`.
-- `authorizationUrl` trỏ sang Casso OAuth authorization endpoint.
-- FE nhận `authorizationUrl` và redirect browser/user sang Casso.
+- `authorizationUrl` trỏ sang SePay OAuth authorization endpoint (`https://my.sepay.vn/oauth/authorize`).
+- FE nhận `authorizationUrl` và redirect browser/user sang SePay.
 - `autoSync` mặc định `true`; sau callback thành công backend sẽ thử sync giao dịch ban đầu.
 
-#### `GET /api/v1/financial-accounts/casso/callback`
+#### `GET /api/v1/financial-accounts/sepay/callback`
 
-> Tam an khoi Swagger/API explorer. Route duoc giu de khong pha flow noi bo neu can bat lai sau.
-
-Casso redirect về endpoint này sau khi user cấp quyền.
+SePay redirect về endpoint này sau khi user cấp quyền.
 
 Request:
 
@@ -454,17 +450,15 @@ Response:
 
 Ghi chú:
 
-- Endpoint anonymous vì callback từ Casso không có JWT FinJar.
+- Endpoint anonymous vì callback từ SePay không có JWT FinJar.
 - Backend xác định user bằng `state` trong `bank_connection_sessions`.
-- Nếu session hợp lệ, backend đổi `code` lấy Casso access token, gọi Casso accounts API, tạo/cập nhật `FinancialAccount` `LinkedApi`.
-- Token Casso không trả về FE; backend lưu token đã bảo vệ trong `FinancialAccount.AccessTokenRef`.
-- Nếu có `returnUrl`, backend redirect về URL đó kèm `cassoStatus=success|failed`.
+- Nếu session hợp lệ, backend đổi `code` lấy SePay access token (POST form tới `https://my.sepay.vn/oauth/token`), gọi SePay bank-account API, tạo/cập nhật `FinancialAccount` `LinkedApi`.
+- Token SePay (access + refresh) không trả về FE; backend lưu token đã bảo vệ trong `FinancialAccount.AccessTokenRef` (AES-GCM, prefix `v1:`). Access token TTL = 3600s, backend auto-refresh khi gặp 401.
+- Nếu có `returnUrl`, backend redirect về URL đó kèm `sepayStatus=success|failed`.
 
 #### `POST /api/v1/financial-accounts/{id}/sync`
 
-> Tam an khoi Swagger/API explorer. Khong expose cho FE trong MVP hien tai.
-
-Sync giao dịch Casso cho một linked financial account. Đây là endpoint FE mới nên ưu tiên dùng khi user bấm nút sync trên màn accounts.
+Sync giao dịch SePay cho một linked financial account. FE bấm nút sync trên màn accounts gọi endpoint này.
 
 Request:
 
@@ -502,8 +496,7 @@ Response:
 Ghi chú:
 
 - Chỉ sync account `ConnectionMode = LinkedApi` và thuộc user hiện tại.
-- Nếu account có OAuth token riêng thì dùng Bearer token đó; account legacy có thể fallback sang Casso API key server config.
-- `triggerProviderSync = true` sẽ gọi Casso sync provider trước khi fetch transactions nếu account có external account ref.
+- Account được link qua OAuth dùng access token đã lưu (auto-refresh khi 401); account thủ công có thể fallback sang SePay API key cấu hình ở `Sepay:ApiKey`.
 - Duplicate transaction được skip theo `FinancialAccountId + ExternalTransactionId`.
 
 #### `PATCH /api/v1/financial-accounts/{id}`
@@ -822,7 +815,7 @@ Response:
 }
 ```
 
-## 3. Transactions, Import, Casso
+## 3. Transactions, Import, SePay
 
 ### Transactions
 
@@ -989,54 +982,11 @@ Ghi chú:
 - User không được nhập giao dịch trong tương lai.
 - Request vẫn dùng `datetimeOffset` để lưu cả ngày và giờ, nhưng service phải validate `date <= now`.
 
-### Casso Transaction Integration
+### SePay Webhook
 
-> **@deprecated**: Hai endpoint dưới đây (`GET` và `POST /api/v1/transactions/Casso`) là legacy. FE mới phải dùng:
-> - `POST /api/v1/financial-accounts/casso/connect` cho OAuth flow,
-> - `POST /api/v1/financial-accounts/{id}/sync` cho thao tác sync thủ công.
->
-> Webhook Casso vẫn nhận trên `POST /api/v1/transactions/Casso` cho đến khi có endpoint webhook mới ở phase tiếp theo; sau đó cả hai endpoint sẽ bị xóa.
+Endpoint backend nhận event giao dịch realtime từ SePay Bank Hub. FE không gọi endpoint này.
 
-#### `GET /api/v1/transactions/Casso` *(deprecated)*
-
-> Tam an khoi Swagger/API explorer. Day la endpoint legacy/manual sync, khong de FE goi trong MVP hien tai.
-
-Legacy sync endpoint. FE mới nên dùng `POST /api/v1/financial-accounts/{id}/sync` vì sync là action trên linked financial account.
-
-Request:
-
-```json
-{
-  "auth": "Bearer",
-  "query": {
-    "financialAccountId": "guid",
-    "fromDate": "date | null",
-    "toDate": "date | null",
-    "page": "int",
-    "pageSize": "int",
-    "sort": "string | null"
-  },
-  "body": null
-}
-```
-
-Response:
-
-```json
-{
-  "status": 200,
-  "body": {
-    "receivedCount": "int",
-    "createdCount": "int",
-    "skippedCount": "int",
-    "message": "string"
-  }
-}
-```
-
-#### `POST /api/v1/transactions/Casso` *(deprecated, vẫn nhận webhook tới khi có endpoint thay thế)*
-
-> Tam an khoi Swagger/API explorer. Webhook Casso V1 van co the goi truc tiep vao route nay neu da cau hinh `secure-token`.
+#### `POST /api/v1/financial-accounts/sepay/webhook`
 
 Request:
 
@@ -1044,12 +994,21 @@ Request:
 {
   "auth": "Anonymous",
   "headers": {
-    "secure-token": "string | null",
-    "X-Casso-Signature": "string | null"
+    "Authorization": "Apikey <Sepay:WebhookApiKey>"
   },
   "body": {
-    "error": "int",
-    "data": "json"
+    "id": "long",
+    "gateway": "string",
+    "transactionDate": "string (yyyy-MM-dd HH:mm:ss)",
+    "accountNumber": "string",
+    "subAccount": "string | null",
+    "code": "string | null",
+    "content": "string | null",
+    "transferType": "in | out",
+    "description": "string | null",
+    "transferAmount": "decimal",
+    "accumulated": "decimal | null",
+    "referenceCode": "string | null"
   }
 }
 ```
@@ -1060,6 +1019,7 @@ Response:
 {
   "status": 200,
   "body": {
+    "success": true,
     "receivedCount": "int",
     "createdCount": "int",
     "skippedCount": "int",
@@ -1070,11 +1030,16 @@ Response:
 
 Ghi chú:
 
-- `GET /api/v1/transactions/Casso` được giữ để tương thích cũ, logic sync dùng chung BankSync service.
-- `POST /api/v1/transactions/Casso` là webhook Casso gọi vào backend.
-- Webhook yêu cầu header `secure-token` khớp config `Casso:WebhookSecureToken` hoặc `CasooOptions:SecureToken`.
-- Backend không tin `X-Casso-Signature` nếu chưa implement verify signature thật.
-- Transaction tạo từ Casso dùng `SourceType = Imported`, lưu `ExternalTransactionId`, `RawPayloadJson`, và cập nhật `FinancialAccount.CurrentBalance`.
+- **Bắt buộc** reply HTTP 200/201 kèm body `{"success": true}` trong vòng 30s; ngược lại SePay sẽ retry tối đa 7 lần theo Fibonacci (5h cửa sổ).
+- Authentication: header `Authorization: Apikey {key}` khớp config `Sepay:WebhookApiKey`. Sai key → 401/400 `SEPAY_WEBHOOK_UNAUTHORIZED`.
+- Mapping field SePay → DB:
+  - `id` → `transactions.external_transaction_id` (dedupe key).
+  - `transferType = "in"` → `Type = Income`; `transferType = "out"` → `Type = Expense`.
+  - `transferAmount` → `transactions.transactions_amount` (giá trị tuyệt đối, dấu BE quyết định theo `Type`).
+  - `accountNumber` → match `financial_accounts.external_account_ref` / `masked_account_number`.
+  - `description` + `content` → `transactions.note` / `raw_description`.
+  - Toàn bộ payload lưu nguyên ở `transactions.raw_payload_json`.
+- Transaction được tạo với `source_type = Imported`. Backend cập nhật `financial_accounts.current_balance` theo `accumulated` (nếu có) hoặc theo phép tính `±transferAmount`.
 
 ### Import/OCR
 

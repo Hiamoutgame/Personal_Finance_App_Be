@@ -8,6 +8,8 @@ using Microsoft.EntityFrameworkCore;
 using Personal_Finance_Management.Repository;
 using Personal_Finance_Management.Service.Base;
 using Personal_Finance_Management.Service.baseServices;
+using Personal_Finance_Management.Service.Common.Constants;
+using Personal_Finance_Management.Service.Common.Enums;
 
 namespace Personal_Finance_Management.Service.broadcast
 {
@@ -35,7 +37,7 @@ namespace Personal_Finance_Management.Service.broadcast
 
             var adminId = ServiceClaimHelper.GetRequiredAdminId(_httpContextAccessor);
 
-            var targetUsers = await _dbContext.Accounts.Where(x => x.Role.Code == "User" && x.Status == "Active")
+            var targetUsers = await _dbContext.Accounts.Where(x => x.Role.Code == Roles.User && x.Status == AccountStatus.Active)
                 .Select(x => x.Id)
                 .ToListAsync();
             var broadcast = new Repository.Entity.Broadcast
@@ -45,7 +47,7 @@ namespace Personal_Finance_Management.Service.broadcast
                 Title = request.Title,
                 Body = request.Body,
                 TargetAudience = request.TargetAudience,
-                Status = request.ScheduledAt == null ? "Sent" : "Queued",
+                Status = request.ScheduledAt == null ? BroadcastStatus.Sent : BroadcastStatus.Queued,
                 ScheduledAt = request.ScheduledAt,
                 SentAt = request.ScheduledAt == null ? DateTimeOffset.UtcNow : (DateTimeOffset?)null,
                 TargetCount = targetUsers.Count,
@@ -63,7 +65,7 @@ namespace Personal_Finance_Management.Service.broadcast
                     Id = Guid.NewGuid(),
                     UserId = userId,
                     BroadcastId = broadcast.Id,
-                    Type = "Broadcast",
+                    Type = NotificationType.Broadcast,
                     Title = broadcast.Title,
                     Body = broadcast.Body,
                     IsRead = false,
@@ -90,7 +92,7 @@ namespace Personal_Finance_Management.Service.broadcast
             // Nên ghi audit log với actionType = BroadcastSend, entityType = Broadcast.
         }
 
-        public async Task<Page<Response.BroadcastsResponse>> GetBroadcasts(int pageIndex, int pageSize, string status = "Queued")
+        public async Task<Page<Response.BroadcastsResponse>> GetBroadcasts(int pageIndex, int pageSize, string status = BroadcastStatus.Queued)
         {
             var totalItems = await _dbContext.Broadcasts.CountAsync();
             var adminId = await GetAdminIdFromToken();
@@ -131,7 +133,7 @@ namespace Personal_Finance_Management.Service.broadcast
             var dispatchedCount = 0;
 
             var dueBroadcasts = await _dbContext.Broadcasts
-                .Where(x => x.Status == "Queued"
+                .Where(x => x.Status == BroadcastStatus.Queued
                             && x.ScheduledAt != null
                             && x.ScheduledAt <= now)
                 .OrderBy(x => x.ScheduledAt)
@@ -144,7 +146,7 @@ namespace Personal_Finance_Management.Service.broadcast
             }
 
             var targetUsers = await _dbContext.Accounts
-                .Where(x => x.Role.Code == "User" && x.Status == "Active")
+                .Where(x => x.Role.Code == Roles.User && x.Status == AccountStatus.Active)
                 .Select(x => x.Id)
                 .ToListAsync(cancellationToken);
 
@@ -162,7 +164,7 @@ namespace Personal_Finance_Management.Service.broadcast
                         Id = Guid.NewGuid(),
                         UserId = userId,
                         BroadcastId = broadcast.Id,
-                        Type = "Broadcast",
+                        Type = NotificationType.Broadcast,
                         Title = broadcast.Title,
                         Body = broadcast.Body,
                         IsRead = false,
@@ -178,7 +180,7 @@ namespace Personal_Finance_Management.Service.broadcast
                         .CountAsync(x => x.BroadcastId == broadcast.Id, cancellationToken);
                 }
 
-                broadcast.Status = "Sent";
+                broadcast.Status = BroadcastStatus.Sent;
                 broadcast.SentAt = now;
                 broadcast.TargetCount = targetUsers.Count;
                 broadcast.UpdatedAt = now;

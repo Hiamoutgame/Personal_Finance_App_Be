@@ -160,8 +160,7 @@ Phù hợp với:
 
 Một số phương thức được xem xét nhưng chưa phù hợp ở giai đoạn hiện tại:
 
-- API ngân hàng: hữu ích về hướng mở rộng, nhưng khó triển khai ngay do ràng buộc bảo mật, pháp lý và hợp tác.
-- SePay/Casso: có chi phí và giới hạn hỗ trợ chưa tối ưu cho bài toán hiện tại.
+- API ngân hàng trực tiếp: hữu ích về hướng mở rộng, nhưng khó triển khai ngay do ràng buộc bảo mật, pháp lý và hợp tác. Hiện tại project chốt tích hợp qua **SePay Bank Hub** (OAuth2 + webhook) cho luồng tự động lấy giao dịch.
 - SMS Banking: tiềm ẩn rủi ro bảo mật thông tin.
 
 ## 8. Tính năng chính cho người dùng

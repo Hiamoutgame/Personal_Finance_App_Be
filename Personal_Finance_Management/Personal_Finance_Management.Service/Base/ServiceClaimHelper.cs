@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Http;
+using Personal_Finance_Management.Service.Common.Constants;
 
 namespace Personal_Finance_Management.Service.Base;
 
@@ -19,7 +20,7 @@ public static class ServiceClaimHelper
         string missingMessage = "Account ID claim is missing")
     {
         var accountIdValue = httpContextAccessor.HttpContext?.User.Claims
-            .FirstOrDefault(claim => claim.Type == "id")?.Value;
+            .FirstOrDefault(claim => claim.Type == AppClaimTypes.Id)?.Value;
 
         if (!Guid.TryParse(accountIdValue, out var accountId))
         {
