@@ -1,9 +1,11 @@
-name: CI
+﻿name: CI
+
 on:
   push:
-    branches: [fix-be-limit]
+    branches: [main]
   pull_request:
-    branches: [fix-be-limit]
+    branches: [main]
+
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
@@ -14,16 +16,18 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '8.0.0'
-          
-      - name:  appsettings.Production.json
-        run: echo "${{ secrets.APPSETTINGS_PRODUCTION }}" > .Personal_Finance_Management/Personal_Finance_Management.Api/appsettings.json
+          dotnet-version: '8.0.x'
+
+      - name: Create appsettings.Production.json
+        env:
+          APPSETTINGS_JSON: ${{ secrets.APPSETTINGS_PRODUCTION }}
+        run: echo "$APPSETTINGS_JSON" > Personal_Finance_Management/Personal_Finance_Management.Api/appsettings.Production.json
+
       - name: Restore dependencies
-        run: dotnet restore
-        
+        run: dotnet restore Personal_Finance_Management/Personal_Finance_Management.sln
+
       - name: Build
-        run: dotnet build --no-restore
+        run: dotnet build Personal_Finance_Management/Personal_Finance_Management.sln --no-restore
 
       - name: Run tests
-        run: dotnet test --no-build --verbosity normal
-      
+        run: dotnet test Personal_Finance_Management/Personal_Finance_Management.sln --no-build --verbosity normal
