@@ -100,6 +100,7 @@ builder.Services.AddScoped<CategoryService.IService, CategoryService.Service>();
 builder.Services.AddScoped<ReminderService.IService, ReminderService.Service>();
 builder.Services.AddScoped<GoalService.IService, GoalService.Service>();
 builder.Services.AddScoped<LimitService.IService, LimitService.Service>();
+builder.Services.AddScoped<LimitService.ISpendingLimitEvaluator, LimitService.SpendingLimitEvaluator>();
 builder.Services.AddScoped<NotificationService.IService, NotificationService.Service>();
 builder.Services.AddScoped<BroadcastService.IService, BroadcastService.Service>();
 builder.Services.AddScoped<AdminService.IService, AdminService.Service>();
@@ -153,3 +154,4 @@ app.UseAuthorization();
 app.MapControllers();
 
 app.Run();
+

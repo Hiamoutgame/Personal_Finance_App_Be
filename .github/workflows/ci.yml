@@ -3,11 +3,10 @@
 on:
   push:
     branches:
-      - '**' # Chạy trên mọi nhánh
+      - '**' 
   pull_request:
     branches:
-      - '**' # Chạy cho PR tới mọi nhánh
-
+      - '**' 
 jobs:
   build-and-test:
     runs-on: ubuntu-latest

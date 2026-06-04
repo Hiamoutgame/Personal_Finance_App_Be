@@ -1,4 +1,4 @@
-﻿using Personal_Finance_Management.Repository.Abtraction;
+using Personal_Finance_Management.Repository.Abtraction;
 
 namespace Personal_Finance_Management.Repository.Entity;
 
@@ -10,6 +10,11 @@ public class Notification : BaseEntity
     public bool IsRead { get; set; } = false;
     public DateTimeOffset? ReadAt { get; set; }
     public string? MetadataJson { get; set; }
+
+    public Guid? LimitId { get; set; }
+    public string? TargetType { get; set; }
+    public string? ThresholdType { get; set; }
+    public string? PeriodKey { get; set; }
 
     public Guid UserId { get; set; }
     public Account User { get; set; } = null!;

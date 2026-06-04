@@ -880,12 +880,18 @@ public class AppDbContext : DbContext
 
             builder.Property(n => n.MetadataJson).HasColumnType("json");
             builder.Property(n => n.IsRead).HasDefaultValue(false);
+            builder.Property(n => n.TargetType).HasMaxLength(20);
+            builder.Property(n => n.ThresholdType).HasMaxLength(20);
+            builder.Property(n => n.PeriodKey).HasMaxLength(20);
 
             builder.Property(n => n.CreatedAt)
                 .HasDefaultValueSql("NOW()");
 
             builder.HasIndex(n => new { n.UserId, n.CreatedAt })
                 .HasDatabaseName("ix_notifications_user_created_at");
+
+            builder.HasIndex(n => new { n.UserId, n.LimitId, n.TargetType, n.ThresholdType, n.PeriodKey })
+                .HasDatabaseName("ix_notifications_limit_dedup");
 
             builder.HasIndex(n => new { n.UserId, n.IsRead })
                 .HasDatabaseName("ix_notifications_user_unread")
@@ -1003,3 +1009,8 @@ public class AppDbContext : DbContext
         });
     }
 }
+
+
+
+
+

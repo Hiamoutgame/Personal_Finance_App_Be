@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Personal_Finance_Management.Repository;
 using Personal_Finance_Management.Repository.Entity;
@@ -7,18 +7,22 @@ using Personal_Finance_Management.Service.Common.Constants;
 using Personal_Finance_Management.Service.Common.Enums;
 using Personal_Finance_Management.Service.Validations;
 
-
 namespace Personal_Finance_Management.Service.limit;
 
 public class Service : IService
 {
     private readonly AppDbContext _appDbContext;
     private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly ISpendingLimitEvaluator _limitEvaluator;
 
-    public Service(AppDbContext appDbContext, IHttpContextAccessor httpContextAccessor)
+    public Service(
+        AppDbContext appDbContext,
+        IHttpContextAccessor httpContextAccessor,
+        ISpendingLimitEvaluator limitEvaluator)
     {
         _appDbContext = appDbContext;
         _httpContextAccessor = httpContextAccessor;
+        _limitEvaluator = limitEvaluator;
     }
     
     private Guid GetCurrentUserId()
@@ -26,8 +30,6 @@ public class Service : IService
         return ServiceClaimHelper.GetRequiredUserId(_httpContextAccessor);
     }
 
-
-    
     public async Task<Response.GetLimitsResponse> GetLimits()
     {
         var userId = GetCurrentUserId();
@@ -39,10 +41,11 @@ public class Service : IService
             .ToListAsync();
 
         var items = new List<Response.GetLimitItem>();
+        var now = DateTimeOffset.UtcNow;
 
         foreach (var limit in limits)
         {
-            string targetName = "Unknow";
+            string targetName = "Unknown";
             Guid targetId = Guid.Empty;
             string targetType = "Jar";
 
@@ -54,6 +57,7 @@ public class Service : IService
                 targetName = limit.Jar.Name;
                 targetType = "Jar";
 
+                var periodStart = SpendingLimitEvaluator.GetPeriodStart(limit.Period, now);
                 currentSpent = await _appDbContext.Transactions
                     .Where(t => t.UserId == userId
                                 && !t.IsDeleted
@@ -61,7 +65,7 @@ public class Service : IService
                                 && t.FromJarId == limit.JarId.Value
                                 && t.ToJarId == null
                                 && t.FinancialAccountId == null
-                                && t.TransactionDate >= limit.ResetAt)
+                                && t.TransactionDate >= periodStart)
                     .SumAsync(t => (decimal?)t.TransactionsAmount) ?? 0m;
             }
             if (limit.Category != null && limit.CategoryId.HasValue)
@@ -70,12 +74,13 @@ public class Service : IService
                 targetId = limit.Category.Id;
                 targetName = limit.Category.Name;
 
+                var periodStart = SpendingLimitEvaluator.GetPeriodStart(limit.Period, now);
                 currentSpent = await _appDbContext.Transactions
                     .Where(t => t.UserId == userId
                                 && !t.IsDeleted
                                 && t.Type == TransactionType.Expense
                                 && t.CategoryId == limit.CategoryId.Value
-                                && t.TransactionDate >= limit.ResetAt)
+                                && t.TransactionDate >= periodStart)
                     .SumAsync(t => (decimal?)t.TransactionsAmount) ?? 0m;
             }
             var item = new Response.GetLimitItem
@@ -180,7 +185,7 @@ public class Service : IService
             .FirstOrDefaultAsync(l => l.Id == id && l.UserId == userId);
 
         if (limit == null)
-            throw new ("Limit not found");
+            throw AppValidationException.NotFound("Limit not found.", "id", ErrorCodes.LimitNotFound);
         
         if (request.LimitAmount.HasValue)
         {
@@ -218,7 +223,7 @@ public class Service : IService
             .FirstOrDefaultAsync(l => l.Id == id && l.UserId == userId);
 
         if (limit == null)
-            throw new KeyNotFoundException("Limit not found");
+            throw AppValidationException.NotFound("Limit not found.", "id", ErrorCodes.LimitNotFound);
         
         limit.IsActive = false;
         await _appDbContext.SaveChangesAsync();

@@ -7,6 +7,7 @@ using Personal_Finance_Management.Service.Base;
 using Personal_Finance_Management.Service.Common.Constants;
 using TxEnums = Personal_Finance_Management.Service.Common.Enums;
 using Personal_Finance_Management.Service.Validations;
+using LimitService = Personal_Finance_Management.Service.limit;
 using System.Net.Http.Headers;
 using System.Text.Json;
 
@@ -17,12 +18,14 @@ public class Service : IService
     private readonly AppDbContext _dbContext;
     private readonly IHttpContextAccessor _httpContext;
     private readonly IConfiguration _configuration;
+    private readonly LimitService.ISpendingLimitEvaluator _limitEvaluator;
 
-    public Service(AppDbContext dbContext, IHttpContextAccessor httpContext, IConfiguration configuration)
+    public Service(AppDbContext dbContext, IHttpContextAccessor httpContext, IConfiguration configuration, LimitService.ISpendingLimitEvaluator limitEvaluator)
     {
         _dbContext = dbContext;
         _httpContext = httpContext;
         _configuration = configuration;
+        _limitEvaluator = limitEvaluator;
     }
     
     public async Task<Response.GetTransactionsResult> GetTransactions(Request.GetTransactionsRequest request)
@@ -399,11 +402,11 @@ public class Service : IService
         }
         if (transaction.FromJarId != null)
         {
-            await CheckJarLimit(transaction.FromJarId.Value);
+            await _limitEvaluator.EvaluateAsync(userIdGuid);
         }
         if (transaction.CategoryId != null)
         {
-            await CheckCategoryLimit(transaction.CategoryId.Value, userIdGuid);
+
         }
 
         await databaseTransaction.CommitAsync();
@@ -553,17 +556,17 @@ public class Service : IService
         }
         if (transaction.Type == TxEnums.TransactionType.Expense && transaction.FromJarId != null)
         {
-            await CheckJarLimit(transaction.FromJarId.Value);
+            await _limitEvaluator.EvaluateAsync(userIdGuid);
         }
         if (transaction.Type == TxEnums.TransactionType.Expense && transaction.CategoryId != null)
         {
-            await CheckCategoryLimit(transaction.CategoryId.Value, userIdGuid);
+
         }
         if (transaction.Type == TxEnums.TransactionType.Expense
             && oldCategoryId.HasValue
             && oldCategoryId != transaction.CategoryId)
         {
-            await CheckCategoryLimit(oldCategoryId.Value, userIdGuid);
+
         }
 
         await databaseTransaction.CommitAsync();
@@ -727,11 +730,11 @@ public class Service : IService
         }
         if (transaction.Type == TxEnums.TransactionType.Expense && transaction.FromJarId != null)
         {
-            await CheckJarLimit(transaction.FromJarId.Value);
+            await _limitEvaluator.EvaluateAsync(userIdGuid);
         }
         if (transaction.Type == TxEnums.TransactionType.Expense && transaction.CategoryId != null)
         {
-            await CheckCategoryLimit(transaction.CategoryId.Value, userIdGuid);
+
         }
         await databaseTransaction.CommitAsync();
 
@@ -815,198 +818,11 @@ public class Service : IService
         });
     }
 
-    private async Task CheckJarLimit(Guid jarId)
-    {
-        var jar = await _dbContext.Jars.FirstOrDefaultAsync(j => j.Id == jarId);
-        if (jar == null) return;
 
-        var activeLimit = await _dbContext.SpendingLimits
-            .Where(x => x.JarId == jarId && x.IsActive == true)
-            .ToListAsync();
-
-        foreach (var item in activeLimit)
-        {
-            var currentSpent = await GetCurrentSpentByJar(jarId, item.UserId, item.ResetAt);
-            var alertThreshold = item.LimitAmount * item.AlertAtPercentage / 100;
-
-            // Business rule:
-            // - Alert threshold only creates warning notification and keeps limit active.
-            // - Exceeded limit creates exceeded notification and deactivates the limit.
-            // Exceeded has priority, so a transaction crossing directly to limit amount only creates exceeded notification.
-            if (currentSpent >= item.LimitAmount)
-            {
-               
-                var notification = new Repository.Entity.Notification()
-                {
-                    UserId = item.UserId,
-                    Type = TxEnums.NotificationType.SpendingAlert,
-                    Title = "Thông báo vượt ngưỡng!",
-                    Body = $"Xin thông báo! bạn đã chạm ngưỡng {item.LimitAmount}đ giới hạn chi tiêu ở hũ {jar.Name}",
-                    IsRead = false,
-                    CreatedAt = DateTimeOffset.UtcNow,
-                    MetadataJson = $"{{\"limitId\": \"{item.Id}\", \"targetType\": \"Jar\", \"jarId\": \"{jar.Id}\", \"thresholdType\": \"Exceeded\"}}"
-
-                };
-                if (await HasLimitNotification(item.UserId, item.Id, "Jar", jar.Id, notification.Body)) continue;
-                item.UpdatedAt = DateTimeOffset.UtcNow;
-                _dbContext.Notifications.Add(notification);
-            }
-            else if (currentSpent >= alertThreshold)
-            {
-                var notification = new Repository.Entity.Notification()
-                {
-                    UserId = item.UserId,
-                    Type = TxEnums.NotificationType.SpendingAlert,
-                    Title = "Thông báo vượt ngưỡng!",
-                    Body = $"Xin thông báo! bạn đã chạm ngưỡng thông báo {item.AlertAtPercentage}% giới hạn chi tiêu ở hũ {jar.Name}",
-                    IsRead = false,
-                    CreatedAt = DateTimeOffset.UtcNow,
-                    MetadataJson = $"{{\"limitId\": \"{item.Id}\", \"targetType\": \"Jar\", \"jarId\": \"{jar.Id}\", \"thresholdType\": \"Alert\"}}"
-                };
-                if (await HasLimitNotification(item.UserId, item.Id, "Jar", jar.Id, notification.Body)) continue;
-                _dbContext.Notifications.Add(notification);
-            }
-        }
-
-        await _dbContext.SaveChangesAsync();
-    }
-
-    private async Task<decimal> GetCurrentSpentByJar(Guid jarId, Guid userId, DateTimeOffset resetAt)
-    {
-        return (await _dbContext.Transactions
-            .Where(t => t.UserId == userId
-                        && !t.IsDeleted
-                        && t.Type == TxEnums.TransactionType.Expense
-                        && t.FromJarId == jarId
-                        && t.ToJarId == null
-                        && t.FinancialAccountId == null
-                        && t.TransactionDate >= resetAt)
-            .SumAsync(t => (decimal?)t.TransactionsAmount)) ?? 0m;
-    }
-
-    private async Task CheckCategoryLimit(Guid categoryId, Guid userId)
-    {
-        var category = await _dbContext.Categories.FirstOrDefaultAsync(c =>
-            c.Id == categoryId
-            && c.IsActive
-            && (c.OwnerUserId == null || c.OwnerUserId == userId));
-        if (category == null) return;
-
-        var activeLimit = await _dbContext.SpendingLimits
-            .Where(x => x.UserId == userId && x.CategoryId == categoryId && x.IsActive)
-            .ToListAsync();
-
-        foreach (var item in activeLimit)
-        {
-            var currentSpent = await GetCurrentSpentByCategory(categoryId, item.UserId, item.ResetAt);
-            var alertThreshold = item.LimitAmount * item.AlertAtPercentage / 100;
-
-            if (currentSpent >= item.LimitAmount)
-            {
-                var notification = new Repository.Entity.Notification()
-                {
-                    UserId = item.UserId,
-                    Type = TxEnums.NotificationType.SpendingAlert,
-                    Title = "Thong bao vuot nguong!",
-                    Body = $"Ban da cham nguong {item.LimitAmount} gioi han chi tieu o danh muc {category.Name}",
-                    IsRead = false,
-                    CreatedAt = DateTimeOffset.UtcNow,
-                    MetadataJson = $"{{\"limitId\": \"{item.Id}\", \"targetType\": \"Category\", \"categoryId\": \"{category.Id}\", \"thresholdType\": \"Exceeded\"}}"
-                };
-                if (await HasLimitNotification(item.UserId, item.Id, "Category", category.Id, notification.Body)) continue;
-                item.UpdatedAt = DateTimeOffset.UtcNow;
-                _dbContext.Notifications.Add(notification);
-            }
-            else if (currentSpent >= alertThreshold)
-            {
-                var notification = new Repository.Entity.Notification()
-                {
-                    UserId = item.UserId,
-                    Type = TxEnums.NotificationType.SpendingAlert,
-                    Title = "Thong bao vuot nguong!",
-                    Body = $"Ban da cham nguong thong bao {item.AlertAtPercentage}% gioi han chi tieu o danh muc {category.Name}",
-                    IsRead = false,
-                    CreatedAt = DateTimeOffset.UtcNow,
-                    MetadataJson = $"{{\"limitId\": \"{item.Id}\", \"targetType\": \"Category\", \"categoryId\": \"{category.Id}\", \"thresholdType\": \"Alert\"}}"
-                };
-                if (await HasLimitNotification(item.UserId, item.Id, "Category", category.Id, notification.Body)) continue;
-                _dbContext.Notifications.Add(notification);
-            }
-        }
-
-        await _dbContext.SaveChangesAsync();
-    }
-
-    private async Task<decimal> GetCurrentSpentByCategory(Guid categoryId, Guid userId, DateTimeOffset resetAt)
-    {
-        return (await _dbContext.Transactions
-            .Where(t => t.UserId == userId
-                        && !t.IsDeleted
-                        && t.Type == TxEnums.TransactionType.Expense
-                        && t.CategoryId == categoryId
-                        && t.TransactionDate >= resetAt)
-            .SumAsync(t => (decimal?)t.TransactionsAmount)) ?? 0m;
-    }
-
-    private async Task AddLimitNotificationIfNotExists(
-        SpendingLimit limit,
-        Repository.Entity.Jar jar,
-        string title,
-        string body)
-    {
-        if (await HasLimitNotification(limit.UserId, limit.Id, "Jar", jar.Id, body))
-            return;
-
-        var notification = new Notification
-        {
-            UserId = limit.UserId,
-            Type = TxEnums.NotificationType.SpendingAlert,
-            Title = title,
-            Body = body,
-            IsRead = false,
-            CreatedAt = DateTimeOffset.UtcNow,
-            MetadataJson = $"{{\"limitId\": \"{limit.Id}\", \"targetType\": \"Jar\", \"jarId\": \"{jar.Id}\"}}"
-        };
-
-        _dbContext.Notifications.Add(notification);
-        await _dbContext.SaveChangesAsync();
-    }
-
-    private async Task<bool> HasLimitNotification(Guid userId, Guid limitId, string targetType, Guid targetId, string body)
-    {
-        var limitIdMarker = $"\"limitId\": \"{limitId}\"";
-        var targetIdMarker = targetType == "Category"
-            ? $"\"categoryId\": \"{targetId}\""
-            : $"\"jarId\": \"{targetId}\"";
-
-        var pendingExists = _dbContext.ChangeTracker
-            .Entries<Notification>()
-            .Any(entry => entry.State == EntityState.Added
-                          && entry.Entity.UserId == userId
-                          && entry.Entity.Type == TxEnums.NotificationType.SpendingAlert
-                          && entry.Entity.Body == body
-                          && entry.Entity.MetadataJson != null
-                          && entry.Entity.MetadataJson.Contains(limitIdMarker)
-                          && entry.Entity.MetadataJson.Contains(targetIdMarker));
-
-        if (pendingExists)
-            return true;
-
-        var metadataList = await _dbContext.Notifications
-            .Where(n => n.UserId == userId
-                        && n.Type == TxEnums.NotificationType.SpendingAlert
-                        && n.Body == body)
-            .Select(n => n.MetadataJson)
-            .ToListAsync();
-
-        return metadataList.Any(metadata =>
-            metadata != null
-            && metadata.Contains(limitIdMarker)
-            && metadata.Contains(targetIdMarker));
-    }
 
     private Guid GetCurrentUserId()
     {
         return ServiceClaimHelper.GetRequiredUserId(_httpContext);
     }
 }
+
