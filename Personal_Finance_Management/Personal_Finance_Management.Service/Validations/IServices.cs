@@ -9,6 +9,7 @@ public interface IServices
 {
     Task<T> ValidateFormRequest<T>(T request);
     Task ValidateRegisterRequest(AuthRequest.RegisterRequest request);
+    Task ValidateLoginRequest(AuthRequest.LoginRequest request);
     Task ValidateImportImageRequest(import.Request.ImportData request);
     Task ValidateAdminDashboardRequest(AdminRequest.AdminDashboardRequest request);
     Task ValidateAdminAuditLogsRequest(AdminRequest.AdminAuditLogsRequest request);
@@ -17,3 +18,4 @@ public interface IServices
     Task ValidateAdminUsersRequest(UserRequest.GetAdminUsersRequest request);
     Task ValidateAdminUserStatusRequest(UserRequest.UserStatusRequest request);
 }
+

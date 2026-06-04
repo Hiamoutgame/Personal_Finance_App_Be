@@ -113,6 +113,8 @@ public class Service : IService
 
     public async Task<Response.LoginResponse> Login(Request.LoginRequest request)
     {
+        await _validationServices.ValidateLoginRequest(request);
+
         var email = request.Email.Trim().ToLowerInvariant();
         var user = await _dbContext.Accounts
             .Include(u => u.Role)
@@ -120,9 +122,8 @@ public class Service : IService
 
         if (user is null || !BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
         {
-            throw ValidationService.AppValidationException.BadRequest(
+            throw ValidationService.AppValidationException.Unauthorized(
                 ErrorMessages.InvalidLoginCredentials,
-                "email",
                 ErrorCodes.InvalidLoginCredentials);
         }
 
@@ -183,3 +184,4 @@ public class Service : IService
         return await Task.FromResult("Logout successful.");
     }
 }
+

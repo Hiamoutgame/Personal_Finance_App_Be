@@ -70,6 +70,11 @@ public class ValidationServices : IServices
             throw AppValidationException.BadRequest("Email is required.", "email", ErrorCodes.Required);
         }
 
+
+        if (!new EmailAddressAttribute().IsValid(email))
+        {
+            throw AppValidationException.BadRequest("Email is not in a valid format.", "email", ErrorCodes.FormInvalid);
+        }
         if (string.IsNullOrWhiteSpace(request.Password))
         {
             throw AppValidationException.BadRequest("Password is required.", "password", ErrorCodes.Required);
@@ -96,6 +101,23 @@ public class ValidationServices : IServices
         }
     }
 
+
+    public async Task ValidateLoginRequest(AuthRequest.LoginRequest request)
+    {
+        await ValidateFormRequest(request);
+
+        var email = request.Email?.Trim();
+
+        if (string.IsNullOrWhiteSpace(email))
+        {
+            throw AppValidationException.BadRequest("Email is required.", "email", ErrorCodes.Required);
+        }
+
+        if (string.IsNullOrWhiteSpace(request.Password))
+        {
+            throw AppValidationException.BadRequest("Password is required.", "password", ErrorCodes.Required);
+        }
+    }
     private static string ToCamelCase(string value)
     {
         if (string.IsNullOrWhiteSpace(value))
@@ -330,3 +352,4 @@ public class ValidationServices : IServices
         }
     }
 }
+
