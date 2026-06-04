@@ -11,6 +11,21 @@ jobs:
   build-and-test:
     runs-on: ubuntu-latest
 
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: MyStrongPassword123@
+          POSTGRES_DB: PersonalFinanceManagementDb
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
     steps:
       - uses: actions/checkout@v4
 
@@ -29,6 +44,25 @@ jobs:
 
       - name: Build
         run: dotnet build Personal_Finance_Management/Personal_Finance_Management.sln --no-restore
+
+      - name: Start API background
+        env:
+          ASPNETCORE_ENVIRONMENT: Production
+        run: |
+          # Run API in the background
+          dotnet run --project Personal_Finance_Management/Personal_Finance_Management.Api/Personal_Finance_Management.Api.csproj --no-build --urls "http://localhost:5284" &
+          
+          # Wait for API to be ready by hitting the /health endpoint
+          echo "Waiting for API to start..."
+          for i in {1..30}; do
+            if curl -s http://localhost:5284/health | grep -q "Healthy"; then
+              echo -e "\nAPI is up and running!"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "Timeout waiting for API to start."
+          exit 1
 
       - name: Run tests
         run: dotnet test Personal_Finance_Management/Personal_Finance_Management.sln --no-build --verbosity normal
